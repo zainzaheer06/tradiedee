@@ -1,0 +1,29 @@
+[Unit]
+Description=NevoxAI Standalone Agent Service
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/root/nevoxai-project-2
+ExecStart=/root/nevoxai-project-2/venv/bin/python /root/nevoxai-project-2/agent.py dev
+Restart=always
+RestartSec=5
+
+# Environment Variables
+Environment=PYTHONUNBUFFERED=1
+Environment=MAX_CONCURRENT_CALLS=4
+Environment=USER_AWAY_TIMEOUT=30.0
+
+# Resource Limits (Increased for stability)
+MemoryMax=1G
+CPUQuota=150%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

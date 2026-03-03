@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}SIP Trunk Management - Admin{% endblock %}
+
+{% block page_title %}SIP Trunk Management{% endblock %}
+
+{% block dashboard_content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">SIP Trunk Management</h1>
+    <p class="text-gray-600 mt-2">Configure outbound SIP trunks for users</p>
+</div>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <!-- Total Users -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6 card-hover">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg">
+                <i class="bi bi-people text-blue-600 text-lg"></i>
+            </div>
+            <span class="text-xs font-medium text-gray-500">Total</span>
+        </div>
+        <p class="text-gray-600 text-sm mb-1">Total Users</p>
+        <p class="text-3xl font-bold text-gray-900">{{ users|length }}</p>
+    </div>
+
+    <!-- Configured -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6 card-hover">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-center w-12 h-12 bg-green-100 rounded-lg">
+                <i class="bi bi-check-circle text-green-600 text-lg"></i>
+            </div>
+            <span class="text-xs font-medium text-gray-500">Configured</span>
+        </div>
+        <p class="text-gray-600 text-sm mb-1">With SIP Trunk</p>
+        <p class="text-3xl font-bold text-gray-900">{{ users|selectattr('sip_configured')|list|length }}</p>
+    </div>
+
+    <!-- Not Configured -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6 card-hover">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-center w-12 h-12 bg-amber-100 rounded-lg">
+                <i class="bi bi-exclamation-circle text-amber-600 text-lg"></i>
+            </div>
+            <span class="text-xs font-medium text-gray-500">Not Configured</span>
+        </div>
+        <p class="text-gray-600 text-sm mb-1">Without SIP Trunk</p>
+        <p class="text-3xl font-bold text-gray-900">{{ users|rejectattr('sip_configured')|list|length }}</p>
+    </div>
+</div>
+
+<!-- Users Table -->
+<div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <!-- Header -->
+    <div class="px-6 py-4 border-b border-gray-200">
+        <div class="flex items-center gap-3">
+            <i class="bi bi-diagram-3 text-indigo-600 text-lg"></i>
+            <h2 class="text-lg font-bold text-gray-900">User SIP Trunk Configuration</h2>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b border-gray-200 bg-gray-50">
+                    <th class="text-left py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">User</th>
+                    <th class="text-left py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</th>
+                    <th class="text-center py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                    <th class="text-left py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Trunk ID</th>
+                    <th class="text-left py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Phone Number</th>
+                    <th class="text-left py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Configured</th>
+                    <th class="text-right py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <!-- User -->
+                    <td class="py-4 px-6">
+                        <div>
+                            <div class="font-medium text-gray-900">{{ user.username }}</div>
+                            <div class="text-xs text-gray-500">ID: #{{ user.id }}</div>
+                        </div>
+                    </td>
+
+                    <!-- Email -->
+                    <td class="py-4 px-6">
+                        <span class="text-sm text-gray-600">{{ user.email }}</span>
+                    </td>
+
+                    <!-- Status -->
+                    <td class="py-4 px-6 text-center">
+                        {% if user.sip_configured %}
+                        <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                            <i class="bi bi-check-circle"></i> Configured
+                        </span>
+                        {% else %}
+                        <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                            <i class="bi bi-x-circle"></i> Not Configured
+                        </span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Trunk ID -->
+                    <td class="py-4 px-6">
+                        {% if user.outbound_trunk_id %}
+                        <code class="text-xs bg-gray-100 px-2 py-1 rounded font-mono text-gray-800">{{ user.outbound_trunk_id }}</code>
+                        {% else %}
+                        <span class="text-sm text-gray-400 italic">None</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Phone Number -->
+                    <td class="py-4 px-6">
+                        {% if user.outbound_phone_number %}
+                        <code class="text-xs bg-blue-50 px-2 py-1 rounded font-mono text-blue-800">{{ user.outbound_phone_number }}</code>
+                        {% else %}
+                        <span class="text-sm text-gray-400 italic">None</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Configured Date -->
+                    <td class="py-4 px-6">
+                        {% if user.sip_configured_at %}
+                        <div class="text-sm text-gray-600">{{ user.sip_configured_at.strftime('%m/%d/%Y') }}</div>
+                        <div class="text-xs text-gray-500">{{ user.sip_configured_at.strftime('%H:%M') }}</div>
+                        {% else %}
+                        <span class="text-sm text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Actions -->
+                    <td class="py-4 px-6 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <a href="{{ url_for('core.configure_user_trunk', user_id=user.id) }}"
+                               class="inline-flex items-center gap-1 px-3 py-2 bg-indigo-100 text-indigo-600 rounded-lg hover:bg-indigo-200 transition-colors font-medium text-sm">
+                                <i class="bi bi-pencil"></i>
+                                Configure
+                            </a>
+                            {% if user.sip_configured %}
+                            <form method="POST" action="{{ url_for('core.remove_user_trunk', user_id=user.id) }}"
+                                  onsubmit="return confirm('Remove SIP trunk from {{ user.username }}?')" class="inline">
+                                <button type="submit"
+                                        class="inline-flex items-center gap-1 px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors font-medium text-sm">
+                                    <i class="bi bi-trash"></i>
+                                    Remove
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Info Banner -->
+<div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+    <div class="flex items-start gap-4">
+        <div class="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg flex-shrink-0">
+            <i class="bi bi-info-circle text-blue-600 text-lg"></i>
+        </div>
+        <div>
+            <h3 class="text-lg font-bold text-gray-900 mb-2">About SIP Trunk Configuration</h3>
+            <ul class="space-y-2 text-sm text-gray-700">
+                <li><i class="bi bi-dot"></i> Each user can have a dedicated outbound SIP trunk for their campaigns</li>
+                <li><i class="bi bi-dot"></i> The trunk ID should be obtained from your LiveKit SIP configuration</li>
+                <li><i class="bi bi-dot"></i> Users with configured trunks will use their trunk for all outbound calls</li>
+                <li><i class="bi bi-dot"></i> Users without a trunk will use the system default trunk</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

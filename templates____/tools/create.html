@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Create Tool{% endblock %}
+
+{% block page_title %}Create Tool{% endblock %}
+
+{% block dashboard_content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center gap-2 mb-2">
+            <a href="{{ url_for('core.tools_list') }}" class="text-indigo-600 hover:text-indigo-700">
+                <i class="bi bi-arrow-left"></i> Back to Tools
+            </a>
+        </div>
+        <h2 class="text-3xl font-bold text-gray-900">Create New Tool</h2>
+        <p class="text-gray-600 mt-1">Define a custom tool to extend your agents' capabilities</p>
+    </div>
+
+    <!-- Form -->
+    <form method="POST" class="bg-white rounded-xl border border-gray-200 p-8 space-y-6">
+        <!-- Basic Information -->
+        <div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
+
+            <!-- Name -->
+            <div class="mb-4">
+                <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
+                    Tool Name <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="name" name="name" required
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                       placeholder="e.g., get_weather, send_email">
+                <p class="text-xs text-gray-500 mt-1">Use lowercase with underscores (snake_case)</p>
+            </div>
+
+            <!-- Description -->
+            <div class="mb-4">
+                <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
+                    Description <span class="text-red-500">*</span>
+                </label>
+                <textarea id="description" name="description" rows="3" required
+                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          placeholder="Describe what this tool does and when the agent should use it"></textarea>
+                <p class="text-xs text-gray-500 mt-1">Be specific - this helps the AI understand when to use the tool</p>
+            </div>
+        </div>
+
+        <hr class="border-gray-200">
+
+        <!-- Tool Type Selection -->
+        <div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Tool Type</h3>
+
+            <div class="space-y-3">
+                <!-- API Call -->
+                <label class="flex items-start gap-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-indigo-500 transition-colors">
+                    <input type="radio" name="tool_type" value="api_call" required
+                           onchange="showToolConfig('api_call')"
+                           class="mt-1 w-4 h-4 text-indigo-600">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <i class="bi bi-cloud-arrow-up text-blue-600"></i>
+                            <span class="font-semibold text-gray-900">API Call</span>
+                        </div>
+                        <p class="text-sm text-gray-600">Make HTTP GET/POST requests to external APIs</p>
+                    </div>
+                </label>
+
+                <!-- Webhook -->
+                <label class="flex items-start gap-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-indigo-500 transition-colors">
+                    <input type="radio" name="tool_type" value="webhook" required
+                           onchange="showToolConfig('webhook')"
+                           class="mt-1 w-4 h-4 text-indigo-600">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <i class="bi bi-webhook text-green-600"></i>
+                            <span class="font-semibold text-gray-900">Webhook</span>
+                        </div>
+                        <p class="text-sm text-gray-600">POST data to a custom webhook URL</p>
+                    </div>
+                </label>
+
+                <!-- RPC 
+                <label class="flex items-start gap-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-indigo-500 transition-colors">
+                    <input type="radio" name="tool_type" value="rpc" required
+                           onchange="showToolConfig('rpc')"
+                           class="mt-1 w-4 h-4 text-indigo-600">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <i class="bi bi-lightning-charge text-purple-600"></i>
+                            <span class="font-semibold text-gray-900">RPC (Frontend Call)</span>
+                        </div>
+                        <p class="text-sm text-gray-600">Forward calls to your frontend application</p>
+                    </div>
+                </label>-->
+            </div>
+        </div>
+
+        <hr class="border-gray-200">
+
+        <!-- Parameters (Optional) -->
+        <div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Parameters (Optional)</h3>
+            <p class="text-sm text-gray-600 mb-4">
+                Define parameters that the AI can extract from conversation and pass to your tool.
+                Leave empty if your tool doesn't need any parameters.
+            </p>
+
+            <div class="mb-4">
+                <label for="parameters" class="block text-sm font-medium text-gray-700 mb-2">
+                    Parameters Definition (JSON)
+                </label>
+                <textarea id="parameters" name="parameters" rows="8"
+                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono text-sm"
+                          placeholder='Example:
+{
+  "city": {
+    "type": "string",
+    "description": "The city name to get weather for",
+    "required": true
+  },
+  "units": {
+    "type": "string",
+    "description": "Temperature units (celsius or fahrenheit)",
+    "required": false
+  }
+}'></textarea>
+                <p class="text-xs text-gray-500 mt-1">
+                    Format: Each parameter has a name, type, description, and required flag.
+                    The AI will automatically extract these values from the conversation.
+                </p>
+            </div>
+
+            <!-- Example -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex gap-2 items-start">
+                    <i class="bi bi-info-circle text-blue-600 mt-0.5"></i>
+                    <div class="text-sm">
+                        <p class="font-semibold text-blue-900 mb-1">How it works:</p>
+                        <p class="text-blue-800 mb-2">If you define a "city" parameter, then when a user says "What's the weather in Paris?", the AI will automatically call your tool with city="Paris".</p>
+                        <p class="text-blue-800">The description helps the AI understand what values to extract from the conversation.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <hr class="border-gray-200">
+
+        <!-- API Call Config -->
+        <div id="config_api_call" class="hidden">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">API Configuration</h3>
+
+            <div class="mb-4">
+                <label for="api_url" class="block text-sm font-medium text-gray-700 mb-2">
+                    API URL <span class="text-red-500">*</span>
+                </label>
+                <input type="url" id="api_url" name="api_url"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                       placeholder="https://api.example.com/endpoint">
+            </div>
+
+            <div class="mb-4">
+                <label for="api_method" class="block text-sm font-medium text-gray-700 mb-2">
+                    HTTP Method
+                </label>
+                <select id="api_method" name="api_method"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label for="api_headers" class="block text-sm font-medium text-gray-700 mb-2">
+                    Headers (JSON)
+                </label>
+                <textarea id="api_headers" name="api_headers" rows="3"
+                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono text-sm"
+                          placeholder='{"Authorization": "Bearer YOUR_TOKEN"}'>{}</textarea>
+                <p class="text-xs text-gray-500 mt-1">Optional: Add custom headers as JSON</p>
+            </div>
+        </div>
+
+        <!-- Webhook Config -->
+        <div id="config_webhook" class="hidden">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Webhook Configuration</h3>
+
+            <div class="mb-4">
+                <label for="webhook_url" class="block text-sm font-medium text-gray-700 mb-2">
+                    Webhook URL <span class="text-red-500">*</span>
+                </label>
+                <input type="url" id="webhook_url" name="webhook_url"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                       placeholder="https://your-server.com/webhook">
+            </div>
+
+            <div class="mb-4">
+                <label for="webhook_headers" class="block text-sm font-medium text-gray-700 mb-2">
+                    Headers (JSON)
+                </label>
+                <textarea id="webhook_headers" name="webhook_headers" rows="3"
+                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono text-sm"
+                          placeholder='{"X-Custom-Header": "value"}'>{}</textarea>
+                <p class="text-xs text-gray-500 mt-1">Optional: Add custom headers as JSON</p>
+            </div>
+        </div>
+
+        <!-- RPC Config -->
+        <div id="config_rpc" class="hidden">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">RPC Configuration</h3>
+
+            <div class="mb-4">
+                <label for="rpc_method" class="block text-sm font-medium text-gray-700 mb-2">
+                    RPC Method Name
+                </label>
+                <input type="text" id="rpc_method" name="rpc_method"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                       placeholder="leave blank to use tool name">
+                <p class="text-xs text-gray-500 mt-1">Leave blank to use the tool name as method</p>
+            </div>
+
+            <div class="mb-4">
+                <label for="rpc_timeout" class="block text-sm font-medium text-gray-700 mb-2">
+                    Timeout (seconds)
+                </label>
+                <input type="number" id="rpc_timeout" name="rpc_timeout" value="5.0" step="0.5" min="1" max="30"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+            </div>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div class="flex gap-3 pt-4 border-t border-gray-200">
+            <button type="submit"
+                    class="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold transition-colors">
+                <i class="bi bi-check-circle"></i> Create Tool
+            </button>
+            <a href="{{ url_for('core.tools_list') }}"
+               class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold transition-colors">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+function showToolConfig(toolType) {
+    // Hide all configs
+    document.getElementById('config_api_call').classList.add('hidden');
+    document.getElementById('config_webhook').classList.add('hidden');
+    document.getElementById('config_rpc').classList.add('hidden');
+
+    // Show selected config
+    document.getElementById('config_' + toolType).classList.remove('hidden');
+}
+</script>
+
+{% endblock %}

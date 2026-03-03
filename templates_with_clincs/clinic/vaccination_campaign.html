@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}Vaccination Campaign — Nevox AI{% endblock %}
+
+{% block dashboard_content %}
+
+<a href="{{ url_for('clinic.clinic_hub') }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 mb-6" style="text-decoration:none;">
+    <i class="bi bi-arrow-left" style="font-size:14px;"></i> Back to Clinic Hub
+</a>
+
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-xl font-semibold text-gray-900">Vaccination & Health Campaigns</h1>
+        <p class="text-sm text-gray-500 mt-0.5">Run targeted outreach calls for vaccinations and health programs</p>
+    </div>
+</div>
+
+<!-- Stats Row -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin-bottom:20px;">
+    <div class="bg-white rounded-lg border border-gray-200 p-4">
+        <p style="font-size:11px; color:var(--t3); margin-bottom:6px; font-weight:600; text-transform:uppercase;">Active Campaigns</p>
+        <p style="font-size:20px; font-weight:700; color:var(--t1); line-height:1;">{{ campaigns|length }}</p>
+    </div>
+    <div class="bg-white rounded-lg border border-gray-200 p-4">
+        <p style="font-size:11px; color:var(--t3); margin-bottom:6px; font-weight:600; text-transform:uppercase;">Patients Contacted</p>
+        <p style="font-size:20px; font-weight:700; color:var(--t1); line-height:1;">—</p>
+    </div>
+    <div class="bg-white rounded-lg border border-gray-200 p-4">
+        <p style="font-size:11px; color:var(--t3); margin-bottom:6px; font-weight:600; text-transform:uppercase;">Avg Response Rate</p>
+        <p style="font-size:20px; font-weight:700; color:var(--t1); line-height:1;">—</p>
+    </div>
+</div>
+
+<!-- Campaigns Header -->
+<div class="flex items-center justify-between mb-4">
+    <h2 class="text-sm font-semibold text-gray-900">Active Campaigns</h2>
+    <button onclick="toggleNewCampaignForm()" class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+        <i class="bi bi-plus-lg" style="font-size:0.75rem;"></i> New Campaign
+    </button>
+</div>
+
+<!-- Empty State -->
+<div id="emptyState" {% if campaigns %}style="display:none;"{% endif %} class="bg-white rounded-lg border border-dashed border-gray-300 p-12 text-center">
+    <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+        <i class="bi bi-megaphone text-gray-400" style="font-size:1.25rem;"></i>
+    </div>
+    <h3 class="text-sm font-semibold text-gray-900 mb-1">No campaigns yet</h3>
+    <p class="text-sm text-gray-500 mb-5">Create your first vaccination or health campaign to start outreach calls</p>
+    <button onclick="toggleNewCampaignForm()" class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+        <i class="bi bi-plus-lg" style="font-size:0.75rem;"></i> Create Campaign
+    </button>
+</div>
+
+<!-- Campaigns List Container -->
+<div id="campaignsList" {% if not campaigns %}style="display:none;"{% endif %}>
+    <div class="space-y-3">
+        {% for campaign in campaigns %}
+        <div class="bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 transition-all">
+            <div class="flex items-start justify-between">
+                <div style="flex:1;">
+                    <div class="flex items-center gap-2 mb-1">
+                        <h3 class="text-sm font-semibold text-gray-900">{{ campaign.name }}</h3>
+                        {% if campaign.is_active %}
+                            <span class="badge badge-green" style="font-size:10px;">Active</span>
+                        {% else %}
+                            <span class="badge badge-gray" style="font-size:10px;">Inactive</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-xs text-gray-500 mb-2">
+                        Campaign Type: <strong>{{ campaign.config.get('campaign_type', 'Unknown') | title }}</strong>
+                    </p>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:8px;">
+                        <div>
+                            <p style="font-size:10px; color:var(--t4); font-weight:600;">Daily Limit</p>
+                            <p style="font-size:13px; color:var(--t1); font-weight:600;">{{ campaign.config.get('daily_limit', '—') }}</p>
+                        </div>
+                        <div>
+                            <p style="font-size:10px; color:var(--t4); font-weight:600;">Start Date</p>
+                            <p style="font-size:13px; color:var(--t1); font-weight:600;">{{ campaign.config.get('start_date', '—') }}</p>
+                        </div>
+                        <div>
+                            <p style="font-size:10px; color:var(--t4); font-weight:600;">End Date</p>
+                            <p style="font-size:13px; color:var(--t1); font-weight:600;">{{ campaign.config.get('end_date', '—') }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-left:12px;">
+                    <button onclick="showToast('Edit coming in next update', 'info')" class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors" style="border:none; cursor:pointer; margin-bottom:6px; display:block;">Edit</button>
+                    <button onclick="showToast('Delete coming in next update', 'info')" class="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors" style="border:none; cursor:pointer;">Delete</button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- New Campaign Form (Hidden by default) -->
+<div id="newCampaignForm" style="display:none; margin-top:20px;">
+    <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-semibold text-gray-900">New Outreach Campaign</h3>
+            <button onclick="toggleNewCampaignForm()" class="text-gray-400 hover:text-gray-600 transition-colors" style="background:none; border:none; cursor:pointer; font-size:18px;">×</button>
+        </div>
+
+        <div class="space-y-4">
+            <!-- Campaign Name -->
+            <div>
+                <label for="campaignName" class="block text-xs font-medium text-gray-700 mb-2">Campaign Name <span class="text-red-500">*</span></label>
+                <input type="text" id="campaignName" placeholder="e.g., Flu Vaccine 2025" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+            </div>
+
+            <!-- Campaign Type -->
+            <div>
+                <label for="campaignType" class="block text-xs font-medium text-gray-700 mb-2">Campaign Type <span class="text-red-500">*</span></label>
+                <select id="campaignType" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC;">
+                    <option value="">Select campaign type</option>
+                    <option value="flu">Flu Vaccination</option>
+                    <option value="covid">COVID Booster</option>
+                    <option value="checkup">Routine Checkup Reminder</option>
+                    <option value="child">Child Vaccination Schedule</option>
+                    <option value="chronic">Chronic Disease Screening</option>
+                    <option value="awareness">General Health Awareness</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </div>
+
+            <!-- Campaign Script -->
+            <div>
+                <label for="campaignScript" class="block text-xs font-medium text-gray-700 mb-2">Campaign call script <span class="text-red-500">*</span></label>
+                <textarea id="campaignScript" rows="3" placeholder="Hello [Patient Name], this is [Clinic Name] calling to inform you about our [Campaign Name] program. We'd like to schedule an appointment for you..." class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC; font-family:system-ui;"></textarea>
+            </div>
+
+            <!-- Date Range -->
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label for="startDate" class="block text-xs font-medium text-gray-700 mb-2">Campaign start date <span class="text-red-500">*</span></label>
+                    <input type="date" id="startDate" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+                </div>
+                <div>
+                    <label for="endDate" class="block text-xs font-medium text-gray-700 mb-2">Campaign end date <span class="text-red-500">*</span></label>
+                    <input type="date" id="endDate" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+                </div>
+            </div>
+
+            <!-- Target Group -->
+            <div>
+                <label for="targetGroup" class="block text-xs font-medium text-gray-700 mb-2">Target patient group <span class="text-red-500">*</span></label>
+                <select id="targetGroup" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC;">
+                    <option value="">Select target group</option>
+                    <option value="all">All patients</option>
+                    <option value="60plus">Patients over 60</option>
+                    <option value="children">Children under 12</option>
+                    <option value="diabetic">Diabetic patients</option>
+                    <option value="custom">Custom list from HMS</option>
+                </select>
+            </div>
+
+            <!-- Daily Limit -->
+            <div>
+                <label for="dailyLimit" class="block text-xs font-medium text-gray-700 mb-2">Daily call limit <span class="text-red-500">*</span></label>
+                <input type="number" id="dailyLimit" value="50" min="1" max="1000" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+                <p class="text-xs text-gray-500 mt-1">Maximum calls to make per day</p>
+            </div>
+
+            <!-- Agent Selection -->
+            <div>
+                <label for="agentSelect4" class="block text-xs font-medium text-gray-700 mb-2">Assign AI Agent <span class="text-red-500">*</span></label>
+                <select id="agentSelect4" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC;">
+                    <option value="">-- Select an agent --</option>
+                    {% if agents %}
+                        {% for agent in agents %}
+                            <option value="{{ agent.id }}">{{ agent.name }}</option>
+                        {% endfor %}
+                    {% else %}
+                        <option value="" disabled>No agents configured yet</option>
+                    {% endif %}
+                </select>
+            </div>
+
+            <!-- Form Buttons -->
+            <div class="flex gap-3 justify-end border-t border-gray-100 pt-4">
+                <button onclick="toggleNewCampaignForm()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">Cancel</button>
+                <button onclick="createCampaign()" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors">Create Campaign</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div style="padding:12px 14px; background:#ECFDF5; border:1px solid #86EFAC; border-radius:8px; margin-top:20px; font-size:12px; color:#15803D;">
+    <i class="bi bi-check-circle" style="margin-right:6px;"></i>
+    Campaigns are ready to use! Patient lists are pulled from your HMS, and you can monitor campaign progress and response rates in real-time.
+</div>
+
+<script>
+function toggleNewCampaignForm() {
+    const form = document.getElementById('newCampaignForm');
+    const emptyState = document.getElementById('emptyState');
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+
+    if (form.style.display === 'block') {
+        emptyState.style.display = 'none';
+        document.getElementById('campaignName').focus();
+    }
+}
+
+async function createCampaign() {
+    const name = document.getElementById('campaignName').value;
+    const type = document.getElementById('campaignType').value;
+    const agent = document.getElementById('agentSelect4').value;
+
+    if (!name || !type || !agent) {
+        showToast('Please fill in all required fields', 'error');
+        return;
+    }
+
+    const data = {
+        agent_id: parseInt(agent),
+        campaign_name: name,
+        campaign_type: type,
+        campaign_script: document.getElementById('campaignScript').value,
+        start_date: document.getElementById('startDate').value,
+        end_date: document.getElementById('endDate').value,
+        target_group: document.getElementById('targetGroup').value,
+        daily_limit: parseInt(document.getElementById('dailyLimit').value),
+        post_call_webhook_url: '',
+    };
+
+    try {
+        const response = await fetch('/clinic/api/vaccination-campaign', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            showToast(result.error || 'Failed to create campaign', 'error');
+            return;
+        }
+
+        showToast(`Campaign "${name}" created successfully!`, 'success');
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Failed to create campaign', 'error');
+    }
+}
+
+function showToast(message, type = 'info') {
+    const colors = {
+        success: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+        error: 'bg-red-50 border-red-200 text-red-800',
+        info: 'bg-blue-50 border-blue-200 text-blue-800'
+    };
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 z-[60] px-4 py-3 rounded-lg border text-sm font-medium shadow-lg ${colors[type] || colors.info}`;
+    toast.innerHTML = `<i class="bi bi-check-circle-fill" style="margin-right:8px;"></i>${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+</script>
+
+{% endblock %}

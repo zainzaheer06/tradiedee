@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}WhatsApp Agents{% endblock %}
+
+{% block page_title %}WhatsApp Agents{% endblock %}
+
+{% block dashboard_content %}
+<!-- Header -->
+<div class="mb-8">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-900">WhatsApp Agents</h2>
+            <p class="text-gray-600 mt-1">Connect your AI agents to WhatsApp — {{ pagination.total if pagination else agents|length }} total</p>
+        </div>
+        <a href="{{ url_for('whatsapp.new_whatsapp_agent') }}" class="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold transition-colors btn-hover">
+            <i class="bi bi-plus-circle"></i> Create WhatsApp Agent
+        </a>
+    </div>
+</div>
+
+<!-- Agents Grid -->
+{% if agents %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for wa in agents %}
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
+        <!-- Card Header -->
+        <div class="bg-gradient-to-r from-green-500 to-emerald-600 p-4">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <h3 class="text-lg font-bold text-white truncate">{{ wa.name }}</h3>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-white/20 backdrop-blur-sm rounded text-xs text-white">
+                            <i class="bi bi-robot"></i>
+                            {{ wa.agent.name if wa.agent else 'No Agent' }}
+                        </span>
+                        {% if wa.status == 'active' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-green-300/30 backdrop-blur-sm rounded text-xs text-white">
+                            <span class="w-2 h-2 bg-green-300 rounded-full animate-pulse"></span> Active
+                        </span>
+                        {% elif wa.status == 'paused' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-yellow-300/30 backdrop-blur-sm rounded text-xs text-white">
+                            <span class="w-2 h-2 bg-yellow-300 rounded-full"></span> Paused
+                        </span>
+                        {% elif wa.status == 'error' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-red-300/30 backdrop-blur-sm rounded text-xs text-white">
+                            <span class="w-2 h-2 bg-red-300 rounded-full"></span> Error
+                        </span>
+                        {% elif wa.status == 'deploying' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-300/30 backdrop-blur-sm rounded text-xs text-white">
+                            <span class="w-2 h-2 bg-blue-300 rounded-full animate-pulse"></span> Deploying
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-300/30 backdrop-blur-sm rounded text-xs text-white">
+                            <span class="w-2 h-2 bg-gray-300 rounded-full"></span> Draft
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="flex items-center justify-center w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg">
+                    <i class="bi bi-whatsapp text-white text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card Body -->
+        <div class="p-4">
+            <!-- Features -->
+            <div class="flex items-center gap-3 mb-4">
+                <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-xs text-gray-600" title="Voice Responses">
+                    <i class="bi bi-mic{% if wa.enable_voice_response %}-fill text-green-600{% else %} text-gray-400{% endif %}"></i>
+                    Voice
+                </span>
+                <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-xs text-gray-600" title="Image Analysis" style="display:none">
+                    <i class="bi bi-image{% if wa.enable_image_analysis %}-fill text-green-600{% else %} text-gray-400{% endif %}"></i>
+                    Image
+                </span>
+                <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-xs text-gray-600" title="Document Analysis" style="display:none">
+                    <i class="bi bi-file-earmark-pdf{% if wa.enable_document_analysis %}-fill text-green-600{% else %} text-gray-400{% endif %}"></i>
+                    PDF
+                </span>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div class="bg-gray-50 rounded-lg p-3">
+                    <p class="text-xs text-gray-500">Messages</p>
+                    <p class="text-lg font-bold text-gray-900">{{ wa.total_messages }}</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-3">
+                    <p class="text-xs text-gray-500">Conversations</p>
+                    <p class="text-lg font-bold text-gray-900">{{ wa.total_conversations }}</p>
+                </div>
+            </div>
+
+            <!-- Phone Number & Created -->
+            <div class="text-xs text-gray-500 mb-4">
+                {% if wa.whatsapp_phone_number %}
+                <p class="mb-1"><i class="bi bi-phone"></i> {{ wa.whatsapp_phone_number }}</p>
+                {% endif %}
+                <p><i class="bi bi-clock"></i> Created {{ wa.created_at.strftime('%b %d, %Y') }}</p>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex gap-2">
+                <a href="{{ url_for('whatsapp.view_whatsapp_agent', agent_id=wa.id) }}"
+                   class="flex-1 text-center px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-sm transition-colors">
+                    <i class="bi bi-eye"></i> View
+                </a>
+                <a href="{{ url_for('whatsapp.edit_whatsapp_agent', agent_id=wa.id) }}"
+                   class="flex-1 text-center px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-sm transition-colors">
+                    <i class="bi bi-pencil"></i> Edit
+                </a>
+                {% if wa.status == 'draft' or wa.status == 'error' %}
+                <form method="POST" action="{{ url_for('whatsapp.deploy_whatsapp_agent', agent_id=wa.id) }}" class="flex-1">
+                    <button type="submit" class="w-full px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm transition-colors">
+                        <i class="bi bi-rocket"></i> Deploy
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if pagination and pagination.pages > 1 %}
+<div class="mt-8 flex justify-center">
+    <nav class="inline-flex items-center gap-1">
+        {% if pagination.has_prev %}
+        <a href="{{ url_for('whatsapp.whatsapp_agents_list', page=pagination.prev_num) }}" class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm transition-colors">Previous</a>
+        {% endif %}
+        {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if p %}
+                <a href="{{ url_for('whatsapp.whatsapp_agents_list', page=p) }}"
+                   class="px-4 py-2 {% if p == pagination.page %}bg-green-600 text-white{% else %}bg-white border border-gray-300 text-gray-700 hover:bg-gray-50{% endif %} rounded-lg text-sm transition-colors">{{ p }}</a>
+            {% else %}
+                <span class="px-2 text-gray-400">...</span>
+            {% endif %}
+        {% endfor %}
+        {% if pagination.has_next %}
+        <a href="{{ url_for('whatsapp.whatsapp_agents_list', page=pagination.next_num) }}" class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm transition-colors">Next</a>
+        {% endif %}
+    </nav>
+</div>
+{% endif %}
+
+{% else %}
+<!-- Empty State -->
+<div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+    <div class="flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mx-auto mb-6">
+        <i class="bi bi-whatsapp text-green-600 text-3xl"></i>
+    </div>
+    <h3 class="text-xl font-bold text-gray-900 mb-2">No WhatsApp Agents Yet</h3>
+    <p class="text-gray-600 mb-6 max-w-md mx-auto">Connect your AI agents to WhatsApp and let them handle customer conversations automatically.</p>
+    <a href="{{ url_for('whatsapp.new_whatsapp_agent') }}" class="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold transition-colors">
+        <i class="bi bi-plus-circle"></i> Create Your First WhatsApp Agent
+    </a>
+</div>
+{% endif %}
+{% endblock %}

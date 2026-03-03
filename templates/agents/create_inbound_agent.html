@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% block title %}Create Inbound Agent — Tradiedee{% endblock %}
+
+{% block dashboard_content %}
+
+<div style="margin-bottom:20px;">
+    <a href="{{ url_for('inbound.inbound_agents') }}" class="btn btn-ghost btn-sm" style="padding-left:0;">
+        <i class="bi bi-arrow-left" style="font-size:12px;"></i> Back to Inbound Agents
+    </a>
+</div>
+
+<div style="max-width:620px; margin:0 auto;">
+    <div class="ph" style="margin-bottom:20px;">
+        <div>
+            <h1 class="ph-title">Create Inbound Agent</h1>
+            <p class="ph-sub">Configure an agent to handle incoming phone calls on a number</p>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('inbound.create_inbound_agent') }}" style="display:flex; flex-direction:column; gap:16px;">
+
+        <!-- Main config card -->
+        <div class="card">
+            <div style="padding:14px 20px; border-bottom:1px solid var(--card-border); display:flex; align-items:center; gap:10px;">
+                <div style="width:34px; height:34px; background:#EEF2FF; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <i class="bi bi-telephone-inbound" style="font-size:15px; color:#4F46E5;"></i>
+                </div>
+                <div>
+                    <p style="font-size:14px; font-weight:600; color:var(--t1);">Inbound Configuration</p>
+                    <p style="font-size:12px; color:var(--t4);">Assign a phone number to an AI agent</p>
+                </div>
+            </div>
+
+            <div style="padding:20px 24px; display:flex; flex-direction:column; gap:18px;">
+
+                <!-- Name -->
+                <div>
+                    <label for="name" style="display:block; font-size:12.5px; font-weight:600; color:var(--t2); margin-bottom:6px;">
+                        Configuration Name <span style="color:var(--red);">*</span>
+                    </label>
+                    <input type="text" id="name" name="name" required class="inp"
+                           placeholder="e.g., Main Office Line, Support Line"
+                           value="{{ form_data.name if form_data else '' }}">
+                    <p style="font-size:11.5px; color:var(--t4); margin-top:5px;">A friendly label for this inbound line</p>
+                </div>
+
+                <!-- Phone Number -->
+                <div>
+                    <label for="phone_number" style="display:block; font-size:12.5px; font-weight:600; color:var(--t2); margin-bottom:6px;">
+                        Phone Number <span style="color:var(--red);">*</span>
+                    </label>
+                    <div style="position:relative;">
+                        <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); pointer-events:none;">
+                            <i class="bi bi-telephone-fill" style="font-size:13px; color:var(--t4);"></i>
+                        </span>
+                        <input type="text" id="phone_number" name="phone_number" required class="inp"
+                               style="padding-left:36px; font-family:monospace;"
+                               placeholder="966512345678"
+                               value="{{ form_data.phone_number if form_data else '' }}">
+                    </div>
+                    <div style="margin-top:6px; display:flex; align-items:center; gap:6px; padding:7px 10px; background:#FFFBEB; border:1px solid #FDE68A; border-radius:6px;">
+                        <i class="bi bi-exclamation-triangle" style="font-size:12px; color:#D97706;"></i>
+                        <p style="font-size:12px; color:#92400E;">Each phone number can only be configured once</p>
+                    </div>
+                </div>
+
+                <!-- Agent -->
+                <div>
+                    <label for="agent_id" style="display:block; font-size:12.5px; font-weight:600; color:var(--t2); margin-bottom:6px;">
+                        Select Agent <span style="color:var(--red);">*</span>
+                    </label>
+                    <select id="agent_id" name="agent_id" required class="inp">
+                        <option value="">Choose an agent...</option>
+                        {% for agent in agents %}
+                        <option value="{{ agent.id }}"
+                            {% if form_data and form_data.agent_id == agent.id|string %}selected{% endif %}>
+                            {{ agent.name }} ({{ agent.voice_name }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <p style="font-size:11.5px; color:var(--t4); margin-top:5px;">Changes to the agent automatically apply to this inbound line</p>
+
+                    {% if not agents %}
+                    <div style="margin-top:10px; padding:10px 14px; background:#FFFBEB; border:1px solid #FDE68A; border-radius:8px; display:flex; align-items:flex-start; gap:8px;">
+                        <i class="bi bi-exclamation-triangle" style="color:#D97706; font-size:13px; margin-top:1px; flex-shrink:0;"></i>
+                        <p style="font-size:12.5px; color:#92400E;">
+                            No agents found.
+                            <a href="{{ url_for('agents.new_agent_form') }}" class="link" style="color:#78350F; font-weight:600;">Create one first</a>.
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Info card -->
+        <div style="padding:14px 16px; background:#F0FDF4; border:1px solid #A7F3D0; border-radius:10px; display:flex; align-items:flex-start; gap:12px;">
+            <div style="width:32px; height:32px; background:#DCFCE7; border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;">
+                <i class="bi bi-link-45deg" style="font-size:15px; color:#059669;"></i>
+            </div>
+            <div>
+                <p style="font-size:13px; font-weight:600; color:#065F46; margin-bottom:3px;">Smart Linking</p>
+                <p style="font-size:12.5px; color:#047857; line-height:1.6;">This creates a link to an existing agent — no duplication. When you update the agent's prompt, greeting, or voice, it automatically applies to this inbound line.</p>
+            </div>
+        </div>
+
+        <!-- Buttons -->
+        <div style="display:flex; gap:10px;">
+            <button type="submit" class="btn btn-primary" style="flex:1; justify-content:center; padding:10px;">
+                <i class="bi bi-plus-circle" style="font-size:13px;"></i> Create Inbound Agent
+            </button>
+            <a href="{{ url_for('inbound.inbound_agents') }}" class="btn btn-ghost" style="padding:10px 20px;">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

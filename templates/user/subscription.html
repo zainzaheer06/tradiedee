@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% block title %}Account — Tradiedee{% endblock %}
+
+{% block dashboard_content %}
+{% set subscription_days = ((datetime.utcnow() - user.subscription_start_date).days if user.subscription_start_date else 0) %}
+{% set normalized_subscription_days = subscription_days if subscription_days >= 0 else 0 %}
+{% set account_age_days = (datetime.utcnow() - user.created_at).days %}
+{% set normalized_account_age_days = account_age_days if account_age_days >= 0 else 0 %}
+{% set total_minutes = (user.minutes_used or 0) + user.minutes_balance %}
+{% set used_pct = ((user.minutes_used or 0) / total_minutes * 100)|round(1) if total_minutes > 0 else 0 %}
+
+<div class="ph">
+    <div>
+        <h1 class="ph-title">Account</h1>
+        <p class="ph-sub">Subscription details and usage statistics</p>
+    </div>
+</div>
+
+<!-- Stats row -->
+<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:24px;">
+    <div class="stat">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+                <p class="stat-label">Account Started</p>
+                <p class="stat-val" style="font-size:20px;">{{ user.subscription_start_date.strftime('%b %d, %Y') if user.subscription_start_date else 'N/A' }}</p>
+                <p class="stat-note">{{ normalized_subscription_days }} days ago</p>
+            </div>
+            <div class="stat-icon" style="background:#ECFDF5;">
+                <i class="bi bi-calendar-check" style="color:#059669; font-size:16px;"></i>
+            </div>
+        </div>
+    </div>
+    <div class="stat">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+                <p class="stat-label">Minutes Balance</p>
+                <p class="stat-val">{{ user.minutes_balance }}</p>
+                <p class="stat-note" style="{% if user.minutes_balance < 100 %}color:#D97706;{% endif %}">
+                    {% if user.minutes_balance < 100 %}<i class="bi bi-exclamation-triangle" style="font-size:11px;"></i> Low — top up soon
+                    {% else %}Available minutes{% endif %}
+                </p>
+            </div>
+            <div class="stat-icon" style="background:#EFF6FF;">
+                <i class="bi bi-hourglass-split" style="color:#2563EB; font-size:16px;"></i>
+            </div>
+        </div>
+    </div>
+    <div class="stat">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+                <p class="stat-label">Total Allocated</p>
+                <p class="stat-val">{{ total_minutes }}</p>
+                <p class="stat-note">{{ used_pct }}% used</p>
+            </div>
+            <div class="stat-icon" style="background:#EEF2FF;">
+                <i class="bi bi-gift" style="color:#4F46E5; font-size:16px;"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Usage card -->
+<div class="card" style="margin-bottom:20px;">
+    <div style="padding:14px 20px; border-bottom:1px solid var(--card-border);">
+        <p style="font-size:14px; font-weight:600; color:var(--t1);">Usage Breakdown</p>
+    </div>
+    <div style="padding:20px 24px;">
+        <!-- Usage rows -->
+        <div style="display:flex; flex-direction:column; gap:0;">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--card-border);">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:32px; height:32px; border-radius:8px; background:#FEF2F2; display:flex; align-items:center; justify-content:center;">
+                        <i class="bi bi-graph-down" style="color:#DC2626; font-size:13px;"></i>
+                    </div>
+                    <span style="font-size:13.5px; color:var(--t2);">Minutes Used</span>
+                </div>
+                <span style="font-size:15px; font-weight:600; color:var(--t1);">{{ user.minutes_used or 0 }} min</span>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--card-border);">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:32px; height:32px; border-radius:8px; background:#ECFDF5; display:flex; align-items:center; justify-content:center;">
+                        <i class="bi bi-graph-up" style="color:#059669; font-size:13px;"></i>
+                    </div>
+                    <span style="font-size:13.5px; color:var(--t2);">Minutes Remaining</span>
+                </div>
+                <span style="font-size:15px; font-weight:600; color:var(--t1);">{{ user.minutes_balance }} min</span>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 0;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:32px; height:32px; border-radius:8px; background:#EEF2FF; display:flex; align-items:center; justify-content:center;">
+                        <i class="bi bi-calculator" style="color:#4F46E5; font-size:13px;"></i>
+                    </div>
+                    <span style="font-size:13.5px; font-weight:600; color:var(--t1);">Total Allocated</span>
+                </div>
+                <span style="font-size:16px; font-weight:700; color:#4F46E5;">{{ total_minutes }} min</span>
+            </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div style="margin-top:20px; padding-top:20px; border-top:1px solid var(--card-border);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <span style="font-size:13px; font-weight:600; color:var(--t2);">Overall Usage</span>
+                <span style="font-size:12.5px; color:var(--t3);">{{ user.minutes_used or 0 }} of {{ total_minutes }} minutes</span>
+            </div>
+            <div style="height:8px; background:#F3F4F6; border-radius:4px; overflow:hidden;">
+                <div style="height:100%; width:{{ used_pct }}%; background:#4F46E5; border-radius:4px; transition:width 0.3s;"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:6px;">
+                <span style="font-size:11px; color:var(--t4);">{{ used_pct }}% used</span>
+                <span style="font-size:11px; color:var(--t4);">{{ 100 - used_pct|round(1) }}% remaining</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Two-col: Account info + Quick stats -->
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
+    <div class="card">
+        <div style="padding:14px 20px; border-bottom:1px solid var(--card-border); display:flex; align-items:center; gap:8px;">
+            <i class="bi bi-person-circle" style="font-size:14px; color:var(--t3);"></i>
+            <p style="font-size:14px; font-weight:600; color:var(--t1);">Account Information</p>
+        </div>
+        <div style="padding:6px 0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 20px; border-bottom:1px solid var(--card-border);">
+                <span style="font-size:13px; color:var(--t3);">Username</span>
+                <span style="font-size:13px; font-weight:600; color:var(--t1);">{{ user.username }}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 20px; border-bottom:1px solid var(--card-border);">
+                <span style="font-size:13px; color:var(--t3);">Email</span>
+                <span style="font-size:13px; font-weight:600; color:var(--t1);">{{ user.email }}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 20px;">
+                <span style="font-size:13px; color:var(--t3);">Account Status</span>
+                <span class="badge badge-green"><i class="bi bi-check-circle-fill" style="font-size:10px;"></i> Active</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div style="padding:14px 20px; border-bottom:1px solid var(--card-border); display:flex; align-items:center; gap:8px;">
+            <i class="bi bi-bar-chart" style="font-size:14px; color:var(--t3);"></i>
+            <p style="font-size:14px; font-weight:600; color:var(--t1);">Quick Stats</p>
+        </div>
+        <div style="padding:6px 0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 20px; border-bottom:1px solid var(--card-border);">
+                <span style="font-size:13px; color:var(--t3);">Total Agents</span>
+                <span style="font-size:13px; font-weight:600; color:var(--t1);">{{ user.agents|length }}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 20px; border-bottom:1px solid var(--card-border);">
+                <span style="font-size:13px; color:var(--t3);">Total Calls</span>
+                <span style="font-size:13px; font-weight:600; color:var(--t1);">{{ user.call_logs|length }}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 20px; border-bottom:1px solid var(--card-border);">
+                <span style="font-size:13px; color:var(--t3);">Member Since</span>
+                <span style="font-size:13px; font-weight:600; color:var(--t1);">{{ user.created_at.strftime('%b %Y') }}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 20px;">
+                <span style="font-size:13px; color:var(--t3);">Account Age</span>
+                <span style="font-size:13px; font-weight:600; color:var(--t1);">{{ normalized_account_age_days }} days</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SIP Config -->
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+    <!-- Outbound -->
+    <div class="card">
+        <div style="padding:14px 20px; border-bottom:1px solid var(--card-border); display:flex; align-items:center; gap:8px;">
+            <i class="bi bi-telephone-outbound" style="font-size:14px; color:var(--t3);"></i>
+            <p style="font-size:14px; font-weight:600; color:var(--t1);">Outbound Configuration</p>
+        </div>
+        {% if user.sip_configured %}
+        <div style="padding:6px 0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 20px; border-bottom:1px solid var(--card-border);">
+                <span style="font-size:13px; color:var(--t3);">Status</span>
+                <span class="badge badge-green"><i class="bi bi-check-circle-fill" style="font-size:10px;"></i> Configured</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 20px;">
+                <span style="font-size:13px; color:var(--t3);">Phone Number</span>
+                <span style="font-size:13px; font-weight:600; color:var(--t1); font-family:monospace;">{{ user.outbound_phone_number or '—' }}</span>
+            </div>
+            {% if user.sip_notes %}
+            <div style="margin:12px 20px; padding:10px 14px; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:7px;">
+                <p style="font-size:12px; color:#1D4ED8;"><i class="bi bi-info-circle"></i> {{ user.sip_notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="empty">
+            <div class="empty-icon">
+                <i class="bi bi-telephone-x" style="font-size:20px; color:#9CA3AF;"></i>
+            </div>
+            <p style="font-size:13.5px; font-weight:600; color:var(--t1); margin-bottom:4px;">Not configured</p>
+            <p style="font-size:12.5px; color:var(--t3);">Contact admin to set up outbound calling</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Inbound -->
+    <div class="card">
+        <div style="padding:14px 20px; border-bottom:1px solid var(--card-border); display:flex; align-items:center; gap:8px;">
+            <i class="bi bi-telephone-inbound" style="font-size:14px; color:var(--t3);"></i>
+            <p style="font-size:14px; font-weight:600; color:var(--t1);">Inbound Configuration</p>
+        </div>
+        {% if user.inbound_configurations %}
+        <div style="padding:6px 0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 20px; border-bottom:1px solid var(--card-border);">
+                <span style="font-size:13px; color:var(--t3);">Status</span>
+                <span class="badge badge-green"><i class="bi bi-check-circle-fill" style="font-size:10px;"></i> {{ user.inbound_configurations|length }} {{ 'number' if user.inbound_configurations|length == 1 else 'numbers' }}</span>
+            </div>
+            {% for config in user.inbound_configurations %}
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:11px 20px; {% if not loop.last %}border-bottom:1px solid var(--card-border);{% endif %}">
+                <div>
+                    <p style="font-size:13px; font-weight:600; color:var(--t1); font-family:monospace;">{{ config.phone_number }}</p>
+                    <p style="font-size:11.5px; color:var(--t4);">{{ config.name }}</p>
+                </div>
+                <span class="badge badge-indigo">
+                    <i class="bi bi-robot" style="font-size:10px;"></i> {{ config.agent.name if config.agent else 'Unlinked' }}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty">
+            <div class="empty-icon">
+                <i class="bi bi-telephone-x" style="font-size:20px; color:#9CA3AF;"></i>
+            </div>
+            <p style="font-size:13.5px; font-weight:600; color:var(--t1); margin-bottom:4px;">Not configured</p>
+            <p style="font-size:12.5px; color:var(--t3);">Contact admin to set up inbound numbers</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

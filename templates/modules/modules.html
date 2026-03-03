@@ -1,0 +1,265 @@
+<!-- templates/modules/modules.html -->
+{% extends "base.html" %}
+
+{% block title %}Platform Modules - Tradiedee{% endblock %}
+
+{% block page_title %}Platform Modules{% endblock %}
+
+{% block dashboard_content %}
+<div class="max-w-6xl mx-auto py-10 px-4">
+
+    <!-- Header -->
+    <div class="text-center mb-10">
+        <h1 class="text-4xl font-bold text-gray-900 mb-3">Built Modular. Activate What You Need.</h1>
+        <p class="text-gray-500 text-lg max-w-2xl mx-auto">Every feature below is independently toggleable. Start with what matters now — expand as you grow.</p>
+        <div class="flex items-center justify-center gap-6 mt-5">
+            <span class="flex items-center gap-2 text-sm text-gray-600">
+                <span class="inline-block w-2.5 h-2.5 rounded-full bg-green-500"></span> Active
+            </span>
+            <span class="flex items-center gap-2 text-sm text-gray-600">
+                <span class="inline-block w-2.5 h-2.5 rounded-full bg-indigo-500"></span> Available on Request
+            </span>
+        </div>
+    </div>
+
+    <!-- SECTION: Voice Features -->
+    <div class="mb-10">
+        <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4 pl-1">Voice Features</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+            <!-- Transfer to Agent -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                        <i class="bi bi-arrow-left-right text-indigo-600 text-lg"></i>
+                    </div>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 inline-block"></span>
+                        Available on Request
+                    </span>
+                </div>
+                <h3 class="font-semibold text-gray-900 mb-1">Transfer to Agent</h3>
+                <p class="text-sm text-gray-500">Route the call to another AI agent mid-conversation based on topic or intent.</p>
+            </div>
+
+            <!-- Transfer to Human -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                        <i class="bi bi-person-lines-fill text-indigo-600 text-lg"></i>
+                    </div>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 inline-block"></span>
+                        Available on Request
+                    </span>
+                </div>
+                <h3 class="font-semibold text-gray-900 mb-1">Transfer to Human</h3>
+                <p class="text-sm text-gray-500">Seamlessly hand off the call to a live human agent when the situation demands it.</p>
+            </div>
+
+            <!-- Background Voice -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                        <i class="bi bi-soundwave text-indigo-600 text-lg"></i>
+                    </div>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 inline-block"></span>
+                        Available on Request
+                    </span>
+                </div>
+                <h3 class="font-semibold text-gray-900 mb-1">Background Voice</h3>
+                <p class="text-sm text-gray-500">Add ambient background sound (office, call center) to make AI calls feel more natural.</p>
+            </div>
+
+            <!-- DTMF -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                        <i class="bi bi-telephone-fill text-indigo-600 text-lg"></i>
+                    </div>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 inline-block"></span>
+                        Available on Request
+                    </span>
+                </div>
+                <h3 class="font-semibold text-gray-900 mb-1">DTMF / Keypad Input</h3>
+                <p class="text-sm text-gray-500">Let callers navigate IVR menus and confirm choices using their phone keypad.</p>
+            </div>
+
+            <!-- Voice Cloning -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                        <i class="bi bi-mic-fill text-indigo-600 text-lg"></i>
+                    </div>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 inline-block"></span>
+                        Available on Request
+                    </span>
+                </div>
+                <h3 class="font-semibold text-gray-900 mb-1">Voice Cloning</h3>
+                <p class="text-sm text-gray-500">Use a custom cloned voice for your AI agent — branded, consistent, and uniquely yours.</p>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- SECTION: Booking & Support -->
+    <div class="mb-10">
+        <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4 pl-1">Booking & Support</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+            <!-- Appointment Booking -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                        <i class="bi bi-calendar-check text-indigo-600 text-lg"></i>
+                    </div>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 inline-block"></span>
+                        Available on Request
+                    </span>
+                </div>
+                <h3 class="font-semibold text-gray-900 mb-1">Appointment Booking</h3>
+                <p class="text-sm text-gray-500">AI agent schedules, reschedules, and confirms appointments directly during the call.</p>
+            </div>
+
+            <!-- Ticketing System -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                        <i class="bi bi-ticket-perforated text-indigo-600 text-lg"></i>
+                    </div>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 inline-block"></span>
+                        Available on Request
+                    </span>
+                </div>
+                <h3 class="font-semibold text-gray-900 mb-1">Ticketing System</h3>
+                <p class="text-sm text-gray-500">Auto-create and assign support tickets from voice or chat interactions with full context.</p>
+            </div>
+
+            <!-- Auto Follow-up -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                        <i class="bi bi-send-check text-indigo-600 text-lg"></i>
+                    </div>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 inline-block"></span>
+                        Available on Request
+                    </span>
+                </div>
+                <h3 class="font-semibold text-gray-900 mb-1">Auto Follow-up</h3>
+                <p class="text-sm text-gray-500">Automatically send a follow-up email or WhatsApp message after a call based on interest level.</p>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- SECTION: Social & Messaging Channels -->
+    <div class="mb-10">
+        <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4 pl-1">Social & Messaging Channels</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+            <!-- WhatsApp AI Agent — ACTIVE -->
+            <div class="bg-white rounded-2xl border border-green-200 shadow-sm p-5 hover:shadow-md transition-shadow ring-1 ring-green-100">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
+                        <i class="bi bi-whatsapp text-green-600 text-lg"></i>
+                    </div>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block animate-pulse"></span>
+                        Active
+                    </span>
+                </div>
+                <h3 class="font-semibold text-gray-900 mb-1">WhatsApp AI Agent</h3>
+                <p class="text-sm text-gray-500">Deploy your AI agent directly on WhatsApp — handle inquiries, qualify leads, and respond 24/7.</p>
+            </div>
+
+            <!-- Telegram AI Agent -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                        <i class="bi bi-telegram text-indigo-600 text-lg"></i>
+                    </div>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 inline-block"></span>
+                        Available on Request
+                    </span>
+                </div>
+                <h3 class="font-semibold text-gray-900 mb-1">Telegram AI Agent</h3>
+                <p class="text-sm text-gray-500">Connect your AI agent to Telegram bots — fully automated conversations at scale.</p>
+            </div>
+
+            <!-- SMS Automation -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                        <i class="bi bi-chat-dots text-indigo-600 text-lg"></i>
+                    </div>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 inline-block"></span>
+                        Available on Request
+                    </span>
+                </div>
+                <h3 class="font-semibold text-gray-900 mb-1">SMS Automation</h3>
+                <p class="text-sm text-gray-500">Send and receive AI-driven SMS messages — confirmations, reminders, and two-way conversations.</p>
+            </div>
+
+            <!-- X.com AI Agent -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                        <i class="bi bi-twitter-x text-indigo-600 text-lg"></i>
+                    </div>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 inline-block"></span>
+                        Available on Request
+                    </span>
+                </div>
+                <h3 class="font-semibold text-gray-900 mb-1">X.com AI Agent</h3>
+                <p class="text-sm text-gray-500">Auto-respond to DMs and mentions on X with a context-aware AI agent.</p>
+            </div>
+
+            <!-- Instagram AI Agent -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                        <i class="bi bi-instagram text-indigo-600 text-lg"></i>
+                    </div>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 inline-block"></span>
+                        Available on Request
+                    </span>
+                </div>
+                <h3 class="font-semibold text-gray-900 mb-1">Instagram AI Agent</h3>
+                <p class="text-sm text-gray-500">Handle Instagram DMs and comments automatically with AI — convert followers to leads.</p>
+            </div>
+
+            <!-- Email -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                        <i class="bi bi-envelope-at text-indigo-600 text-lg"></i>
+                    </div>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 inline-block"></span>
+                        Available on Request
+                    </span>
+                </div>
+                <h3 class="font-semibold text-gray-900 mb-1">Email AI Agent</h3>
+                <p class="text-sm text-gray-500">AI reads, classifies, and responds to inbound emails — fully automated inbox management.</p>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Footer note -->
+    <div class="text-center mt-4">
+        <p class="text-sm text-gray-400">All modules are developed and maintained by Tradiedee. Contact your account manager to activate any module.</p>
+    </div>
+
+</div>
+{% endblock %}

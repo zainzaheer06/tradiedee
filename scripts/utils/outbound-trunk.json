@@ -1,0 +1,12 @@
+{
+    "trunk": {
+        "name": "Saudi Arabia ExaCall SIP Trunk v3",
+        "address": "2912.sip.exacall.com:5760",
+        "transport": "SIP_TRANSPORT_UDP",
+        "numbers": [
+            "966115101854"
+        ],
+        "auth_username": "2912919101",
+        "auth_password": "9UFaxJqQqkUEEe7akHog"
+    }
+}

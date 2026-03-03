@@ -1,0 +1,402 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block page_title %}Admin Dashboard{% endblock %}
+
+{% block dashboard_content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">Admin Dashboard 🛡️</h1>
+    <p class="text-gray-600 mt-2">Manage users, approvals, and platform statistics</p>
+</div>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Total Users -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6 card-hover">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-lg">
+                <i class="bi bi-people text-purple-600 text-lg"></i>
+            </div>
+            <span class="text-xs font-medium text-gray-500">Users</span>
+        </div>
+        <p class="text-gray-600 text-sm mb-1">Total Users</p>
+        <p class="text-3xl font-bold text-gray-900">{{ users|length }}</p>
+    </div>
+
+    <!-- Pending Approval -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6 card-hover">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-center w-12 h-12 bg-amber-100 rounded-lg">
+                <i class="bi bi-hourglass-split text-amber-600 text-lg"></i>
+            </div>
+            <span class="text-xs font-medium text-gray-500">Pending</span>
+        </div>
+        <p class="text-gray-600 text-sm mb-1">Pending Approval</p>
+        <p class="text-3xl font-bold text-gray-900">{{ pending_users|length }}</p>
+    </div>
+
+    <!-- Total Calls -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6 card-hover">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-center w-12 h-12 bg-green-100 rounded-lg">
+                <i class="bi bi-telephone text-green-600 text-lg"></i>
+            </div>
+            <span class="text-xs font-medium text-gray-500">Calls</span>
+        </div>
+        <p class="text-gray-600 text-sm mb-1">Total Calls</p>
+        <p class="text-3xl font-bold text-gray-900">{{ total_calls }}</p>
+    </div>
+
+    <!-- Total Minutes -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6 card-hover">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-center w-12 h-12 bg-red-100 rounded-lg">
+                <i class="bi bi-clock text-red-600 text-lg"></i>
+            </div>
+            <span class="text-xs font-medium text-gray-500">Minutes</span>
+        </div>
+        <p class="text-gray-600 text-sm mb-1">Total Minutes Used</p>
+        <p class="text-3xl font-bold text-gray-900">{{ total_minutes }}</p>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="mb-8">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Outbound Trunks -->
+        <div class="bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-xl p-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center justify-center w-14 h-14 bg-indigo-100 rounded-xl">
+                        <i class="bi bi-diagram-3 text-indigo-600 text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">Outbound Trunks</h3>
+                        <p class="text-sm text-gray-600">Configure SIP trunks for users</p>
+                    </div>
+                </div>
+                <a href="{{ url_for('core.trunk_management') }}"
+                   class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors shadow-sm">
+                    <i class="bi bi-gear"></i>
+                    Manage
+                </a>
+            </div>
+        </div>
+
+        <!-- Inbound Trunks -->
+        <div class="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-xl p-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center justify-center w-14 h-14 bg-blue-100 rounded-xl">
+                        <i class="bi bi-telephone-inbound text-blue-600 text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">Inbound Trunks</h3>
+                        <p class="text-sm text-gray-600">Configure trunks for agents</p>
+                    </div>
+                </div>
+                <a href="{{ url_for('core.inbound_trunk_management') }}"
+                   class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors shadow-sm">
+                    <i class="bi bi-gear"></i>
+                    Manage
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pending Approvals Section -->
+{% if pending_users %}
+<div class="mb-8">
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <!-- Header -->
+        <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-orange-50">
+            <div class="flex items-center gap-3">
+                <i class="bi bi-hourglass-split text-amber-600 text-lg"></i>
+                <h2 class="text-lg font-bold text-gray-900">Pending Approvals</h2>
+                <span class="ml-auto bg-amber-600 text-white text-xs font-bold px-2 py-1 rounded">{{ pending_users|length }}</span>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-gray-200 bg-gray-50">
+                        <th class="text-left py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">User ID</th>
+                        <th class="text-left py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Username</th>
+                        <th class="text-left py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</th>
+                        <th class="text-left py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Joined</th>
+                        <th class="text-right py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in pending_users %}
+                    <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                        <td class="py-3 px-6">
+                            <span class="text-sm font-mono text-gray-600">#{{ user.id }}</span>
+                        </td>
+                        <td class="py-3 px-6">
+                            <span class="font-medium text-gray-900">{{ user.username }}</span>
+                        </td>
+                        <td class="py-3 px-6">
+                            <span class="text-sm text-gray-600">{{ user.email }}</span>
+                        </td>
+                        <td class="py-3 px-6">
+                            <span class="text-sm text-gray-600">{{ user.created_at.strftime('%b %d, %Y') }}</span>
+                        </td>
+                        <td class="py-3 px-6 text-right">
+                            <a href="{{ url_for('core.approve_user', user_id=user.id) }}" class="inline-flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg font-medium transition-colors text-sm">
+                                <i class="bi bi-check-circle"></i> Approve
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- All Users Section -->
+<div>
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <!-- Header -->
+        <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center gap-3">
+                <i class="bi bi-people text-indigo-600 text-lg"></i>
+                <h2 class="text-lg font-bold text-gray-900">All Users</h2>
+                <span class="ml-auto text-xs font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{{ users|length }}</span>
+            </div>
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="hidden lg:block">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-200 bg-gray-50">
+                            <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">ID</th>
+                            <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">User</th>
+                            <th class="text-center py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Minutes</th>
+                            <th class="text-center py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                            <th class="text-center py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Stats</th>
+                            <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Joined</th>
+                            <th class="text-right py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                            <td class="py-4 px-4">
+                                <span class="text-sm font-mono text-gray-600">#{{ user.id }}</span>
+                            </td>
+                            <td class="py-4 px-4">
+                                <div>
+                                    <div class="font-medium text-gray-900">{{ user.username }}</div>
+                                    <div class="text-sm text-gray-500">{{ user.email }}</div>
+                                </div>
+                            </td>
+                            <td class="py-4 px-4 text-center">
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                    {{ user.minutes_balance }} min
+                                </span>
+                            </td>
+                            <td class="py-4 px-4 text-center">
+                                {% if user.is_approved %}
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                    Approved
+                                </span>
+                                {% else %}
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                    Pending
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="py-4 px-4 text-center">
+                                <div class="flex justify-center space-x-4 text-sm">
+                                    <span class="text-gray-900">{{ user.agents|length }} agents</span>
+                                    <span class="text-gray-500">•</span>
+                                    <span class="text-gray-900">{{ user.call_logs|length }} calls</span>
+                                </div>
+                            </td>
+                            <td class="py-4 px-4">
+                                <span class="text-sm text-gray-600">{{ user.created_at.strftime('%b %d, %Y') }}</span>
+                            </td>
+                            <td class="py-4 px-4 text-right">
+                                <button type="button" 
+                                        class="inline-flex items-center gap-2 px-3 py-2 bg-indigo-100 text-indigo-600 hover:bg-indigo-200 rounded-lg font-medium transition-colors text-sm"
+                                        onclick="openAddMinutesModal({{ user.id }}, '{{ user.username }}', '{{ user.email }}', {{ user.minutes_balance }})">
+                                    <i class="bi bi-plus-circle"></i>
+                                    <span class="hidden sm:inline">Add Minutes</span>
+                                    <span class="sm:hidden">Add</span>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Mobile Card View -->
+        <div class="lg:hidden">
+            <div class="space-y-4 p-4">
+                {% for user in users %}
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-sm font-medium text-gray-900 truncate">{{ user.username }}</h3>
+                            <p class="text-sm text-gray-500 truncate">{{ user.email }}</p>
+                            <p class="text-xs text-gray-400 mt-1">ID: #{{ user.id }}</p>
+                        </div>
+                        <div class="ml-3">
+                            {% if user.is_approved %}
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                Approved
+                            </span>
+                            {% else %}
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                Pending
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-4 mb-3 text-center">
+                        <div>
+                            <div class="text-sm font-semibold text-gray-900">{{ user.minutes_balance }}</div>
+                            <div class="text-xs text-gray-500">Minutes</div>
+                        </div>
+                        <div>
+                            <div class="text-sm font-semibold text-gray-900">{{ user.agents|length }}</div>
+                            <div class="text-xs text-gray-500">Agents</div>
+                        </div>
+                        <div>
+                            <div class="text-sm font-semibold text-gray-900">{{ user.call_logs|length }}</div>
+                            <div class="text-xs text-gray-500">Calls</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-gray-500">Joined {{ user.created_at.strftime('%b %d, %Y') }}</span>
+                        <button type="button" 
+                                class="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-600 hover:bg-indigo-200 rounded-lg font-medium transition-colors text-sm"
+                                onclick="openAddMinutesModal({{ user.id }}, '{{ user.username }}', '{{ user.email }}', {{ user.minutes_balance }})">
+                            <i class="bi bi-plus-circle"></i>
+                            Add
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Single Add Minutes Modal -->
+<div id="addMinutesModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl shadow-lg max-w-md w-full mx-4">
+        <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-t-xl">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold text-gray-900">
+                    <i class="bi bi-plus-circle text-indigo-600 me-2"></i>
+                    Add Minutes to <span id="modalUsername"></span>
+                </h3>
+                <button onclick="closeAddMinutesModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        </div>
+        
+        <form id="addMinutesForm" method="POST">
+            <div class="p-6">
+                <div class="mb-4">
+                    <label for="minutesToAdd" class="block text-sm font-semibold text-gray-700 mb-2">
+                        Minutes to Add
+                    </label>
+                    <input type="number" 
+                           id="minutesToAdd"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-lg" 
+                           name="minutes" 
+                           min="1" 
+                           placeholder="Enter minutes"
+                           required>
+                </div>
+                
+                <div class="bg-gradient-to-r from-gray-50 to-blue-50 p-4 rounded-lg border">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-700">Current Balance</p>
+                            <p id="modalCurrentBalance" class="text-2xl font-bold text-indigo-600"></p>
+                            <p class="text-xs text-gray-500">minutes</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-medium text-gray-700">User Info</p>
+                            <p id="modalUserEmail" class="text-sm text-gray-600"></p>
+                            <p id="modalUserId" class="text-xs text-gray-500"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-200 p-4 bg-gray-50 rounded-b-xl flex gap-2">
+                <button type="button" 
+                        onclick="closeAddMinutesModal()"
+                        class="flex-1 px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg font-medium transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="flex-1 px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-medium transition-colors shadow-sm">
+                    <i class="bi bi-plus-circle me-1"></i>
+                    Add Minutes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openAddMinutesModal(userId, username, email, currentBalance) {
+    // Set modal content
+    document.getElementById('modalUsername').textContent = username;
+    document.getElementById('modalUserEmail').textContent = email;
+    document.getElementById('modalUserId').textContent = 'ID: #' + userId;
+    document.getElementById('modalCurrentBalance').textContent = currentBalance;
+    
+    // Set form action
+    document.getElementById('addMinutesForm').action = `/admin/add-minutes/${userId}`;
+    
+    // Clear input
+    document.getElementById('minutesToAdd').value = '';
+    
+    // Show modal
+    document.getElementById('addMinutesModal').classList.remove('hidden');
+    
+    // Focus on input
+    setTimeout(() => {
+        document.getElementById('minutesToAdd').focus();
+    }, 100);
+}
+
+function closeAddMinutesModal() {
+    document.getElementById('addMinutesModal').classList.add('hidden');
+}
+
+// Close modal when clicking outside
+document.getElementById('addMinutesModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeAddMinutesModal();
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeAddMinutesModal();
+    }
+});
+</script>
+{% endblock %}

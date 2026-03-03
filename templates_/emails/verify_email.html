@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Your Email</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            background-color: #4F46E5;
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #1f2937;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #6b7280;
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+        .button {
+            display: inline-block;
+            background-color: #4F46E5;
+            color: white;
+            text-decoration: none;
+            padding: 14px 40px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 20px 0;
+        }
+        .button:hover {
+            background-color: #4338CA;
+        }
+        .info-box {
+            background-color: #f3f4f6;
+            border-left: 4px solid #4F46E5;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .link {
+            color: #4F46E5;
+            text-decoration: none;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">📞</div>
+            <h1>Welcome to Voice Agent Platform!</h1>
+            <p class="subtitle">Hi {{ username }}, verify your email to get started</p>
+        </div>
+
+        <p>Thank you for signing up! We're excited to have you on board.</p>
+
+        <p>To complete your registration and start using our Voice Agent Platform, please verify your email address by clicking the button below:</p>
+
+        <div style="text-align: center;">
+            <a href="{{ verify_url }}" class="button">Verify Email Address</a>
+        </div>
+
+        <div class="info-box">
+            <strong>⏱️ This link will expire in 1 hour</strong><br>
+            If you didn't create an account, you can safely ignore this email.
+        </div>
+
+        <p style="margin-top: 30px;">If the button above doesn't work, copy and paste this link into your browser:</p>
+        <p><a href="{{ verify_url }}" class="link">{{ verify_url }}</a></p>
+
+        <div class="footer">
+            <p><strong>Voice Agent Platform</strong></p>
+            <p>This is an automated email. Please do not reply to this message.</p>
+        </div>
+    </div>
+</body>
+</html>

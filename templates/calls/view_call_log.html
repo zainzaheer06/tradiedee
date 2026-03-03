@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+{% block title %}Call Log #{{ log.id }} — Tradiedee{% endblock %}
+
+{% block dashboard_content %}
+
+<div style="margin-bottom:20px;">
+    <a href="{{ url_for('core.call_logs') }}" class="btn btn-ghost btn-sm" style="padding-left:0;">
+        <i class="bi bi-arrow-left" style="font-size:12px;"></i> Back to Call Logs
+    </a>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 300px; gap:20px; align-items:start;">
+
+    <!-- Left: main content -->
+    <div style="display:flex; flex-direction:column; gap:20px;">
+
+        <!-- Call Details -->
+        <div class="card">
+            <div style="padding:14px 20px; border-bottom:1px solid var(--card-border); display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <i class="bi bi-telephone-outbound" style="font-size:14px; color:var(--t3);"></i>
+                    <p style="font-size:14px; font-weight:600; color:var(--t1);">Call Details</p>
+                </div>
+                <span style="font-size:12px; font-family:monospace; color:var(--t4); background:#F9FAFB; padding:3px 10px; border-radius:20px; border:1px solid var(--card-border);">#{{ log.id }}</span>
+            </div>
+            <div style="padding:20px 24px;">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+                    <!-- Left col -->
+                    <div style="display:flex; flex-direction:column; gap:18px;">
+                        <div>
+                            <p style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--t4); margin-bottom:6px;">Agent</p>
+                            {% if log.agent %}
+                            <a href="{{ url_for('agents.view_agent', agent_id=log.agent_id) }}" class="link" style="font-size:15px; font-weight:600;">{{ log.agent.name }}</a>
+                            {% else %}
+                            <p style="font-size:14px; color:var(--t3);">N/A</p>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <p style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--t4); margin-bottom:6px;">From Number</p>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:14px; font-family:monospace; color:var(--t2); background:#F9FAFB; padding:6px 12px; border-radius:7px; border:1px solid var(--card-border);">{{ log.from_number }}</span>
+                                <button onclick="navigator.clipboard.writeText('{{ log.from_number }}')" class="btn btn-ghost btn-sm" title="Copy">
+                                    <i class="bi bi-clipboard" style="font-size:12px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <p style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--t4); margin-bottom:6px;">To Number</p>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:14px; font-family:monospace; color:var(--t2); background:#F9FAFB; padding:6px 12px; border-radius:7px; border:1px solid var(--card-border);">{{ log.to_number }}</span>
+                                <button onclick="navigator.clipboard.writeText('{{ log.to_number }}')" class="btn btn-ghost btn-sm" title="Copy">
+                                    <i class="bi bi-clipboard" style="font-size:12px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Right col -->
+                    <div style="display:flex; flex-direction:column; gap:18px;">
+                        <div>
+                            <p style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--t4); margin-bottom:6px;">Duration</p>
+                            <p style="font-size:15px; font-weight:600; color:var(--t1);">{{ (log.duration_seconds / 60) | round(1) }} <span style="font-size:13px; font-weight:400; color:var(--t3);">m</span></p>
+                        </div>
+                        <div style="display:none;">
+                            <p style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--t4); margin-bottom:6px;">Minutes Used</p>
+                            <span class="badge badge-indigo" style="font-size:13px;">{{ log.minutes_used }} min</span>
+                        </div>
+                        <div>
+                            <p style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--t4); margin-bottom:6px;">Status</p>
+                            {% if log.status == 'completed' %}
+                                <span class="badge badge-green"><i class="bi bi-check-circle" style="font-size:10px;"></i> Completed</span>
+                            {% elif log.status == 'no_answer' %}
+                                <span class="badge badge-amber">No Answer</span>
+                            {% elif log.status == 'failed' %}
+                                <span class="badge badge-red">Failed</span>
+                            {% else %}
+                                <span class="badge badge-gray">{{ log.status }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--card-border);">
+                    <p style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--t4); margin-bottom:6px;">Date & Time</p>
+                    <p style="font-size:13.5px; color:var(--t2);">{{ log.created_at.strftime('%B %d, %Y at %I:%M:%S %p') }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recording -->
+        {% if log.recording_url %}
+        <div class="card">
+            <div style="padding:14px 20px; border-bottom:1px solid var(--card-border); display:flex; align-items:center; gap:8px;">
+                <i class="bi bi-mic-fill" style="font-size:14px; color:var(--t3);"></i>
+                <p style="font-size:14px; font-weight:600; color:var(--t1);">Call Recording</p>
+            </div>
+            <div style="padding:20px 24px;">
+                <div style="background:#F9FAFB; border:1px solid var(--card-border); border-radius:8px; padding:16px;">
+                    <audio controls style="width:100%;" preload="metadata" controlsList="nodownload">
+                        <source src="{{ log.recording_url }}" type="audio/mpeg">
+                        <source src="{{ log.recording_url }}" type="audio/mp3">
+                        <source src="{{ log.recording_url }}" type="audio/wav">
+                        <source src="{{ log.recording_url }}" type="audio/mp4">
+                        Your browser does not support the audio element.
+                    </audio>
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-top:12px; flex-wrap:wrap; gap:10px;">
+                        <span style="font-size:12px; color:var(--t4);">
+                            <i class="bi bi-clock-history"></i> Recorded: {{ log.created_at.strftime('%b %d, %Y') }}
+                        </span>
+                        <a href="{{ url_for('core.download_recording', call_id=log.id) }}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-download" style="font-size:11px;"></i> Download
+                        </a>
+                    </div>
+                </div>
+                <p style="font-size:11.5px; color:var(--t4); margin-top:10px;">
+                    <i class="bi bi-info-circle"></i> Recording stored securely following PDPL compliance.
+                </p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Transcript -->
+        <div class="card">
+            <div style="padding:14px 20px; border-bottom:1px solid var(--card-border); display:flex; align-items:center; justify-content:space-between; cursor:pointer;"
+                 onclick="toggleTranscript()">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <i class="bi bi-chat-dots" style="font-size:14px; color:var(--t3);"></i>
+                    <p style="font-size:14px; font-weight:600; color:var(--t1);">Conversation Transcript</p>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    {% set trans_data = log.transcription_data|from_json if log.transcription_data and log.transcription_data != '{}' else {} %}
+                    {% if trans_data.get('message_count', 0) > 0 %}
+                    <span class="badge badge-gray">{{ trans_data.get('message_count', 0) }} messages</span>
+                    {% endif %}
+                    <i id="transcriptToggleIcon" class="bi bi-chevron-right" style="font-size:13px; color:var(--t4); transition:transform 0.2s;"></i>
+                </div>
+            </div>
+
+            <div id="transcriptContent" style="display:none; padding:20px 24px;">
+                {% set trans_data = log.transcription_data|from_json if log.transcription_data and log.transcription_data != '{}' else {} %}
+                {% set messages = trans_data.get('messages', []) %}
+
+                {% if messages and messages|length > 0 %}
+                <div style="display:flex; flex-direction:column; gap:16px; max-height:520px; overflow-y:auto; padding-right:4px;">
+                    {% for msg in messages %}
+                    <div style="display:flex; {% if msg.role == 'user' %}justify-content:flex-end;{% else %}justify-content:flex-start;{% endif %}">
+                        <div style="max-width:75%;">
+                            <div style="display:flex; align-items:center; gap:7px; margin-bottom:5px; {% if msg.role == 'user' %}flex-direction:row-reverse;{% endif %}">
+                                {% if msg.role == 'user' %}
+                                <div style="width:26px; height:26px; border-radius:50%; background:#3B82F6; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                    <i class="bi bi-person-fill" style="font-size:12px; color:#fff;"></i>
+                                </div>
+                                <span style="font-size:12px; font-weight:600; color:var(--t2);">User</span>
+                                {% else %}
+                                <div style="width:26px; height:26px; border-radius:50%; background:#4F46E5; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                    <i class="bi bi-robot" style="font-size:12px; color:#fff;"></i>
+                                </div>
+                                <span style="font-size:12px; font-weight:600; color:var(--t2);">Agent</span>
+                                {% endif %}
+                                <span style="font-size:11px; color:var(--t4);">
+                                    {{ msg.timestamp.split('T')[1].split('.')[0] if 'T' in msg.timestamp else '' }}
+                                </span>
+                            </div>
+                            <div style="padding:10px 14px; border-radius:12px;
+                                {% if msg.role == 'user' %}background:#DBEAFE; color:#1E3A5F; border-radius:12px 12px 4px 12px;
+                                {% else %}background:#F3F4F6; color:var(--t1); border-radius:12px 12px 12px 4px;{% endif %}">
+                                <p style="font-size:13.5px; line-height:1.6;">{{ msg.text }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:14px; border-top:1px solid var(--card-border);">
+                    <span style="font-size:12.5px; color:var(--t3);">
+                        <i class="bi bi-clock-history"></i>
+                        Call started: {{ trans_data.get('start_time', '').split('T')[1].split('.')[0] if trans_data.get('start_time') and 'T' in trans_data.get('start_time', '') else 'N/A' }}
+                    </span>
+                    <button onclick="copyTranscript(event)" class="btn btn-ghost btn-sm">
+                        <i class="bi bi-clipboard" style="font-size:11px;"></i> Copy Transcript
+                    </button>
+                </div>
+
+                {% elif log.transcription %}
+                <div style="background:#F9FAFB; border:1px solid var(--card-border); border-radius:8px; padding:16px;">
+                    <p style="font-size:13.5px; color:var(--t2); white-space:pre-wrap; line-height:1.7;">{{ log.transcription }}</p>
+                </div>
+                {% else %}
+                <div class="empty">
+                    <div class="empty-icon">
+                        <i class="bi bi-file-earmark-text" style="font-size:20px; color:#9CA3AF;"></i>
+                    </div>
+                    <p style="font-size:14px; font-weight:600; color:var(--t1); margin-bottom:4px;">No Transcription Available</p>
+                    <p style="font-size:13px; color:var(--t3);">The transcript will appear here once the call is processed</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Interest Analysis -->
+        {% set interest_data = log.sentiment_summary|from_json if log.sentiment_summary and log.sentiment_summary != '{}' else {} %}
+        {% if interest_data and interest_data.get('interest') %}
+        <div class="card">
+            <div style="padding:14px 20px; border-bottom:1px solid var(--card-border); display:flex; align-items:center; gap:8px;">
+                <i class="bi bi-graph-up-arrow" style="font-size:14px; color:var(--t3);"></i>
+                <p style="font-size:14px; font-weight:600; color:var(--t1);">Interest Analysis</p>
+            </div>
+            <div style="padding:24px;">
+                {% set interest = interest_data.get('interest', 'Not Interested') %}
+                {% set confidence = interest_data.get('confidence', 'Low') %}
+                {% set quality = interest_data.get('conversation_quality') %}
+
+                <div style="text-align:center; padding:20px 0;">
+                    {% if interest == 'Interested' %}
+                    <span class="badge badge-green" style="font-size:15px; padding:10px 24px;">
+                        <i class="bi bi-hand-thumbs-up-fill" style="font-size:14px;"></i> Interested
+                    </span>
+                    {% else %}
+                    <span class="badge badge-red" style="font-size:15px; padding:10px 24px;">
+                        <i class="bi bi-hand-thumbs-down-fill" style="font-size:14px;"></i> Not Interested
+                    </span>
+                    {% endif %}
+                    <p style="margin-top:10px; font-size:12.5px; color:var(--t4);">Confidence: {{ confidence }}</p>
+                    {% if quality %}
+                    <div style="margin-top:8px;">
+                        {% if quality == 'engaging' %}
+                            <span class="badge badge-green">
+                                <i class="bi bi-star-fill" style="font-size:10px;"></i> Engaging
+                            </span>
+                        {% elif quality == 'neutral' %}
+                            <span class="badge badge-gray">
+                                <i class="bi bi-dash-circle" style="font-size:10px;"></i> Neutral
+                            </span>
+                        {% else %}
+                            <span class="badge badge-red">
+                                <i class="bi bi-x-circle" style="font-size:10px;"></i> Dismissive
+                            </span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% set indicators = interest_data.get('key_indicators', {}) %}
+                {% if indicators %}
+                <div style="border-top:1px solid var(--card-border); padding-top:20px; margin-top:4px;">
+                    <p style="font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--t4); margin-bottom:14px;">Engagement Indicators</p>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        {% set indic_list = [
+                            ('asked_questions',    'Asked Questions',    False),
+                            ('requested_callback', 'Requested Callback', False),
+                            ('shared_needs',       'Shared Needs',       False),
+                            ('agreed_next_steps',  'Agreed Next Steps',  False),
+                            ('provided_details',   'Provided Details',   False),
+                            ('explicit_rejection', 'Explicit Rejection', True)
+                        ] %}
+                        {% for key, label, is_negative in indic_list %}
+                        {% set active = indicators.get(key) %}
+                        <div style="display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:8px;
+                            {% if active and not is_negative %}background:#F0FDF4;
+                            {% elif active and is_negative %}background:#FEF2F2;
+                            {% else %}background:#F9FAFB;{% endif %}">
+                            <i class="bi {% if active and not is_negative %}bi-check-circle-fill{% elif active and is_negative %}bi-x-circle-fill{% else %}bi-circle{% endif %}"
+                               style="font-size:13px; {% if active and not is_negative %}color:#059669;{% elif active and is_negative %}color:#DC2626;{% else %}color:#D1D5DB;{% endif %}"></i>
+                            <span style="font-size:12.5px; {% if active %}font-weight:500;{% endif %} {% if active and not is_negative %}color:#065F46;{% elif active and is_negative %}color:#991B1B;{% else %}color:var(--t3);{% endif %}">{{ label }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- Right sidebar -->
+    <div style="position:sticky; top:24px;">
+        <div class="card">
+            <div style="padding:14px 18px; border-bottom:1px solid var(--card-border);">
+                <p style="font-size:14px; font-weight:600; color:var(--t1);">Call Summary</p>
+            </div>
+            <div style="padding:16px 18px; border-bottom:1px solid var(--card-border); display:flex; flex-direction:column; gap:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:13px; color:var(--t3);">Duration</span>
+                    <span style="font-size:13px; font-weight:600; color:var(--t1);">{{ (log.duration_seconds / 60) | round(1) }}m</span>
+                </div>
+                {% set trans_data = log.transcription_data|from_json if log.transcription_data and log.transcription_data != '{}' else {} %}
+                {% if trans_data.get('message_count', 0) > 0 %}
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:13px; color:var(--t3);">Messages</span>
+                    <span style="font-size:13px; font-weight:600; color:#2563EB;">{{ trans_data.get('message_count', 0) }}</span>
+                </div>
+                {% endif %}
+                <div style="display:flex; justify-content:space-between; align-items:center; display:none;">
+                    <span style="font-size:13px; color:var(--t3);">Cost</span>
+                    <span style="font-size:13px; font-weight:600; color:#4F46E5;">{{ log.minutes_used }} min</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding-top:10px; border-top:1px solid var(--card-border);">
+                    <span style="font-size:13px; font-weight:500; color:var(--t2);">Status</span>
+                    {% if log.status == 'completed' %}
+                        <span class="badge badge-green"><i class="bi bi-check-circle" style="font-size:10px;"></i> Completed</span>
+                    {% elif log.status == 'no_answer' %}
+                        <span class="badge badge-amber">No Answer</span>
+                    {% elif log.status == 'failed' %}
+                        <span class="badge badge-red">Failed</span>
+                    {% else %}
+                        <span class="badge badge-gray">{{ log.status }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div style="padding:14px 18px; display:flex; flex-direction:column; gap:8px;">
+                <a href="{{ url_for('agents.view_agent', agent_id=log.agent_id) if log.agent else '#' }}" class="btn btn-secondary" style="width:100%; justify-content:center;">
+                    <i class="bi bi-robot" style="font-size:12px;"></i> View Agent
+                </a>
+                <a href="{{ url_for('core.call_logs') }}" class="btn btn-ghost" style="width:100%; justify-content:center;">
+                    <i class="bi bi-list" style="font-size:12px;"></i> All Logs
+                </a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleTranscript() {
+    const content = document.getElementById('transcriptContent');
+    const icon = document.getElementById('transcriptToggleIcon');
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        icon.style.transform = 'rotate(90deg)';
+    } else {
+        content.style.display = 'none';
+        icon.style.transform = 'rotate(0deg)';
+    }
+}
+
+function copyTranscript(event) {
+    {% set trans_data = log.transcription_data|from_json if log.transcription_data and log.transcription_data != '{}' else {} %}
+    {% set messages = trans_data.get('messages', []) %}
+    {% if messages and messages|length > 0 %}
+    let transcript = '';
+    {% for msg in messages %}
+    transcript += {{ (msg.role.upper() ~ ': ' ~ msg.text ~ '\n')|tojson }};
+    {% endfor %}
+
+    navigator.clipboard.writeText(transcript).then(() => {
+        const btn = event.target.closest('button');
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check" style="font-size:11px;"></i> Copied!';
+        setTimeout(() => { btn.innerHTML = orig; }, 2000);
+    }).catch(() => alert('Failed to copy transcript'));
+    {% else %}
+    alert('No transcript available to copy');
+    {% endif %}
+}
+</script>
+{% endblock %}

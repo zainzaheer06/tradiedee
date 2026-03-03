@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Agents{% endblock %}
+
+{% block page_title %}Manage Agents{% endblock %}
+
+{% block dashboard_content %}
+<!-- Header -->
+<div class="mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h1 class="text-xl font-semibold text-gray-900">Voice Agents</h1>
+            <p class="text-sm text-gray-500 mt-0.5">{{ pagination.total if pagination else agents|length }} agents configured</p>
+        </div>
+        <a href="{{ url_for('agents.new_agent_form') }}" class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+            <i class="bi bi-plus-lg" style="font-size: 0.75rem;"></i> New Agent
+        </a>
+    </div>
+
+    <!-- Search -->
+    <div class="bg-white rounded-lg border border-gray-200 p-3">
+        <form method="GET" action="{{ url_for('agents.agents_list') }}" class="flex items-center gap-2">
+            <div class="flex-1 relative">
+                <i class="bi bi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" style="font-size: 0.8rem;"></i>
+                <input type="text" name="search" value="{{ search_query or '' }}"
+                       placeholder="Search agents by name, prompt, or voice..."
+                       class="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+            </div>
+            <button type="submit" class="px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 font-medium transition-colors">
+                Search
+            </button>
+            {% if search_query %}
+            <a href="{{ url_for('agents.agents_list') }}" class="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors">
+                Clear
+            </a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- Agents Grid -->
+{% if agents %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for agent in agents %}
+    <div class="bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all group">
+        <!-- Card Top -->
+        <div class="p-4 pb-3">
+            <div class="flex items-start justify-between mb-3">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
+                        <i class="bi bi-robot text-indigo-600" style="font-size: 1rem;"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="text-sm font-semibold text-gray-900 truncate">{{ agent.name }}</h3>
+                        <div class="flex items-center gap-1 mt-0.5">
+                            <i class="bi bi-mic-fill text-gray-400" style="font-size: 0.625rem;"></i>
+                            <span class="text-xs text-gray-500">{{ agent.voice_name or 'Fatima' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prompt Preview -->
+            <p class="text-xs text-gray-500 leading-relaxed line-clamp-2 mb-3">{{ agent.prompt }}</p>
+
+            <!-- Meta -->
+            <div class="flex items-center gap-3 text-xs text-gray-400">
+                <span class="flex items-center gap-1">
+                    <i class="bi bi-calendar3" style="font-size: 0.625rem;"></i>
+                    {{ agent.created_at.strftime('%b %d, %Y') }}
+                </span>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="px-4 py-3 border-t border-gray-100 flex items-center gap-2">
+            <a href="{{ url_for('agents.view_agent', agent_id=agent.id) }}"
+               class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors">
+                <i class="bi bi-eye" style="font-size: 0.7rem;"></i> View
+            </a>
+            <a href="{{ url_for('agents.edit_agent_form', agent_id=agent.id) }}"
+               class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors">
+                <i class="bi bi-pencil" style="font-size: 0.7rem;"></i> Edit
+            </a>
+            <button onclick="confirmDelete({{ agent.id }}, '{{ agent.name }}')"
+                    class="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100 transition-colors">
+                <i class="bi bi-trash" style="font-size: 0.7rem;"></i>
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if pagination and pagination.pages > 1 %}
+<div class="flex items-center justify-center mt-6">
+    <div class="flex items-center gap-1.5">
+        {% if pagination.has_prev %}
+        <a href="{{ url_for('agents.agents_list', page=pagination.prev_num) }}" class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition-colors">
+            &larr; Previous
+        </a>
+        {% endif %}
+        <span class="px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-md">
+            {{ pagination.page }} / {{ pagination.pages }}
+        </span>
+        {% if pagination.has_next %}
+        <a href="{{ url_for('agents.agents_list', page=pagination.next_num) }}" class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition-colors">
+            Next &rarr;
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<!-- Empty State -->
+<div class="bg-white rounded-lg border border-dashed border-gray-300 p-12 text-center">
+    <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+        <i class="bi bi-robot text-gray-400" style="font-size: 1.25rem;"></i>
+    </div>
+    <h3 class="text-sm font-semibold text-gray-900 mb-1">No agents yet</h3>
+    <p class="text-sm text-gray-500 mb-5">Create your first AI voice agent to get started</p>
+    <a href="{{ url_for('agents.new_agent_form') }}" class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+        <i class="bi bi-plus-lg" style="font-size: 0.75rem;"></i> Create Agent
+    </a>
+</div>
+{% endif %}
+
+<!-- Delete Modal -->
+<div id="deleteModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg p-6 max-w-sm w-full shadow-xl">
+        <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
+                <i class="bi bi-exclamation-triangle text-red-600" style="font-size: 1rem;"></i>
+            </div>
+            <div>
+                <h3 class="text-sm font-semibold text-gray-900">Delete Agent</h3>
+                <p class="text-xs text-gray-500 mt-0.5">This cannot be undone</p>
+            </div>
+        </div>
+        <p class="text-sm text-gray-600 mb-5 ml-[52px]">
+            Delete <strong id="agentNameToDelete"></strong>?
+        </p>
+        <div class="flex gap-2 justify-end">
+            <button onclick="closeDeleteModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                Cancel
+            </button>
+            <form id="deleteForm" method="POST">
+                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors">
+                    Delete
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(agentId, agentName) {
+    document.getElementById('agentNameToDelete').textContent = agentName;
+    document.getElementById('deleteForm').action = '/agent/' + agentId + '/delete';
+    document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.add('hidden');
+}
+
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDeleteModal();
+});
+</script>
+
+<style>
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+</style>
+{% endblock %}

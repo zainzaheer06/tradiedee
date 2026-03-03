@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}Tradiedee - AI Voice Agent for Trades{% endblock %}
+
+{% block dashboard_content %}
+
+<div class="max-w-6xl mx-auto">
+    <!-- Hero Section -->
+    <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg p-12 mb-12 shadow-lg">
+        <h1 class="text-4xl font-bold mb-3">Tradiedee</h1>
+        <p class="text-xl text-blue-100 mb-6">AI-Powered Voice Agent & Business Automation for Australian Trades</p>
+
+        {% if current_user.is_authenticated %}
+            {% if user_business %}
+                <div class="flex gap-3">
+                    <a href="{{ url_for('jobs.job_dashboard') }}"
+                        class="bg-white text-blue-600 hover:bg-gray-100 font-bold py-3 px-6 rounded-lg transition">
+                        📋 Jobs Dashboard
+                    </a>
+                    <a href="{{ url_for('business_setup.setup') }}"
+                        class="bg-blue-800 hover:bg-blue-900 text-white font-bold py-3 px-6 rounded-lg transition">
+                        ⚙️ Settings
+                    </a>
+                </div>
+            {% else %}
+                <a href="{{ url_for('business_setup.setup') }}"
+                    class="bg-white text-blue-600 hover:bg-gray-100 font-bold py-3 px-6 rounded-lg inline-block transition">
+                    🚀 Start Setup
+                </a>
+            {% endif %}
+        {% else %}
+            <div class="flex gap-3">
+                <a href="{{ url_for('core.login') }}"
+                    class="bg-white text-blue-600 hover:bg-gray-100 font-bold py-3 px-6 rounded-lg transition">
+                    Login
+                </a>
+                <a href="{{ url_for('core.signup') }}"
+                    class="bg-blue-800 hover:bg-blue-900 text-white font-bold py-3 px-6 rounded-lg transition">
+                    Sign Up Free
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Business Status (if logged in) -->
+    {% if current_user.is_authenticated and user_business %}
+    <div class="bg-white rounded-lg p-8 mb-12 shadow-sm border border-gray-200">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6">📊 Business Overview</h2>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <div class="text-3xl font-bold text-blue-600" id="todayCount">-</div>
+                <div class="text-sm text-gray-700 mt-1">Today's Jobs</div>
+            </div>
+            <div class="bg-red-50 rounded-lg p-4 border border-red-200">
+                <div class="text-3xl font-bold text-red-600" id="emergencyCount">-</div>
+                <div class="text-sm text-gray-700 mt-1">Emergencies</div>
+            </div>
+            <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+                <div class="text-3xl font-bold text-green-600" id="completedCount">-</div>
+                <div class="text-sm text-gray-700 mt-1">Completed</div>
+            </div>
+            <div class="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                <div class="text-3xl font-bold text-yellow-600" id="pendingCount">-</div>
+                <div class="text-sm text-gray-700 mt-1">Pending</div>
+            </div>
+        </div>
+
+        <div>
+            <h3 class="font-semibold text-gray-900 mb-2">{{ user_business.business_name }}</h3>
+            <p class="text-gray-600 text-sm">
+                {{ user_business.business_type }} • 📞 {{ user_business.phone_number }}
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Load stats
+        fetch('/jobs/api/stats')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('todayCount').textContent = data.today_jobs || 0;
+                document.getElementById('emergencyCount').textContent = data.emergencies || 0;
+                document.getElementById('completedCount').textContent = data.completed || 0;
+                document.getElementById('pendingCount').textContent = data.pending || 0;
+            })
+            .catch(e => console.error('Error loading stats:', e));
+    </script>
+    {% endif %}
+
+    <!-- Features Section -->
+    <div class="mb-12">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">✨ Key Features</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Feature 1: AI Voice Agent -->
+            <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition">
+                <div class="text-4xl mb-3">🎤</div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">AI Voice Agent</h3>
+                <p class="text-gray-600 text-sm">
+                    Automated phone answering with AI voice assistant. Takes job details, checks availability, and books appointments 24/7.
+                </p>
+            </div>
+
+            <!-- Feature 2: Smart Scheduling -->
+            <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition">
+                <div class="text-4xl mb-3">📅</div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Smart Scheduling</h3>
+                <p class="text-gray-600 text-sm">
+                    Real-time availability checking with ServiceM8 integration. Automatically suggest available time slots to customers.
+                </p>
+            </div>
+
+            <!-- Feature 3: Emergency Detection -->
+            <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition">
+                <div class="text-4xl mb-3">🚨</div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Emergency Detection</h3>
+                <p class="text-gray-600 text-sm">
+                    AI detects emergency keywords and immediately escalates to your emergency contacts via SMS alerts.
+                </p>
+            </div>
+
+            <!-- Feature 4: Address Validation -->
+            <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition">
+                <div class="text-4xl mb-3">📍</div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Address Validation</h3>
+                <p class="text-gray-600 text-sm">
+                    Google Maps integration auto-corrects addresses and validates customer location. Prevents booking errors.
+                </p>
+            </div>
+
+            <!-- Feature 5: Job Management -->
+            <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition">
+                <div class="text-4xl mb-3">💼</div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Job Dashboard</h3>
+                <p class="text-gray-600 text-sm">
+                    Centralized dashboard for all jobs. Track status from booking → scheduled → completed → invoiced.
+                </p>
+            </div>
+
+            <!-- Feature 6: SMS Automation -->
+            <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition">
+                <div class="text-4xl mb-3">📱</div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">SMS Automation</h3>
+                <p class="text-gray-600 text-sm">
+                    Automatic booking confirmations, reminders, and emergency alerts via SMS. Keep customers informed.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- How It Works -->
+    <div class="bg-gray-50 rounded-lg p-8 mb-12 border border-gray-200">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">⚙️ How Tradiedee Works</h2>
+
+        <div class="space-y-6">
+            <div class="flex gap-4">
+                <div class="flex-shrink-0 w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-lg">1</div>
+                <div>
+                    <h3 class="font-bold text-gray-900 mb-1">Customer Calls</h3>
+                    <p class="text-gray-600 text-sm">Customer calls your business. Tradiedee AI answers 24/7.</p>
+                </div>
+            </div>
+
+            <div class="flex gap-4">
+                <div class="flex-shrink-0 w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-lg">2</div>
+                <div>
+                    <h3 class="font-bold text-gray-900 mb-1">AI Listens & Understands</h3>
+                    <p class="text-gray-600 text-sm">AI listens to customer problem, validates address, detects emergencies.</p>
+                </div>
+            </div>
+
+            <div class="flex gap-4">
+                <div class="flex-shrink-0 w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-lg">3</div>
+                <div>
+                    <h3 class="font-bold text-gray-900 mb-1">Checks Availability</h3>
+                    <p class="text-gray-600 text-sm">AI checks your real-time availability in ServiceM8 or calendar.</p>
+                </div>
+            </div>
+
+            <div class="flex gap-4">
+                <div class="flex-shrink-0 w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-lg">4</div>
+                <div>
+                    <h3 class="font-bold text-gray-900 mb-1">Books Job</h3>
+                    <p class="text-gray-600 text-sm">AI books job in your system and sends SMS confirmation.</p>
+                </div>
+            </div>
+
+            <div class="flex gap-4">
+                <div class="flex-shrink-0 w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-lg">5</div>
+                <div>
+                    <h3 class="font-bold text-gray-900 mb-1">Handles Emergencies</h3>
+                    <p class="text-gray-600 text-sm">If emergency detected, SMS alerts your emergency contacts immediately.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CTA Section -->
+    <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg p-8 text-center">
+        <h2 class="text-2xl font-bold mb-3">Ready to Automate Your Business?</h2>
+        <p class="text-blue-100 mb-6">Start using Tradiedee today. No credit card required.</p>
+
+        {% if current_user.is_authenticated %}
+            {% if user_business %}
+                <a href="{{ url_for('phase1.test_dashboard') }}"
+                    class="bg-white text-blue-600 hover:bg-gray-100 font-bold py-3 px-8 rounded-lg inline-block transition">
+                    🧪 Test APIs
+                </a>
+            {% else %}
+                <a href="{{ url_for('business_setup.setup') }}"
+                    class="bg-white text-blue-600 hover:bg-gray-100 font-bold py-3 px-8 rounded-lg inline-block transition">
+                    🚀 Complete Setup
+                </a>
+            {% endif %}
+        {% else %}
+            <a href="{{ url_for('core.signup') }}"
+                class="bg-white text-blue-600 hover:bg-gray-100 font-bold py-3 px-8 rounded-lg inline-block transition">
+                Get Started Free
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block title %}Job Dashboard - {{ business.business_name }}{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="mb-1">📋 Job Dashboard</h1>
+            <p class="text-muted">{{ business.business_name }} - {{ business.business_type }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('business_setup.edit_business') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-cog"></i> Settings
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card bg-light">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1 small">Today's Jobs</p>
+                            <h3 class="mb-0">{{ stats.total_today }}</h3>
+                        </div>
+                        <i class="fas fa-calendar-day fa-2x text-primary opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card bg-light">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1 small">Emergencies</p>
+                            <h3 class="mb-0 text-danger">{{ stats.emergencies }}</h3>
+                        </div>
+                        <i class="fas fa-exclamation-triangle fa-2x text-danger opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card bg-light">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1 small">Completed</p>
+                            <h3 class="mb-0 text-success">{{ stats.completed }}</h3>
+                        </div>
+                        <i class="fas fa-check-circle fa-2x text-success opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card bg-light">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1 small">Pending</p>
+                            <h3 class="mb-0 text-warning">{{ stats.pending }}</h3>
+                        </div>
+                        <i class="fas fa-clock fa-2x text-warning opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Date</label>
+                            <input type="date" name="date" class="form-control" value="{{ date_filter }}" onchange="this.form.submit()">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select" onchange="this.form.submit()">
+                                <option value="all">All Statuses</option>
+                                <option value="new" {% if status_filter == 'new' %}selected{% endif %}>New</option>
+                                <option value="scheduled" {% if status_filter == 'scheduled' %}selected{% endif %}>Scheduled</option>
+                                <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="reset" class="btn btn-secondary mt-4">Reset Filters</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Jobs List - Card View (Tradiedee) -->
+    <div class="row">
+        <div class="col-md-12 mb-3">
+            <h5 class="mb-3">📞 Tradiedee Jobs</h5>
+        </div>
+        {% if jobs %}
+            {% for job in jobs %}
+            <div class="col-lg-6 col-md-12 mb-3">
+                <div class="card job-card {% if job.is_emergency %}border-danger{% elif job.status == 'new' %}border-primary{% endif %}">
+                    <div class="card-body">
+                        <!-- Header with Status and Priority -->
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h5 class="card-title mb-0">{{ job.customer_name }}</h5>
+                                <small class="text-muted">Job #{{ job.id }}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-{% if job.status == 'completed' %}success{% elif job.status == 'in_progress' %}info{% elif job.status == 'scheduled' %}primary{% elif job.status == 'new' %}warning{% else %}secondary{% endif %} mb-2">
+                                    {{ job.status.replace('_', ' ').title() }}
+                                </span>
+                                {% if job.is_emergency %}
+                                    <br><span class="badge bg-danger">🚨 EMERGENCY</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Customer Details Grid -->
+                        <div class="row g-2 mb-3">
+                            <!-- Phone -->
+                            <div class="col-md-6">
+                                <small class="text-muted d-block">📞 Phone</small>
+                                <a href="tel:{{ job.customer_phone }}" class="text-dark fw-bold">{{ job.customer_phone }}</a>
+                            </div>
+
+                            <!-- Job Type -->
+                            <div class="col-md-6">
+                                <small class="text-muted d-block">🔧 Service Type</small>
+                                <span class="badge bg-light text-dark">{{ job.job_type | default('General', true) }}</span>
+                            </div>
+
+                            <!-- Address -->
+                            <div class="col-12">
+                                <small class="text-muted d-block">📍 Address</small>
+                                <span class="text-dark">{{ job.customer_address | default('Address not collected', true) }}</span>
+                            </div>
+
+                            <!-- Scheduled Time -->
+                            <div class="col-md-6">
+                                <small class="text-muted d-block">🕐 Appointment</small>
+                                {% if job.scheduled_datetime %}
+                                    <span class="text-dark">{{ job.scheduled_datetime.strftime('%a %d/%m at %I:%M %p') }}</span>
+                                {% else %}
+                                    <span class="text-muted italic">Not scheduled</span>
+                                {% endif %}
+                            </div>
+
+                            <!-- Urgency -->
+                            <div class="col-md-6">
+                                <small class="text-muted d-block">⚡ Priority</small>
+                                {% if job.is_emergency %}
+                                    <span class="badge bg-danger">URGENT</span>
+                                {% elif job.urgency == 'high' %}
+                                    <span class="badge bg-warning">High</span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark">Normal</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Issue Description (if available) -->
+                        {% if job.description %}
+                        <div class="mb-3 p-2 bg-light rounded">
+                            <small class="text-muted d-block mb-1">Issue Description</small>
+                            <small class="text-dark">{{ job.description[:100] }}{% if job.description|length > 100 %}...{% endif %}</small>
+                        </div>
+                        {% endif %}
+
+                        <!-- SMS Status Badge -->
+                        {% if job.sms_logs %}
+                        <div class="mb-3">
+                            <small class="text-muted d-block mb-1">💬 SMS Status</small>
+                            {% for sms in job.sms_logs[:1] %}
+                            <span class="badge {% if sms.status == 'sent' %}bg-success{% elif sms.status == 'queued' %}bg-info{% else %}bg-warning{% endif %}">
+                                {{ sms.status.title() }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <!-- Action Buttons -->
+                        <div class="d-grid gap-2 d-sm-flex">
+                            <a href="{{ url_for('jobs.view_job', job_id=job.id) }}" class="btn btn-sm btn-primary">
+                                View Details
+                            </a>
+                            <a href="tel:{{ job.customer_phone }}" class="btn btn-sm btn-outline-secondary">
+                                Call Customer
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="card p-5 text-center text-muted">
+                    <i class="fas fa-inbox fa-3x mb-3 opacity-25"></i>
+                    <p class="mb-0">No jobs created yet. Incoming calls will appear here.</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<style>
+    .stat-card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        transform: translateY(-2px);
+    }
+
+    /* Tradiedee Job Cards */
+    .job-card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .job-card:hover {
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .job-card.border-danger {
+        border-left: 4px solid #dc3545 !important;
+    }
+
+    .job-card.border-primary {
+        border-left: 4px solid #0d6efd !important;
+    }
+
+    .job-card .card-title {
+        color: #212529;
+        font-size: 1.1rem;
+    }
+
+    .job-card small.text-muted {
+        font-size: 0.85rem;
+    }
+
+    .job-card .badge {
+        font-weight: 500;
+    }
+
+    /* SMS Status Badge */
+    .job-card .badge.bg-success {
+        background-color: #198754 !important;
+        color: white;
+    }
+
+    .job-card .badge.bg-info {
+        background-color: #0dcaf0 !important;
+        color: #000;
+    }
+
+    .job-card .badge.bg-warning {
+        background-color: #ffc107 !important;
+        color: #000;
+    }
+
+    /* Action Buttons */
+    .job-card .btn-sm {
+        padding: 0.35rem 0.75rem;
+        font-size: 0.875rem;
+    }
+
+    .job-card .btn-primary {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+
+    .job-card .btn-primary:hover {
+        background-color: #0b5ed7;
+        border-color: #0a58ca;
+    }
+</style>
+{% endblock %}

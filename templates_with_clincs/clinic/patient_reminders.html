@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Patient Reminders Config — Nevox AI{% endblock %}
+
+{% block dashboard_content %}
+
+<a href="{{ url_for('clinic.clinic_hub') }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 mb-6" style="text-decoration:none;">
+    <i class="bi bi-arrow-left" style="font-size:14px;"></i> Back to Clinic Hub
+</a>
+
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-xl font-semibold text-gray-900">Patient Reminders</h1>
+        <p class="text-sm text-gray-500 mt-0.5">Reduce no-shows with automated reminder calls before appointments</p>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg border border-gray-200 p-4 mb-6 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+        <i class="bi bi-info-circle" style="font-size:16px; color:var(--t3);"></i>
+        <span class="text-sm text-gray-700">Status:</span>
+        <span class="badge badge-gray">Not Configured</span>
+    </div>
+    <button class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors" onclick="enableFeature()">Enable Feature</button>
+</div>
+
+<!-- Reminder Schedule -->
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-5">
+    <div class="flex items-center gap-2 mb-4">
+        <i class="bi bi-calendar3" style="font-size:16px; color:#059669;"></i>
+        <h2 class="text-sm font-semibold text-gray-900">When to Call</h2>
+    </div>
+
+    <p class="text-xs text-gray-600 mb-3">Select which reminder calls to enable:</p>
+
+    <div class="space-y-2">
+        <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-md">
+            <input type="checkbox" id="reminder48" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500 mt-0.5" checked>
+            <div style="flex:1;">
+                <label for="reminder48" class="block text-sm font-medium text-gray-700">48 hours before appointment</label>
+                <select class="w-full mt-1.5 px-2 py-1 text-xs border border-gray-200 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC;">
+                    <option>09:00 – 18:00</option>
+                    <option>08:00 – 17:00</option>
+                    <option>10:00 – 20:00</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-md">
+            <input type="checkbox" id="reminder24" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500 mt-0.5" checked>
+            <div style="flex:1;">
+                <label for="reminder24" class="block text-sm font-medium text-gray-700">24 hours before appointment</label>
+                <select class="w-full mt-1.5 px-2 py-1 text-xs border border-gray-200 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC;">
+                    <option>09:00 – 18:00</option>
+                    <option>08:00 – 17:00</option>
+                    <option>10:00 – 20:00</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-md">
+            <input type="checkbox" id="reminder2h" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500 mt-0.5" checked>
+            <div style="flex:1;">
+                <label for="reminder2h" class="block text-sm font-medium text-gray-700">2 hours before appointment</label>
+                <select class="w-full mt-1.5 px-2 py-1 text-xs border border-gray-200 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC;">
+                    <option>09:00 – 18:00</option>
+                    <option>08:00 – 17:00</option>
+                    <option>10:00 – 20:00</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reminder Content -->
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-5">
+    <div class="flex items-center gap-2 mb-4">
+        <i class="bi bi-chat-quote" style="font-size:16px; color:#D97706;"></i>
+        <h2 class="text-sm font-semibold text-gray-900">Message Content</h2>
+    </div>
+
+    <div class="mb-4">
+        <label for="reminderScript" class="block text-xs font-medium text-gray-700 mb-2">Reminder script template <span class="text-red-500">*</span></label>
+        <textarea id="reminderScript" rows="3" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC; font-family:system-ui;">Hello [Patient Name], this is a reminder from [Clinic Name] about your appointment on [Date] at [Time] with Dr. [Doctor Name]. Please press 1 to confirm, press 2 to reschedule, or press 3 to cancel.</textarea>
+        <div style="margin-top:8px; padding:8px 10px; background:#ECFDF5; border-left:3px solid #86EFAC; border-radius:3px; font-size:11px; color:#15803D;">
+            <strong>Template variables</strong> like [Patient Name], [Date], and [Time] are automatically populated from your HMS integration when the reminder is sent.
+        </div>
+    </div>
+
+    <div>
+        <label for="language" class="block text-xs font-medium text-gray-700 mb-2">Language for reminder calls</label>
+        <select id="language" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC;">
+            <option value="ar">Arabic</option>
+            <option value="en" selected>English</option>
+            <option value="ar-en">Both (Arabic first)</option>
+            <option value="en-ar">Both (English first)</option>
+        </select>
+    </div>
+</div>
+
+<!-- Response Handling -->
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-5">
+    <div class="flex items-center gap-2 mb-4">
+        <i class="bi bi-reply" style="font-size:16px; color:#4F46E5;"></i>
+        <h2 class="text-sm font-semibold text-gray-900">Patient Response Handling</h2>
+    </div>
+
+    <p class="text-xs text-gray-600 mb-4">Choose what happens when patient responds:</p>
+
+    <div class="space-y-3">
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+            <span class="text-xs font-medium text-gray-700 min-w-fit">If patient confirms:</span>
+            <select class="flex-1 px-2 py-1.5 text-xs border border-gray-200 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC;">
+                <option>Log confirmation</option>
+                <option>Send confirmation SMS</option>
+                <option>Do nothing</option>
+            </select>
+        </div>
+
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+            <span class="text-xs font-medium text-gray-700 min-w-fit">If patient reschedules:</span>
+            <select class="flex-1 px-2 py-1.5 text-xs border border-gray-200 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC;">
+                <option>Transfer to booking agent</option>
+                <option>Log and notify staff</option>
+                <option>Collect preferred time</option>
+            </select>
+        </div>
+
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+            <span class="text-xs font-medium text-gray-700 min-w-fit">If patient cancels:</span>
+            <select class="flex-1 px-2 py-1.5 text-xs border border-gray-200 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC;">
+                <option>Log cancellation</option>
+                <option>Notify staff immediately</option>
+                <option>Offer rebooking</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Agent Assignment -->
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-5">
+    <div class="flex items-center gap-2 mb-4">
+        <i class="bi bi-robot" style="font-size:16px; color:#4F46E5;"></i>
+        <h2 class="text-sm font-semibold text-gray-900">AI Agent Assignment</h2>
+    </div>
+    <label for="agentSelect3" class="block text-xs font-medium text-gray-700 mb-2">Select Agent <span class="text-red-500">*</span></label>
+    <select id="agentSelect3" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC;">
+        <option value="">-- Select an agent --</option>
+        {% if agents %}
+            {% for agent in agents %}
+                <option value="{{ agent.id }}" {% if config.get('agent_id') == agent.id %}selected{% endif %}>{{ agent.name }}</option>
+            {% endfor %}
+        {% else %}
+            <option value="" disabled>No agents configured yet</option>
+        {% endif %}
+    </select>
+</div>
+
+<!-- n8n Integration -->
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-5">
+    <div class="flex items-center gap-2 mb-4">
+        <i class="bi bi-link-45deg" style="font-size:16px; color:#7C3AED;"></i>
+        <h2 class="text-sm font-semibold text-gray-900">n8n Webhook Integration</h2>
+    </div>
+
+    <div class="mb-3">
+        <label class="block text-xs font-medium text-gray-700 mb-2">Pre-call Webhook (Patient + Appointment Data)</label>
+        <input type="url" placeholder="https://n8n.yourdomain.com/webhook/clinic/pre-reminder" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none font-mono" style="background-color:#FAFBFC; font-size:11px;">
+        <p class="text-xs text-gray-500 mt-1">Fetch patient and appointment details from HMS</p>
+    </div>
+
+    <div>
+        <label class="block text-xs font-medium text-gray-700 mb-2">Post-call Webhook (Response Logging)</label>
+        <input type="url" placeholder="https://n8n.yourdomain.com/webhook/clinic/post-reminder" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none font-mono" style="background-color:#FAFBFC; font-size:11px;">
+        <p class="text-xs text-gray-500 mt-1">Log reminder response in HMS</p>
+    </div>
+</div>
+
+<div style="padding:12px 14px; background:#ECFDF5; border:1px solid #86EFAC; border-radius:8px; margin-bottom:24px; font-size:12px; color:#15803D;">
+    <i class="bi bi-check-circle" style="margin-right:6px;"></i>
+    Reminders will be automatically scheduled based on appointment times in your HMS. Your AI agent will call patients at the selected times.
+</div>
+
+<div class="flex gap-3 justify-end">
+    <a href="{{ url_for('clinic.clinic_hub') }}" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors" style="text-decoration:none;">Cancel</a>
+    <button onclick="saveConfiguration()" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors">Save Configuration</button>
+</div>
+
+<script>
+async function saveConfiguration() {
+    const agent = document.getElementById('agentSelect3').value;
+    if (!agent) {
+        showToast('Please select an agent', 'error');
+        return;
+    }
+
+    const reminderTimes = [];
+    if (document.getElementById('reminder48').checked) reminderTimes.push(48);
+    if (document.getElementById('reminder24').checked) reminderTimes.push(24);
+    if (document.getElementById('reminder2h').checked) reminderTimes.push(2);
+
+    const data = {
+        agent_id: parseInt(agent),
+        reminder_times: reminderTimes,
+        reminder_script: document.getElementById('reminderScript').value,
+        language: document.getElementById('language').value,
+        confirm_action: document.querySelectorAll('select')[0].value,
+        reschedule_action: document.querySelectorAll('select')[1].value,
+        cancel_action: document.querySelectorAll('select')[2].value,
+        pre_call_webhook_url: document.querySelectorAll('input[type="url"]')[0].value,
+        post_call_webhook_url: document.querySelectorAll('input[type="url"]')[1].value,
+    };
+
+    try {
+        const response = await fetch('/clinic/api/patient-reminders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            showToast(result.error || 'Failed to save', 'error');
+            return;
+        }
+
+        showToast('Patient reminders configured successfully!', 'success');
+        setTimeout(() => { window.location.href = '{{ url_for('clinic.clinic_hub') }}'; }, 1500);
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Failed to save configuration', 'error');
+    }
+}
+
+function enableFeature() {
+    showToast('Coming in next update', 'info');
+}
+
+function showToast(message, type = 'info') {
+    const colors = {
+        success: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+        error: 'bg-red-50 border-red-200 text-red-800',
+        info: 'bg-blue-50 border-blue-200 text-blue-800'
+    };
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 z-[60] px-4 py-3 rounded-lg border text-sm font-medium shadow-lg ${colors[type] || colors.info}`;
+    toast.innerHTML = `<i class="bi bi-check-circle-fill" style="margin-right:8px;"></i>${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+</script>
+
+{% endblock %}

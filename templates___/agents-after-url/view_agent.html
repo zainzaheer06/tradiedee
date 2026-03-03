@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% block title %}{{ agent.name }}{% endblock %}
+{% block page_title %}{% endblock %}
+
+{% block dashboard_content %}
+<div class="mb-6">
+    <a href="{{ url_for('agents.create_agent') }}" class="inline-flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg font-medium transition-colors">
+        <i class="bi bi-arrow-left"></i> Back to Agents
+    </a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Content -->
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Agent Details Card -->
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-blue-50">
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center justify-center w-12 h-12 bg-indigo-600 rounded-lg">
+                        <span class="text-white text-lg font-bold">{{ agent.user_agent_number or '?' }}</span>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">{{ agent.name }}</h2>
+                        <p class="text-sm text-gray-600">Voice Agent Configuration</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 space-y-6">
+                <!-- Voice -->
+                <div>
+                    <label class="text-sm font-semibold text-gray-600 uppercase tracking-wide block mb-2">Voice</label>
+                    <div class="flex items-center gap-2">
+                        <span class="flex-1 px-3 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm font-semibold">{{ agent.voice_name or 'Fatima' }}</span>
+                        <button onclick="navigator.clipboard.writeText('{{ agent.voice_id }}')" class="px-3 py-2 bg-indigo-100 text-indigo-600 hover:bg-indigo-200 rounded-lg font-medium transition-colors text-sm" title="Copy Voice ID">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Created Date -->
+                <div>
+                    <label class="text-sm font-semibold text-gray-600 uppercase tracking-wide block mb-2">Created</label>
+                    <p class="text-gray-700">{{ agent.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+                </div>
+
+                <!-- Greeting Message -->
+                <div>
+                    <label class="text-sm font-semibold text-gray-600 uppercase tracking-wide block mb-2">Greeting Message</label>
+                    <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+                        <div class="flex items-start gap-2">
+                            <p class="text-sm text-gray-800 leading-relaxed">{{ agent.greeting or 'السلام عليكم ورحمة الله وبركاته، أهلاً وسهلاً فيك. أنا مساعدك الذكي، كيف أقدر أساعدك اليوم؟' }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Prompt -->
+                <div>
+                    <label class="text-sm font-semibold text-gray-600 uppercase tracking-wide block mb-2">System Prompt</label>
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <pre class="whitespace-pre-wrap break-words text-sm text-gray-700 font-mono">{{ agent.prompt }}</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call History -->
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <i class="bi bi-clock-history text-indigo-600 text-lg"></i>
+                    <h3 class="text-lg font-bold text-gray-900">Call History</h3>
+                </div>
+                {% if call_logs %}
+                <span class="text-xs font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{{ call_logs|length }} calls</span>
+                {% endif %}
+            </div>
+
+            <div class="p-6">
+                {% if call_logs %}
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">To Number</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Duration</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Minutes</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                                <th class="text-right py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for call in call_logs %}
+                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td class="py-3 px-4">
+                                    <span class="font-medium text-gray-900">{{ call.to_number }}</span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="text-sm text-gray-600">{{ call.duration_seconds }}s</span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="badge-primary">{{ call.minutes_used }} min</span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="text-sm text-gray-600">{{ call.created_at.strftime('%b %d, %Y') }}</span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="badge-success">{{ call.status }}</span>
+                                </td>
+                                <td class="py-3 px-4 text-right">
+                                    <a href="{{ url_for('core.view_call_log', log_id=call.id) }}" class="inline-flex items-center gap-1 px-3 py-1 text-indigo-600 hover:bg-indigo-50 rounded font-medium transition-colors text-sm">
+                                        <i class="bi bi-arrow-right"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination Controls -->
+                {% if pagination.pages > 1 %}
+                <div class="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+                    <div class="text-sm text-gray-600">
+                        Showing {{ ((pagination.page - 1) * pagination.per_page) + 1 }} to {{ pagination.page * pagination.per_page if pagination.page * pagination.per_page < pagination.total else pagination.total }} of {{ pagination.total }} calls
+                    </div>
+                    <div class="flex items-center gap-2">
+                        {% if pagination.has_prev %}
+                        <a href="{{ url_for('agents.view_agent', agent_num=agent.user_agent_number, page=pagination.prev_num) }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
+                            <i class="bi bi-chevron-left"></i> Previous
+                        </a>
+                        {% endif %}
+
+                        <span class="px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md">
+                            Page {{ pagination.page }} of {{ pagination.pages }}
+                        </span>
+
+                        {% if pagination.has_next %}
+                        <a href="{{ url_for('agents.view_agent', agent_num=agent.user_agent_number, page=pagination.next_num) }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
+                            Next <i class="bi bi-chevron-right"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% else %}
+                <div class="text-center py-12">
+                    <div class="flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mx-auto mb-4">
+                        <i class="bi bi-telephone-x text-gray-400 text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">No calls yet</h3>
+                    <p class="text-gray-600">This agent hasn't made any calls yet</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar - Make Call -->
+    <div class="lg:col-span-1">
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden sticky top-20">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-blue-50">
+                <div class="flex items-center gap-2">
+                    <i class="bi bi-telephone-outbound text-indigo-600 text-lg"></i>
+                    <h3 class="font-bold text-gray-900">Make Call</h3>
+                </div>
+            </div>
+
+            <form id="makeCallForm" class="p-6 space-y-4">
+                <div>
+                    <label for="phone_number" class="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
+                    <input type="tel" id="phone_number" name="phone_number" placeholder="+966123456789 or 966123456789"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                           required>
+                    <p class="text-xs text-gray-500 mt-1">Enter with or without '+' sign (e.g., +966123456789 or 966123456789)</p>
+                    <p id="phone_error" class="text-xs text-red-600 mt-1 hidden"></p>
+                </div>
+
+                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors btn-hover" id="callButton">
+                    <i class="bi bi-telephone-outbound"></i> Make Call
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Phone number validation function
+function validatePhoneNumber(phoneNumber) {
+    const errors = [];
+
+    // Remove any whitespace
+    phoneNumber = phoneNumber.trim();
+
+    // Check if empty
+    if (!phoneNumber) {
+        errors.push('Phone number is required');
+        return { valid: false, errors, cleaned: phoneNumber };
+    }
+
+    // Remove spaces, dashes, parentheses, and + sign for validation
+    const cleanedNumber = phoneNumber.replace(/[\s\-()\+]/g, '');
+
+    // Check if it contains only digits after cleaning
+    if (!/^\d+$/.test(cleanedNumber)) {
+        errors.push('Phone number should contain only digits and allowed characters (+, -, spaces, parentheses)');
+    }
+
+    // Check length (international format: 10-15 digits)
+    if (cleanedNumber.length < 10) {
+        errors.push('Phone number is too short (minimum 10 digits)');
+    } else if (cleanedNumber.length > 15) {
+        errors.push('Phone number is too long (maximum 15 digits)');
+    }
+
+    return {
+        valid: errors.length === 0,
+        errors,
+        cleaned: cleanedNumber
+    };
+}
+
+// Real-time validation on input
+document.getElementById('phone_number').addEventListener('input', function(e) {
+    const errorElement = document.getElementById('phone_error');
+    const validation = validatePhoneNumber(e.target.value);
+
+    if (!validation.valid && e.target.value.trim() !== '') {
+        errorElement.textContent = validation.errors[0];
+        errorElement.classList.remove('hidden');
+        e.target.classList.add('border-red-500');
+        e.target.classList.remove('border-gray-300');
+    } else {
+        errorElement.classList.add('hidden');
+        e.target.classList.remove('border-red-500');
+        e.target.classList.add('border-gray-300');
+    }
+});
+
+document.getElementById('makeCallForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const phoneInput = document.getElementById('phone_number');
+    const phoneNumber = phoneInput.value;
+    const errorElement = document.getElementById('phone_error');
+    const btn = document.getElementById('callButton');
+    const originalHTML = btn.innerHTML;
+
+    // Validate phone number
+    const validation = validatePhoneNumber(phoneNumber);
+
+    if (!validation.valid) {
+        errorElement.textContent = validation.errors.join(', ');
+        errorElement.classList.remove('hidden');
+        phoneInput.classList.add('border-red-500');
+        phoneInput.focus();
+        return;
+    }
+
+    // Clear any previous errors
+    errorElement.classList.add('hidden');
+    phoneInput.classList.remove('border-red-500');
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split animate-spin"></i> Calling...';
+
+    try {
+        // Use the cleaned phone number (digits only)
+        const response = await fetch('{{ url_for("agents.make_call_route", agent_num=agent.user_agent_number) }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `phone_number=${encodeURIComponent(validation.cleaned)}`
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Show success message
+            btn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+            btn.classList.add('bg-green-600', 'hover:bg-green-700');
+            btn.innerHTML = '<i class="bi bi-check-circle"></i> Call Initiated!';
+
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            throw new Error(data.error || 'Failed to make call');
+        }
+    } catch (error) {
+        btn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+        btn.classList.add('bg-red-600', 'hover:bg-red-700');
+        btn.innerHTML = '<i class="bi bi-exclamation-circle"></i> Error: ' + error.message;
+
+        setTimeout(() => {
+            btn.classList.remove('bg-red-600', 'hover:bg-red-700');
+            btn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+        }, 3000);
+    }
+});
+</script>
+{% endblock %}

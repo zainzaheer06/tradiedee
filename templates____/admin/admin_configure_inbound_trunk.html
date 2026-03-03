@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Configure Inbound Trunk - {{ config.name }}{% endblock %}
+
+{% block page_title %}Configure Inbound Trunk{% endblock %}
+
+{% block dashboard_content %}
+<!-- Back Button -->
+<div class="mb-6">
+    <a href="{{ url_for('core.inbound_trunk_management') }}" class="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium">
+        <i class="bi bi-arrow-left"></i>
+        Back to Inbound Trunk Management
+    </a>
+</div>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">Configure Inbound SIP Trunk</h1>
+    <p class="text-gray-600 mt-2">Assign inbound SIP trunk for {{ config.name }}</p>
+</div>
+
+<!-- Configuration Info Card -->
+<div class="bg-white rounded-xl border border-gray-200 overflow-hidden mb-8">
+    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <i class="bi bi-telephone-inbound text-indigo-600"></i>
+            Inbound Configuration Information
+        </h2>
+    </div>
+    <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label class="text-sm font-semibold text-gray-600 mb-1 block">Configuration Name</label>
+                <p class="text-lg font-medium text-gray-900">{{ config.name }}</p>
+            </div>
+            <div>
+                <label class="text-sm font-semibold text-gray-600 mb-1 block">Owner</label>
+                <p class="text-lg font-medium text-gray-900">{{ config.user.username }}</p>
+                <p class="text-sm text-gray-500">{{ config.user.email }}</p>
+            </div>
+            <div>
+                <label class="text-sm font-semibold text-gray-600 mb-1 block">Phone Number</label>
+                {% if config.phone_number %}
+                <p class="text-lg font-medium text-gray-900 font-mono">{{ config.phone_number }}</p>
+                {% else %}
+                <p class="text-gray-500 italic">Not set</p>
+                {% endif %}
+            </div>
+            <div>
+                <label class="text-sm font-semibold text-gray-600 mb-1 block">Linked Agent</label>
+                <p class="text-lg font-medium text-gray-900">{{ config.agent.name }}</p>
+                <p class="text-sm text-gray-500">{{ config.agent.voice_name or 'Default Voice' }}</p>
+            </div>
+            <div>
+                <label class="text-sm font-semibold text-gray-600 mb-1 block">Configuration ID</label>
+                <p class="text-lg font-medium text-gray-900">#{{ config.id }}</p>
+            </div>
+            <div>
+                <label class="text-sm font-semibold text-gray-600 mb-1 block">Current Status</label>
+                {% if config.trunk_id %}
+                <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
+                    <i class="bi bi-check-circle"></i> Configured
+                </span>
+                {% else %}
+                <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm font-semibold">
+                    <i class="bi bi-x-circle"></i> Not Configured
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Configuration Form -->
+<div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <i class="bi bi-diagram-3 text-indigo-600"></i>
+            Inbound Trunk Configuration
+        </h2>
+    </div>
+    <div class="p-6">
+        <form method="POST" action="{{ url_for('core.configure_inbound_trunk', config_id=config.id) }}">
+            <!-- Inbound Trunk ID -->
+            <div class="mb-6">
+                <label for="inbound_trunk_id" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                    <i class="bi bi-diagram-3 text-indigo-600"></i>
+                    Inbound Trunk ID
+                </label>
+                <input type="text"
+                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-gray-900 font-mono text-sm"
+                       id="inbound_trunk_id"
+                       name="inbound_trunk_id"
+                       value="{{ config.trunk_id or '' }}"
+                       placeholder="e.g., ST_abc123xyz456">
+                <p class="mt-2 text-sm text-gray-600">
+                    <i class="bi bi-info-circle"></i>
+                    Enter the LiveKit inbound SIP trunk ID from your LiveKit dashboard (starts with "ST_")
+                </p>
+            </div>
+
+            <!-- Info Banner -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div class="flex items-start gap-3">
+                    <i class="bi bi-lightbulb text-blue-600 text-lg mt-0.5"></i>
+                    <div class="text-sm text-gray-700">
+                        <p class="font-semibold mb-2">Configuration Tips:</p>
+                        <ul class="space-y-1">
+                            <li><i class="bi bi-dot"></i> Trunk ID format: ST_xxxxxxxxxxxx (from LiveKit SIP dashboard)</li>
+                            <li><i class="bi bi-dot"></i> This trunk handles incoming calls to phone number {{ config.phone_number }}</li>
+                            <li><i class="bi bi-dot"></i> Leave empty to disable inbound calls for this configuration</li>
+                            <li><i class="bi bi-dot"></i> Make sure the trunk is configured in LiveKit with proper routing</li>
+                            <li><i class="bi bi-dot"></i> Changes take effect immediately for new incoming calls</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Buttons -->
+            <div class="flex items-center gap-4">
+                <button type="submit"
+                        class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors flex items-center gap-2">
+                    <i class="bi bi-check-circle"></i>
+                    Save Configuration
+                </button>
+                <a href="{{ url_for('core.inbound_trunk_management') }}"
+                   class="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-colors flex items-center gap-2">
+                    <i class="bi bi-x-circle"></i>
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Danger Zone -->
+{% if config.trunk_id %}
+<div class="mt-8 bg-white rounded-xl border-2 border-red-200 overflow-hidden">
+    <div class="px-6 py-4 border-b border-red-200 bg-red-50">
+        <h2 class="text-lg font-bold text-red-900 flex items-center gap-2">
+            <i class="bi bi-exclamation-triangle"></i>
+            Danger Zone
+        </h2>
+    </div>
+    <div class="p-6">
+        <p class="text-gray-700 mb-4">Remove the inbound trunk configuration. This configuration will no longer be able to receive incoming calls.</p>
+        <form method="POST" action="{{ url_for('core.remove_inbound_trunk', config_id=config.id) }}"
+              onsubmit="return confirm('Are you sure you want to remove the inbound trunk from {{ config.name }}? This will disable incoming calls to this configuration.')">
+            <button type="submit"
+                    class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors flex items-center gap-2">
+                <i class="bi bi-trash"></i>
+                Remove Inbound Trunk Configuration
+            </button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% block title %}Campaigns — Tradiedee{% endblock %}
+
+{% block dashboard_content %}
+
+<div class="ph">
+    <div>
+        <h1 class="ph-title">Campaigns</h1>
+        <p class="ph-sub">{{ pagination.total if pagination else campaigns|length }} outbound campaign{{ 's' if (pagination.total if pagination else campaigns|length) != 1 else '' }}</p>
+    </div>
+    <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg" style="font-size:12px;"></i> Create Campaign
+    </a>
+</div>
+
+<!-- Filters -->
+<div class="card" style="margin-bottom:20px; padding:14px 16px;">
+    <form method="GET" action="{{ url_for('campaigns.campaigns') }}" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:200px; position:relative;">
+            <i class="bi bi-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--t4); font-size:13px;"></i>
+            <input type="text" name="search" value="{{ search_query or '' }}"
+                   placeholder="Search campaigns..."
+                   class="inp inp-sm" style="padding-left:34px;">
+        </div>
+        <select name="status" class="inp inp-sm" style="width:auto;">
+            <option value="">All Statuses</option>
+            <option value="draft"     {% if status_filter == 'draft'     %}selected{% endif %}>Draft</option>
+            <option value="running"   {% if status_filter == 'running'   %}selected{% endif %}>Running</option>
+            <option value="paused"    {% if status_filter == 'paused'    %}selected{% endif %}>Paused</option>
+            <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+            <option value="stopped"   {% if status_filter == 'stopped'   %}selected{% endif %}>Stopped</option>
+        </select>
+        <button type="submit" class="btn btn-secondary btn-sm">
+            <i class="bi bi-funnel" style="font-size:11px;"></i> Filter
+        </button>
+        {% if search_query or status_filter %}
+        <a href="{{ url_for('campaigns.campaigns') }}" class="btn btn-ghost btn-sm">Clear</a>
+        {% endif %}
+    </form>
+</div>
+
+{% if campaigns %}
+<div class="card" style="overflow:hidden; margin-bottom:20px;">
+    <div style="overflow-x:auto;">
+        <table class="tbl">
+            <thead>
+                <tr>
+                    <th>Campaign</th>
+                    <th>Agent</th>
+                    <th style="text-align:center;">Status</th>
+                    <th style="text-align:center;">Progress</th>
+                    <th style="text-align:center;">Contacts</th>
+                    <th style="text-align:center;">Interest</th>
+                    <th style="text-align:center;">Created</th>
+                    <th style="text-align:right;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for campaign in campaigns %}
+                <tr>
+                    <!-- Campaign name -->
+                    <td style="max-width:220px;">
+                        <p style="font-size:14px; font-weight:600; color:var(--t1); margin-bottom:2px;">{{ campaign.name }}</p>
+                        {% if campaign.description %}
+                        <p style="font-size:12px; color:var(--t4); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:200px;">
+                            {{ campaign.description[:80] }}{% if campaign.description|length > 80 %}…{% endif %}
+                        </p>
+                        {% else %}
+                        <p style="font-size:12px; color:var(--t4); font-style:italic;">No description</p>
+                        {% endif %}
+                    </td>
+
+                    <!-- Agent -->
+                    <td>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <i class="bi bi-robot" style="font-size:13px; color:#4F46E5;"></i>
+                            <div>
+                                <p style="font-size:13px; font-weight:500; color:var(--t1);">{{ campaign.agent.name }}</p>
+                                <p style="font-size:11.5px; color:var(--t4);">{{ campaign.agent.voice_name or 'Default Voice' }}</p>
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- Status -->
+                    <td style="text-align:center;">
+                        {% if campaign.status == 'running' %}
+                            <span class="badge badge-green">Running</span>
+                        {% elif campaign.status == 'paused' %}
+                            <span class="badge badge-amber">Paused</span>
+                        {% elif campaign.status == 'completed' %}
+                            <span class="badge badge-indigo">Completed</span>
+                        {% elif campaign.status == 'stopped' %}
+                            <span class="badge badge-red">Stopped</span>
+                        {% else %}
+                            <span class="badge badge-gray">Draft</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Progress -->
+                    <td style="text-align:center;">
+                        <div style="min-width:100px;">
+                            <div style="display:flex; justify-content:center; margin-bottom:5px;">
+                                <span style="font-size:12.5px; font-weight:600; color:var(--t2);">{{ campaign.stats.progress }}%</span>
+                            </div>
+                            <div style="height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;">
+                                <div style="height:100%; width:{{ campaign.stats.progress }}%; background:#4F46E5; border-radius:3px;"></div>
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- Contacts -->
+                    <td style="text-align:center;">
+                        <p style="font-size:14px; font-weight:600; color:var(--t1);">{{ campaign.stats.processed }}/{{ campaign.stats.total }}</p>
+                        <p style="font-size:11.5px; color:var(--t4);">
+                            {% if campaign.stats.pending > 0 %}{{ campaign.stats.pending }} pending{% endif %}
+                            {% if campaign.stats.failed + campaign.stats.no_answer > 0 %}
+                                {% if campaign.stats.pending > 0 %}, {% endif %}{{ campaign.stats.failed + campaign.stats.no_answer }} failed
+                            {% endif %}
+                        </p>
+                    </td>
+
+                    <!-- Interest -->
+                    <td style="text-align:center;">
+                        {% if campaign.stats.interested > 0 or campaign.stats.not_interested > 0 %}
+                        <div style="display:flex; align-items:center; justify-content:center; gap:14px;">
+                            <div style="text-align:center;">
+                                <p style="font-size:13px; font-weight:700; color:#059669;">{{ campaign.stats.interested }}</p>
+                                <p style="font-size:11px; color:var(--t4);">Int.</p>
+                            </div>
+                            <div style="text-align:center;">
+                                <p style="font-size:13px; font-weight:700; color:var(--t3);">{{ campaign.stats.not_interested }}</p>
+                                <p style="font-size:11px; color:var(--t4);">Not</p>
+                            </div>
+                        </div>
+                        {% else %}
+                        <span style="font-size:13px; color:var(--t4);">—</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Date -->
+                    <td style="text-align:center; white-space:nowrap;">
+                        <p style="font-size:13px; color:var(--t2);">{{ campaign.created_at.strftime('%b %d, %Y') }}</p>
+                        <p style="font-size:11.5px; color:var(--t4);">{{ campaign.created_at.strftime('%H:%M') }}</p>
+                    </td>
+
+                    <!-- Actions -->
+                    <td style="text-align:right;">
+                        <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id) }}" class="btn btn-ghost btn-sm">
+                            <i class="bi bi-eye" style="font-size:11px;"></i> View
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if pagination.pages > 1 %}
+<div style="display:flex; align-items:center; justify-content:space-between; padding:12px 0;">
+    <p style="font-size:12.5px; color:var(--t3);">
+        Page {{ pagination.page }} of {{ pagination.pages }}
+    </p>
+    <div class="pag">
+        {% if pagination.has_prev %}
+        <a href="{{ url_for('campaigns.campaigns', page=pagination.prev_num) }}"><i class="bi bi-chevron-left"></i> Prev</a>
+        {% else %}<span class="dis"><i class="bi bi-chevron-left"></i> Prev</span>{% endif %}
+
+        <span class="cur">{{ pagination.page }}</span>
+
+        {% if pagination.has_next %}
+        <a href="{{ url_for('campaigns.campaigns', page=pagination.next_num) }}">Next <i class="bi bi-chevron-right"></i></a>
+        {% else %}<span class="dis">Next <i class="bi bi-chevron-right"></i></span>{% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="card">
+    <div class="empty">
+        <div class="empty-icon">
+            <i class="bi bi-megaphone" style="font-size:20px; color:#9CA3AF;"></i>
+        </div>
+        <p style="font-size:14px; font-weight:600; color:var(--t1); margin-bottom:4px;">No Campaigns Yet</p>
+        <p style="font-size:13px; color:var(--t3); margin-bottom:20px;">Create your first outbound campaign to start calling customers</p>
+        <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg" style="font-size:11px;"></i> Create First Campaign
+        </a>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

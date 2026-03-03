@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Nevox AI{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon-logo.svg') }}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Bootstrap Icons - Latest version with fallback -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" media="none" onload="if(media!='all')media='all'">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Smooth transitions */
+        * {
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
+        /* Badge styles */
+        .badge-primary {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border-radius: 9999px;
+            background-color: #e0e7ff;
+            color: #4338ca;
+        }
+
+        .badge-success {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border-radius: 9999px;
+            background-color: #d1fae5;
+            color: #047857;
+        }
+
+        .badge-warning {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border-radius: 9999px;
+            background-color: #fef3c7;
+            color: #b45309;
+        }
+
+        .badge-danger {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border-radius: 9999px;
+            background-color: #fee2e2;
+            color: #b91c1c;
+        }
+
+        /* Button hover effects */
+        .btn-hover {
+            transition: box-shadow 0.2s ease;
+        }
+
+        .btn-hover:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Card hover */
+        .card-hover {
+            transition: box-shadow 0.2s ease;
+        }
+
+        .card-hover:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* ===== SIDEBAR STYLES — Clean Light ===== */
+        .sidebar {
+            transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: #ffffff;
+            border-right: 1px solid #e5e7eb;
+            width: 15rem; /* w-60 */
+        }
+        .sidebar-hidden {
+            transform: translateX(-100%);
+        }
+        @media (min-width: 1024px) {
+            .sidebar-hidden { transform: translateX(0); }
+            .sidebar.collapsed {
+                width: 4rem;
+            }
+            .sidebar.collapsed .sidebar-label,
+            .sidebar.collapsed .sidebar-section-label,
+            .sidebar.collapsed .sidebar-badge,
+            .sidebar.collapsed .nav-chevron,
+            .sidebar.collapsed .submenu,
+            .sidebar.collapsed .sidebar-divider {
+                display: none;
+            }
+            .sidebar.collapsed .nav-item,
+            .sidebar.collapsed .nav-dropdown-btn {
+                justify-content: center;
+                padding-left: 0;
+                padding-right: 0;
+            }
+            .sidebar.collapsed .nav-item span,
+            .sidebar.collapsed .nav-dropdown-btn span {
+                display: none;
+            }
+            .sidebar.collapsed .nav-item i,
+            .sidebar.collapsed .nav-dropdown-btn i {
+                font-size: 1.125rem;
+                width: auto;
+            }
+            .sidebar.collapsed .nav-item.active::before {
+                top: 4px; bottom: 4px;
+            }
+            .sidebar.collapsed nav {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+            .sidebar.collapsed .sidebar-footer .user-info {
+                display: none;
+            }
+            .sidebar.collapsed .sidebar-footer .footer-inner {
+                justify-content: center;
+                padding: 0;
+            }
+            .sidebar.collapsed .sidebar-footer .logout-btn {
+                display: none;
+            }
+            .sidebar.collapsed .sidebar-header {
+                justify-content: center;
+                padding-left: 0;
+                padding-right: 0;
+            }
+            .sidebar.collapsed .logo-full {
+                display: none;
+            }
+            .sidebar.collapsed .logo-icon {
+                display: flex;
+            }
+            .sidebar.collapsed .collapse-btn {
+                display: none;
+            }
+        }
+        .logo-icon {
+            display: none;
+        }
+
+        /* Floating expand button — visible only when sidebar is collapsed */
+        .expand-float-btn {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 4.5rem;
+            z-index: 51;
+            width: 28px;
+            height: 28px;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.375rem;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            color: #6b7280;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            transition: all 0.15s ease;
+        }
+        .expand-float-btn:hover {
+            background: #f9fafb;
+            color: #111827;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        @media (min-width: 1024px) {
+            .sidebar.collapsed ~ .expand-float-btn,
+            .expand-float-btn.visible {
+                display: flex;
+            }
+        }
+
+        /* Tooltip for collapsed sidebar */
+        @media (min-width: 1024px) {
+            .sidebar.collapsed .nav-item,
+            .sidebar.collapsed .nav-dropdown-btn {
+                position: relative;
+            }
+            .sidebar.collapsed .nav-item[title]:hover::after,
+            .sidebar.collapsed .nav-dropdown-btn[title]:hover::after {
+                content: attr(title);
+                position: absolute;
+                left: calc(100% + 8px);
+                top: 50%;
+                transform: translateY(-50%);
+                background: #1f2937;
+                color: #ffffff;
+                font-size: 0.75rem;
+                font-weight: 500;
+                padding: 0.25rem 0.625rem;
+                border-radius: 0.375rem;
+                white-space: nowrap;
+                z-index: 100;
+                pointer-events: none;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            }
+        }
+
+        /* Section labels */
+        .sidebar-section-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: #9ca3af;
+            padding: 1rem 0.75rem 0.375rem;
+        }
+
+        /* Nav items */
+        .nav-item {
+            transition: all 0.12s ease;
+            position: relative;
+            border-radius: 0.375rem;
+            color: #4b5563;
+            font-size: 0.875rem;
+            font-weight: 450;
+        }
+        .nav-item:hover {
+            background: #f3f4f6;
+            color: #111827;
+        }
+        .nav-item i {
+            width: 1.125rem;
+            text-align: center;
+            font-size: 1rem;
+            color: #9ca3af;
+            transition: color 0.12s ease;
+        }
+        .nav-item:hover i {
+            color: #6b7280;
+        }
+        .nav-item.active {
+            background: #f3f4f6;
+            color: #111827;
+            font-weight: 500;
+        }
+        .nav-item.active i {
+            color: #4f46e5;
+        }
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 6px; bottom: 6px;
+            width: 2px;
+            border-radius: 0 2px 2px 0;
+            background: #4f46e5;
+        }
+        .nav-item.active:hover {
+            background: #eef2ff;
+        }
+
+        /* Dropdown button */
+        .nav-dropdown-btn {
+            transition: all 0.12s ease;
+            border-radius: 0.375rem;
+            color: #4b5563;
+            font-size: 0.875rem;
+            font-weight: 450;
+            cursor: pointer;
+            border: none;
+            background: none;
+        }
+        .nav-dropdown-btn:hover {
+            background: #f3f4f6;
+            color: #111827;
+        }
+        .nav-dropdown-btn i {
+            color: #9ca3af;
+            font-size: 1rem;
+        }
+        .nav-dropdown-btn:hover i {
+            color: #6b7280;
+        }
+        .nav-dropdown-btn.expanded {
+            color: #111827;
+        }
+
+        /* Submenu */
+        .submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s ease;
+            opacity: 0;
+        }
+        .submenu.show {
+            max-height: 300px;
+            opacity: 1;
+        }
+        .submenu .nav-item {
+            font-size: 0.875rem;
+            padding-left: 2.25rem;
+        }
+        .submenu .nav-item::before {
+            display: none;
+        }
+
+        /* Dot indicator for submenu items */
+        .submenu .nav-item .sub-dot {
+            width: 5px; height: 5px;
+            border-radius: 50%;
+            background: #d1d5db;
+            transition: background 0.12s ease;
+            flex-shrink: 0;
+        }
+        .submenu .nav-item:hover .sub-dot {
+            background: #6b7280;
+        }
+        .submenu .nav-item.active .sub-dot {
+            background: #4f46e5;
+        }
+
+        /* Chevron */
+        .nav-chevron {
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.7rem;
+            color: #d1d5db;
+        }
+        .chevron-rotate {
+            transform: rotate(180deg);
+        }
+
+        /* Sidebar divider */
+        .sidebar-divider {
+            height: 1px;
+            background: #f3f4f6;
+            margin: 0.25rem 0.75rem;
+        }
+
+        /* Sidebar footer */
+        .sidebar-footer {
+            border-top: 1px solid #f3f4f6;
+        }
+
+        /* Mobile overlay */
+        .sidebar-overlay {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .sidebar-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Badge pill */
+        .sidebar-badge {
+            font-size: 0.65rem;
+            padding: 0.125rem 0.4rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+        .sidebar-badge-new {
+            background: #ecfdf5;
+            color: #059669;
+        }
+
+        /* Scrollbar for sidebar nav */
+        .sidebar nav::-webkit-scrollbar { width: 3px; }
+        .sidebar nav::-webkit-scrollbar-track { background: transparent; }
+        .sidebar nav::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 3px; }
+        .sidebar nav::-webkit-scrollbar-thumb:hover { background: #d1d5db; }
+    </style>
+    {% block extra_css %}{% endblock %}
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-50">
+    {% if session.user_id %}
+    <!-- Dashboard Layout with Sidebar -->
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar sidebar-hidden lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-50 flex flex-col">
+            <!-- Sidebar Header -->
+            <div class="sidebar-header flex items-center justify-between h-14 px-4 flex-shrink-0 border-b border-gray-100">
+                <!-- Full logo + text (expanded) -->
+                <a href="{{ url_for('core.dashboard') }}" class="logo-full flex items-center gap-2.5 no-underline">
+                    <img src="{{ url_for('static', filename='images/favicon-logo.svg') }}" alt="NevoxAI" class="w-7 h-7">
+                    <span class="sidebar-label text-sm font-semibold text-gray-900">NevoxAI</span>
+                </a>
+                <!-- Icon only (collapsed) -->
+                <a href="{{ url_for('core.dashboard') }}" class="logo-icon items-center justify-center no-underline" title="NevoxAI">
+                    <img src="{{ url_for('static', filename='images/favicon-logo.svg') }}" alt="NevoxAI" class="w-7 h-7">
+                </a>
+                <div class="flex items-center gap-1">
+                    <button onclick="toggleCollapse()" class="collapse-btn hidden lg:flex text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100" title="Collapse sidebar">
+                        <i class="bi bi-layout-sidebar-inset" style="font-size: 0.875rem;"></i>
+                    </button>
+                    <button onclick="toggleSidebar()" class="lg:hidden text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100">
+                        <i class="bi bi-x-lg" style="font-size: 0.875rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 overflow-y-auto py-2 px-2.5">
+
+                {% if session.is_admin %}
+                <!-- ==================== ADMIN NAVIGATION ==================== -->
+                <div class="sidebar-section-label">Admin</div>
+                <div class="space-y-0.5">
+                    <a href="{{ url_for('core.admin_dashboard') }}" title="Admin Dashboard" class="nav-item {% if request.endpoint == 'admin_dashboard' %}active{% endif %} flex items-center gap-2.5 px-2.5 py-2 rounded-md">
+                        <i class="bi bi-shield-lock"></i>
+                        <span class="sidebar-label">Admin Dashboard</span>
+                    </a>
+                    <a href="{{ url_for('core.trunk_management') }}" title="Outbound Trunks" class="nav-item {% if request.endpoint in ['trunk_management', 'configure_user_trunk'] %}active{% endif %} flex items-center gap-2.5 px-2.5 py-2 rounded-md">
+                        <i class="bi bi-diagram-3"></i>
+                        <span class="sidebar-label">Outbound Trunks</span>
+                    </a>
+                    <a href="{{ url_for('core.inbound_trunk_management') }}" title="Inbound Trunks" class="nav-item {% if request.endpoint in ['inbound_trunk_management', 'configure_inbound_trunk'] %}active{% endif %} flex items-center gap-2.5 px-2.5 py-2 rounded-md">
+                        <i class="bi bi-telephone-inbound"></i>
+                        <span class="sidebar-label">Inbound Trunks</span>
+                    </a>
+                </div>
+
+                {% else %}
+                <!-- ==================== USER NAVIGATION ==================== -->
+
+                <!-- OVERVIEW -->
+                <div class="sidebar-section-label">Overview</div>
+                <div class="space-y-0.5">
+                    <a href="{{ url_for('core.dashboard') }}" title="Dashboard" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %} flex items-center gap-2.5 px-2.5 py-2 rounded-md">
+                        <i class="bi bi-grid-1x2"></i>
+                        <span class="sidebar-label">Dashboard</span>
+                    </a>
+                    <a href="{{ url_for('core.analytics') }}" title="Analytics" class="nav-item {% if request.endpoint == 'analytics' %}active{% endif %} flex items-center gap-2.5 px-2.5 py-2 rounded-md">
+                        <i class="bi bi-bar-chart-line"></i>
+                        <span class="sidebar-label">Analytics</span>
+                    </a>
+                </div>
+
+                <div class="sidebar-divider"></div>
+
+                <!-- AGENTS -->
+                <div class="sidebar-section-label">Agents</div>
+                <div class="space-y-0.5">
+                    <a href="{{ url_for('agents.create_agent') }}" title="Create Agent" class="nav-item {% if request.endpoint == 'create_agent' %}active{% endif %} flex items-center gap-2.5 px-2.5 py-2 rounded-md">
+                        <i class="bi bi-robot"></i>
+                        <span class="sidebar-label">Create Agent</span>
+                    </a>
+                    <a href="{{ url_for('core.tools_list') }}" title="Integrations" class="nav-item {% if request.endpoint in ['tools_list', 'create_tool', 'edit_tool', 'agent_tools'] %}active{% endif %} flex items-center gap-2.5 px-2.5 py-2 rounded-md">
+                        <i class="bi bi-puzzle"></i>
+                        <span class="sidebar-label">Integrations</span>
+                    </a>
+                    <a href="{{ url_for('test_agent.test_agent_page') }}" title="Test Agent" class="nav-item {% if request.endpoint == 'test_agent_page' %}active{% endif %} flex items-center gap-2.5 px-2.5 py-2 rounded-md">
+                        <i class="bi bi-headset"></i>
+                        <span class="sidebar-label">Test Agent</span>
+                    </a>
+                    <a href="{{ url_for('workflows.workflows_page') }}" title="Workflows" class="nav-item flex items-center gap-2.5 px-2.5 py-2 rounded-md">
+                        <i class="bi bi-bezier2"></i>
+                        <span class="sidebar-label">Workflows</span>
+                    </a>
+                </div>
+
+                <div class="sidebar-divider"></div>
+
+                <!-- CHANNELS -->
+                <div class="sidebar-section-label">Channels</div>
+                <div class="space-y-0.5">
+                    <!-- Inbound Dropdown -->
+                    <div>
+                        <button onclick="toggleDropdown('inbound')" title="Inbound" class="nav-dropdown-btn w-full flex items-center justify-between px-2.5 py-2 rounded-md">
+                            <div class="flex items-center gap-2.5">
+                                <i class="bi bi-telephone-inbound" style="width: 1rem; text-align: center;"></i>
+                                <span class="sidebar-label">Inbound</span>
+                            </div>
+                            <i id="inbound-chevron" class="bi bi-chevron-down nav-chevron"></i>
+                        </button>
+                        <div id="inbound-submenu" class="submenu mt-0.5 space-y-0.5">
+                            <a href="{{ url_for('inbound.inbound_agents') }}" title="Agents" class="nav-item {% if request.endpoint in ['inbound_agents', 'create_inbound_agent'] %}active{% endif %} flex items-center gap-2 px-2.5 py-1.5 rounded-md">
+                                <span class="sub-dot"></span>
+                                <span class="sidebar-label">Agents</span>
+                            </a>
+                            <a href="{{ url_for('inbound.inbound_call_logs') }}" title="Call Logs" class="nav-item {% if request.endpoint == 'inbound_call_logs' %}active{% endif %} flex items-center gap-2 px-2.5 py-1.5 rounded-md">
+                                <span class="sub-dot"></span>
+                                <span class="sidebar-label">Call Logs</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Outbound Dropdown -->
+                    <div>
+                        <button onclick="toggleDropdown('outbound')" title="Outbound" class="nav-dropdown-btn w-full flex items-center justify-between px-2.5 py-2 rounded-md">
+                            <div class="flex items-center gap-2.5">
+                                <i class="bi bi-telephone-outbound" style="width: 1rem; text-align: center;"></i>
+                                <span class="sidebar-label">Outbound</span>
+                            </div>
+                            <i id="outbound-chevron" class="bi bi-chevron-down nav-chevron"></i>
+                        </button>
+                        <div id="outbound-submenu" class="submenu mt-0.5 space-y-0.5">
+                            <a href="{{ url_for('campaigns.campaigns') }}" title="Campaigns" class="nav-item {% if request.endpoint in ['campaigns', 'create_campaign', 'view_campaign'] %}active{% endif %} flex items-center gap-2 px-2.5 py-1.5 rounded-md">
+                                <span class="sub-dot"></span>
+                                <span class="sidebar-label">Campaigns</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Socials Dropdown -->
+                    <div>
+                        <button onclick="toggleDropdown('socials')" title="Socials" class="nav-dropdown-btn w-full flex items-center justify-between px-2.5 py-2 rounded-md">
+                            <div class="flex items-center gap-2.5">
+                                <i class="bi bi-chat-dots" style="width: 1rem; text-align: center;"></i>
+                                <span class="sidebar-label">Socials</span>
+                            </div>
+                            <i id="socials-chevron" class="bi bi-chevron-down nav-chevron"></i>
+                        </button>
+                        <div id="socials-submenu" class="submenu mt-0.5 space-y-0.5">
+                            <a href="{{ url_for('whatsapp.whatsapp_agents_list') }}" title="WhatsApp" class="nav-item {% if request.endpoint and 'whatsapp' in request.endpoint %}active{% endif %} flex items-center gap-2 px-2.5 py-1.5 rounded-md">
+                                <span class="sub-dot" style="background: #25D366;"></span>
+                                <span class="sidebar-label">WhatsApp</span>
+                                <span class="sidebar-badge sidebar-badge-new ml-auto">NEW</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Call Logs (standalone) -->
+                    <a href="{{ url_for('core.call_logs') }}" title="Call Logs" class="nav-item {% if request.endpoint == 'call_logs' %}active{% endif %} flex items-center gap-2.5 px-2.5 py-2 rounded-md">
+                        <i class="bi bi-clock-history"></i>
+                        <span class="sidebar-label">Call Logs</span>
+                    </a>
+                </div>
+
+                <div class="sidebar-divider"></div>
+
+                <!-- SETTINGS -->
+                <div class="sidebar-section-label">Settings</div>
+                <div class="space-y-0.5">
+                    <a href="{{ url_for('core.subscription') }}" title="Subscription" class="nav-item {% if request.endpoint == 'subscription' %}active{% endif %} flex items-center gap-2.5 px-2.5 py-2 rounded-md">
+                        <i class="bi bi-credit-card-2-front"></i>
+                        <span class="sidebar-label">Subscription</span>
+                    </a>
+                    <a href="{{ url_for('api_v1.api_keys_page') }}" title="API Keys" class="nav-item {% if request.endpoint == 'api_keys_page' %}active{% endif %} flex items-center gap-2.5 px-2.5 py-2 rounded-md">
+                        <i class="bi bi-key"></i>
+                        <span class="sidebar-label">API Keys</span>
+                    </a>
+                    <a style="display: none;" href="{{ url_for('core.web_call') }}" title="Web Call" class="nav-item {% if request.endpoint == 'web_call' %}active{% endif %} flex items-center gap-2.5 px-2.5 py-2 rounded-md">
+                        <i class="bi bi-mic-fill"></i>
+                        <span class="sidebar-label">Web Call</span>
+                    </a>
+                </div>
+
+                {% endif %}
+            </nav>
+
+            <!-- Sidebar Footer - User Profile -->
+            <div class="sidebar-footer p-3 flex-shrink-0">
+                <div class="footer-inner flex items-center gap-2.5 px-2 py-1.5 rounded-md">
+                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold flex-shrink-0">
+                        {{ session.username[:2]|upper if session.username else 'U' }}
+                    </div>
+                    <div class="user-info flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-900 truncate">{{ session.username }}</p>
+                        <p class="text-xs text-gray-400 truncate">{% if session.is_admin %}Administrator{% else %}User{% endif %}</p>
+                    </div>
+                    <a href="{{ url_for('core.logout') }}" class="logout-btn text-gray-300 hover:text-red-500 transition-colors" title="Logout">
+                        <i class="bi bi-box-arrow-right" style="font-size: 0.875rem;"></i>
+                    </a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Mobile sidebar overlay -->
+        <div id="sidebar-overlay" class="sidebar-overlay fixed inset-0 bg-black bg-opacity-50 lg:hidden z-40" onclick="toggleSidebar()"></div>
+
+        <!-- Floating expand button (shows when sidebar collapsed) -->
+        <button id="expand-btn" class="expand-float-btn" onclick="toggleCollapse()" title="Expand sidebar">
+            <i class="bi bi-chevron-right" style="font-size: 0.75rem;"></i>
+        </button>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+
+            <!-- Mobile Top Bar (hamburger to open sidebar) -->
+            <div class="lg:hidden flex items-center h-14 px-4 bg-white border-b border-gray-200">
+                <button onclick="toggleSidebar()" class="text-gray-500 hover:text-gray-700 p-1.5 -ml-1.5 rounded-md hover:bg-gray-100">
+                    <i class="bi bi-list" style="font-size: 1.25rem;"></i>
+                </button>
+                <div class="flex items-center gap-2 ml-3">
+                    <img src="{{ url_for('static', filename='images/favicon-logo.svg') }}" alt="NevoxAI" class="w-6 h-6">
+                    <span class="text-sm font-semibold text-gray-900">NevoxAI</span>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <main class="flex-1 overflow-y-auto bg-gray-50">
+                <div class="max-w-7xl mx-auto px-6 py-6">
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                        <div class="mb-4 px-4 py-3 rounded-md bg-{% if category == 'success' %}green{% elif category == 'error' %}red{% else %}amber{% endif %}-50 border border-{% if category == 'success' %}green{% elif category == 'error' %}red{% else %}amber{% endif %}-200 flex items-center gap-3">
+                            <div class="flex-shrink-0">
+                                {% if category == 'success' %}
+                                <i class="bi bi-check-circle text-green-600" style="font-size: 0.875rem;"></i>
+                                {% elif category == 'error' %}
+                                <i class="bi bi-exclamation-circle text-red-600" style="font-size: 0.875rem;"></i>
+                                {% else %}
+                                <i class="bi bi-info-circle text-amber-600" style="font-size: 0.875rem;"></i>
+                                {% endif %}
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-700">{{ message }}</p>
+                            </div>
+                            <button onclick="this.parentElement.remove()" class="flex-shrink-0 text-gray-400 hover:text-gray-600">
+                                <i class="bi bi-x" style="font-size: 1rem;"></i>
+                            </button>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Page Content -->
+                {% block dashboard_content %}{% endblock %}
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('sidebar-hidden');
+            overlay.classList.toggle('active');
+        }
+
+        // Collapse / expand sidebar on desktop
+        function toggleCollapse() {
+            const sidebar = document.getElementById('sidebar');
+            const expandBtn = document.getElementById('expand-btn');
+            const isCollapsed = sidebar.classList.toggle('collapsed');
+            // Show floating expand button when collapsed
+            if (expandBtn) {
+                expandBtn.classList.toggle('visible', isCollapsed);
+            }
+            // Remember preference
+            localStorage.setItem('sidebar-collapsed', isCollapsed ? '1' : '0');
+        }
+
+        // Unified dropdown toggle
+        function toggleDropdown(name) {
+            const submenu = document.getElementById(name + '-submenu');
+            const chevron = document.getElementById(name + '-chevron');
+            const btn = chevron?.closest('.nav-dropdown-btn');
+            if (!submenu || !chevron) return;
+
+            const isOpen = submenu.classList.contains('show');
+            if (isOpen) {
+                submenu.classList.remove('show');
+                chevron.classList.remove('chevron-rotate');
+                if (btn) btn.classList.remove('expanded');
+            } else {
+                submenu.classList.add('show');
+                chevron.classList.add('chevron-rotate');
+                if (btn) btn.classList.add('expanded');
+            }
+        }
+
+        // Close sidebar on mobile when clicking outside
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            const isClickInside = sidebar.contains(event.target);
+            const isMobileMenuButton = event.target.closest('[onclick="toggleSidebar()"]');
+            if (!isClickInside && !isMobileMenuButton && window.innerWidth < 1024) {
+                sidebar.classList.add('sidebar-hidden');
+                overlay.classList.remove('active');
+            }
+        });
+
+        // Auto-expand active dropdown menus + restore collapse state on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Restore collapsed state from localStorage
+            if (localStorage.getItem('sidebar-collapsed') === '1' && window.innerWidth >= 1024) {
+                const sidebar = document.getElementById('sidebar');
+                const expandBtn = document.getElementById('expand-btn');
+                sidebar.classList.add('collapsed');
+                if (expandBtn) {
+                    expandBtn.classList.add('visible');
+                }
+            }
+
+            const path = window.location.pathname;
+            const dropdowns = [
+                { name: 'inbound',  match: ['/inbound'] },
+                { name: 'outbound', match: ['/outbound', '/campaign'] },
+                { name: 'socials',  match: ['/whatsapp'] }
+            ];
+            dropdowns.forEach(function(dd) {
+                if (dd.match.some(function(m) { return path.includes(m); })) {
+                    toggleDropdown(dd.name);
+                }
+            });
+        });
+    </script>
+
+    {% else %}
+    <!-- Non-authenticated layout (Login/Signup pages) -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="fixed top-4 right-4 z-50 space-y-2" style="max-width: 400px;">
+            {% for category, message in messages %}
+            <div class="p-4 rounded-lg bg-{% if category == 'success' %}green{% elif category == 'error' %}red{% else %}amber{% endif %}-50 border border-{% if category == 'success' %}green{% elif category == 'error' %}red{% else %}amber{% endif %}-200 flex items-start gap-3 shadow-lg">
+                <div class="flex-shrink-0">
+                    {% if category == 'success' %}
+                    <i class="bi bi-check-circle text-green-600 text-lg"></i>
+                    {% elif category == 'error' %}
+                    <i class="bi bi-exclamation-circle text-red-600 text-lg"></i>
+                    {% else %}
+                    <i class="bi bi-info-circle text-amber-600 text-lg"></i>
+                    {% endif %}
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-800">{{ message }}</p>
+                </div>
+                <button onclick="this.parentElement.remove()" class="flex-shrink-0 text-gray-400 hover:text-gray-600">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

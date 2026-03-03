@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Nevox AI{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon-logo.svg') }}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        nevox: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            200: '#c7d2fe',
+                            300: '#a5b4fc',
+                            400: '#a78bfa',
+                            500: '#7c3aed',
+                            600: '#4F46E5',
+                            700: '#4338CA',
+                            800: '#3730a3',
+                            900: '#312e81',
+                            950: '#1a1744',
+                        },
+                        sidebar: {
+                            DEFAULT: '#0B0F1E',
+                            light: '#111631',
+                            lighter: '#1a1f3d',
+                            border: '#1e2545',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" media="none" onload="if(media!='all')media='all'">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        body { font-family: 'Inter', sans-serif; }
+
+        /* Custom scrollbar - main content */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #c7d2fe; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a5b4fc; }
+
+        /* Sidebar scrollbar */
+        .sidebar-nav::-webkit-scrollbar { width: 4px; }
+        .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(167, 139, 250, 0.2); border-radius: 2px; }
+
+        /* Badge styles */
+        .badge-primary { display: inline-flex; align-items: center; padding: 0.25rem 0.75rem; font-size: 0.75rem; font-weight: 500; border-radius: 9999px; background-color: #e0e7ff; color: #4338ca; }
+        .badge-success { display: inline-flex; align-items: center; padding: 0.25rem 0.75rem; font-size: 0.75rem; font-weight: 500; border-radius: 9999px; background-color: #d1fae5; color: #047857; }
+        .badge-warning { display: inline-flex; align-items: center; padding: 0.25rem 0.75rem; font-size: 0.75rem; font-weight: 500; border-radius: 9999px; background-color: #fef3c7; color: #b45309; }
+        .badge-danger { display: inline-flex; align-items: center; padding: 0.25rem 0.75rem; font-size: 0.75rem; font-weight: 500; border-radius: 9999px; background-color: #fee2e2; color: #b91c1c; }
+
+        /* Sidebar */
+        .sidebar { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .sidebar-hidden { transform: translateX(-100%); }
+        @media (min-width: 1024px) { .sidebar-hidden { transform: translateX(0); } }
+
+        /* Nav items - dark sidebar */
+        .nav-link {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.625rem 1rem; border-radius: 0.5rem;
+            font-size: 0.875rem; font-weight: 500;
+            color: rgba(255,255,255,0.55);
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .nav-link i { font-size: 1.125rem; width: 1.25rem; text-align: center; }
+        .nav-link:hover { color: rgba(255,255,255,0.9); background: rgba(167, 139, 250, 0.08); }
+        .nav-link.active {
+            color: #fff;
+            background: linear-gradient(135deg, rgba(79,70,229,0.4), rgba(167,139,250,0.2));
+            box-shadow: 0 0 0 1px rgba(167,139,250,0.15);
+        }
+        .nav-link.active::before {
+            content: ''; position: absolute; left: 0; top: 4px; bottom: 4px;
+            width: 3px; border-radius: 0 3px 3px 0;
+            background: linear-gradient(180deg, #a78bfa, #4F46E5);
+        }
+
+        /* Submenu */
+        .sub-menu { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+        .sub-menu.open { max-height: 200px; }
+        .sub-link {
+            display: flex; align-items: center; gap: 0.625rem;
+            padding: 0.5rem 1rem 0.5rem 2.75rem;
+            font-size: 0.8125rem; font-weight: 450;
+            color: rgba(255,255,255,0.45); border-radius: 0.375rem;
+            transition: all 0.2s ease;
+        }
+        .sub-link i { font-size: 0.875rem; width: 1rem; text-align: center; }
+        .sub-link:hover { color: rgba(255,255,255,0.85); background: rgba(167, 139, 250, 0.06); }
+        .sub-link.active { color: #a78bfa; background: rgba(167,139,250,0.1); }
+
+        /* Chevron */
+        .menu-chevron { transition: transform 0.25s ease; font-size: 0.7rem; }
+        .menu-chevron.open { transform: rotate(180deg); }
+
+        /* Overlay */
+        .sidebar-overlay { opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+        .sidebar-overlay.active { opacity: 1; visibility: visible; }
+
+        /* Soundwave animation for sidebar header */
+        .soundwave { display: flex; align-items: flex-end; gap: 2px; height: 16px; }
+        .soundwave span {
+            display: block; width: 2px; border-radius: 1px;
+            background: linear-gradient(180deg, #a78bfa, #4F46E5);
+            animation: wave 1.2s ease-in-out infinite;
+        }
+        .soundwave span:nth-child(1) { height: 40%; animation-delay: 0s; }
+        .soundwave span:nth-child(2) { height: 70%; animation-delay: 0.1s; }
+        .soundwave span:nth-child(3) { height: 100%; animation-delay: 0.2s; }
+        .soundwave span:nth-child(4) { height: 60%; animation-delay: 0.3s; }
+        .soundwave span:nth-child(5) { height: 80%; animation-delay: 0.15s; }
+        @keyframes wave {
+            0%, 100% { transform: scaleY(0.5); }
+            50% { transform: scaleY(1); }
+        }
+
+        /* Section label in sidebar */
+        .nav-section {
+            padding: 0.5rem 1rem; margin-top: 1.25rem; margin-bottom: 0.375rem;
+            font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em;
+            text-transform: uppercase; color: rgba(255,255,255,0.25);
+        }
+        .nav-section:first-child { margin-top: 0; }
+
+        /* Card hover */
+        .card-hover { transition: all 0.2s ease; }
+        .card-hover:hover { box-shadow: 0 4px 20px -4px rgba(79,70,229,0.12); transform: translateY(-1px); }
+    </style>
+    {% block extra_css %}{% endblock %}
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-50/80">
+    {% if session.user_id %}
+    <div class="flex h-screen overflow-hidden">
+
+        <!-- ============================================ -->
+        <!-- DARK SIDEBAR -->
+        <!-- ============================================ -->
+        <aside id="sidebar" class="sidebar sidebar-hidden lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-50 w-[260px] bg-sidebar flex flex-col">
+
+            <!-- Sidebar Header: Logo + Soundwave -->
+            <div class="flex items-center justify-between h-16 px-5 border-b border-sidebar-border flex-shrink-0">
+                <div class="flex items-center gap-3">
+                    <img src="{{ url_for('static', filename='images/favicon-logo.svg') }}" alt="Nevox AI" class="h-8 w-8">
+                    <span class="text-base font-bold text-white tracking-tight">Nevox AI</span>
+                    <div class="soundwave ml-1">
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                </div>
+                <button onclick="toggleSidebar()" class="lg:hidden text-white/40 hover:text-white/70 transition-colors">
+                    <i class="bi bi-x-lg text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="sidebar-nav flex-1 overflow-y-auto py-4 px-3">
+
+                {% if session.is_admin %}
+                <!-- ===== ADMIN NAV ===== -->
+                <div class="nav-section">Administration</div>
+                <div class="space-y-0.5">
+                    <a href="{{ url_for('core.admin_dashboard') }}" class="nav-link {% if request.endpoint == 'admin_dashboard' %}active{% endif %}">
+                        <i class="bi bi-grid-1x2"></i><span>Admin Dashboard</span>
+                    </a>
+                    <a href="{{ url_for('core.trunk_management') }}" class="nav-link {% if request.endpoint in ['trunk_management', 'configure_user_trunk'] %}active{% endif %}">
+                        <i class="bi bi-diagram-3"></i><span>Outbound Trunks</span>
+                    </a>
+                    <a href="{{ url_for('core.inbound_trunk_management') }}" class="nav-link {% if request.endpoint in ['inbound_trunk_management', 'configure_inbound_trunk'] %}active{% endif %}">
+                        <i class="bi bi-telephone-inbound"></i><span>Inbound Trunks</span>
+                    </a>
+                </div>
+
+                {% else %}
+                <!-- ===== USER NAV ===== -->
+
+                <!-- Overview -->
+                <div class="nav-section">Overview</div>
+                <div class="space-y-0.5">
+                    <a href="{{ url_for('core.dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                        <i class="bi bi-grid-1x2"></i><span>Dashboard</span>
+                    </a>
+                    <a href="{{ url_for('core.analytics') }}" class="nav-link {% if request.endpoint == 'analytics' %}active{% endif %}">
+                        <i class="bi bi-bar-chart-line"></i><span>Analytics</span>
+                    </a>
+                </div>
+
+                <!-- Voice Agents -->
+                <div class="nav-section">Voice Agents</div>
+                <div class="space-y-0.5">
+                    <a href="{{ url_for('agents.create_agent') }}" class="nav-link {% if request.endpoint == 'create_agent' %}active{% endif %}">
+                        <i class="bi bi-robot"></i><span>Agents</span>
+                    </a>
+                    <a href="{{ url_for('core.call_logs') }}" class="nav-link {% if request.endpoint == 'call_logs' %}active{% endif %}">
+                        <i class="bi bi-journal-text"></i><span>Call Logs</span>
+                    </a>
+                    <a href="{{ url_for('test_agent.test_agent_page') }}" class="nav-link {% if request.endpoint == 'test_agent_page' %}active{% endif %}">
+                        <i class="bi bi-headset"></i><span>Test Agent</span>
+                    </a>
+                </div>
+
+                <!-- Channels -->
+                <div class="nav-section">Channels</div>
+                <div class="space-y-0.5">
+                    <!-- Inbound -->
+                    <button onclick="toggleMenu('inbound')" class="nav-link w-full justify-between">
+                        <div class="flex items-center gap-3">
+                            <i class="bi bi-telephone-inbound"></i><span>Inbound</span>
+                        </div>
+                        <i id="inbound-chevron" class="bi bi-chevron-down menu-chevron"></i>
+                    </button>
+                    <div id="inbound-submenu" class="sub-menu">
+                        <a href="{{ url_for('inbound.inbound_agents') }}" class="sub-link {% if request.endpoint in ['inbound_agents', 'create_inbound_agent'] %}active{% endif %}">
+                            <i class="bi bi-person-badge"></i><span>Agents</span>
+                        </a>
+                        <a href="{{ url_for('inbound.inbound_call_logs') }}" class="sub-link {% if request.endpoint == 'inbound_call_logs' %}active{% endif %}">
+                            <i class="bi bi-list-ul"></i><span>Calls</span>
+                        </a>
+                    </div>
+
+                    <!-- Outbound -->
+                    <button onclick="toggleMenu('outbound')" class="nav-link w-full justify-between">
+                        <div class="flex items-center gap-3">
+                            <i class="bi bi-telephone-outbound"></i><span>Outbound</span>
+                        </div>
+                        <i id="outbound-chevron" class="bi bi-chevron-down menu-chevron"></i>
+                    </button>
+                    <div id="outbound-submenu" class="sub-menu">
+                        <a href="{{ url_for('campaigns.campaigns') }}" class="sub-link {% if request.endpoint in ['campaigns', 'create_campaign', 'view_campaign'] %}active{% endif %}">
+                            <i class="bi bi-megaphone"></i><span>Campaigns</span>
+                        </a>
+                    </div>
+
+                    <!-- Socials -->
+                    <button onclick="toggleMenu('socials')" class="nav-link w-full justify-between">
+                        <div class="flex items-center gap-3">
+                            <i class="bi bi-chat-square-dots"></i><span>Socials</span>
+                        </div>
+                        <i id="socials-chevron" class="bi bi-chevron-down menu-chevron"></i>
+                    </button>
+                    <div id="socials-submenu" class="sub-menu">
+                        <a href="{{ url_for('whatsapp.whatsapp_agents_list') }}" class="sub-link">
+                            <i class="bi bi-whatsapp" style="color: #25D366;"></i><span>WhatsApp</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Configure -->
+                <div class="nav-section">Configure</div>
+                <div class="space-y-0.5">
+                    <a href="{{ url_for('core.tools_list') }}" class="nav-link {% if request.endpoint in ['tools_list', 'create_tool', 'edit_tool', 'agent_tools'] %}active{% endif %}">
+                        <i class="bi bi-puzzle"></i><span>Integrations</span>
+                    </a>
+                    <a href="{{ url_for('workflows.workflows_page') }}" class="nav-link">
+                        <i class="bi bi-signpost-split"></i><span>Workflows</span>
+                    </a>
+                    <a style="display: none;" href="{{ url_for('core.web_call') }}" class="nav-link {% if request.endpoint == 'web_call' %}active{% endif %}">
+                        <i class="bi bi-mic-fill"></i><span>Web Call</span>
+                    </a>
+                </div>
+
+                <!-- Account -->
+                <div class="nav-section">Account</div>
+                <div class="space-y-0.5">
+                    <a href="{{ url_for('core.subscription') }}" class="nav-link {% if request.endpoint == 'subscription' %}active{% endif %}">
+                        <i class="bi bi-credit-card-2-front"></i><span>Subscription</span>
+                    </a>
+                    <a href="{{ url_for('api_v1.api_keys_page') }}" class="nav-link {% if request.endpoint == 'api_keys_page' %}active{% endif %}">
+                        <i class="bi bi-key"></i><span>API Keys</span>
+                    </a>
+                </div>
+                {% endif %}
+            </nav>
+
+            <!-- Sidebar Footer: User Profile -->
+            <div class="flex-shrink-0 border-t border-sidebar-border p-3">
+                <div class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-sidebar-lighter transition-colors">
+                    <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-nevox-600 to-nevox-400 flex items-center justify-center flex-shrink-0">
+                        <span class="text-white text-sm font-bold">{{ session.username[0]|upper if session.username else 'U' }}</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-white truncate">{{ session.username }}</p>
+                        <p class="text-[0.6875rem] text-white/35 truncate">{% if session.is_admin %}Administrator{% else %}User{% endif %}</p>
+                    </div>
+                    <a href="{{ url_for('core.logout') }}" class="text-white/25 hover:text-red-400 transition-colors p-1" title="Logout">
+                        <i class="bi bi-box-arrow-right text-sm"></i>
+                    </a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Mobile overlay -->
+        <div id="sidebar-overlay" class="sidebar-overlay fixed inset-0 bg-black/60 backdrop-blur-sm lg:hidden z-40" onclick="toggleSidebar()"></div>
+
+        <!-- ============================================ -->
+        <!-- MAIN CONTENT AREA -->
+        <!-- ============================================ -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+
+            <!-- Top Bar -->
+            <header class="flex items-center justify-between h-14 px-6 bg-white border-b border-gray-200/80 flex-shrink-0">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleSidebar()" class="lg:hidden text-gray-400 hover:text-gray-600 transition-colors">
+                        <i class="bi bi-list text-xl"></i>
+                    </button>
+                    <div class="hidden lg:flex items-center gap-2 text-sm">
+                        <span class="text-gray-400">{% block breadcrumb_parent %}Home{% endblock %}</span>
+                        <i class="bi bi-chevron-right text-gray-300" style="font-size: 0.65rem;"></i>
+                        <span class="text-gray-700 font-medium">{% block breadcrumb_current %}Dashboard{% endblock %}</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    {% if not session.is_admin %}
+                    <div class="flex items-center gap-2 px-3 py-1.5 bg-nevox-50 rounded-lg border border-nevox-100">
+                        <div class="w-1.5 h-1.5 rounded-full bg-nevox-400 animate-pulse"></div>
+                        <span class="text-xs font-semibold text-nevox-700">{{ session.get('minutes_balance', 0) }} min</span>
+                    </div>
+                    {% endif %}
+                    <a href="{{ url_for('agents.new_agent_form') }}" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-nevox-600 text-white text-xs font-semibold rounded-lg hover:bg-nevox-700 transition-colors shadow-sm shadow-nevox-600/20">
+                        <i class="bi bi-plus-lg" style="font-size: 0.65rem;"></i> New Agent
+                    </a>
+                </div>
+            </header>
+
+            <!-- Main Content -->
+            <main class="flex-1 overflow-y-auto">
+                <div class="p-6">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                            <div class="mb-4 p-3.5 rounded-xl {% if category == 'success' %}bg-emerald-50 border border-emerald-200{% elif category == 'error' %}bg-red-50 border border-red-200{% else %}bg-amber-50 border border-amber-200{% endif %} flex items-center gap-3 shadow-sm">
+                                {% if category == 'success' %}
+                                <div class="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0"><i class="bi bi-check-lg text-emerald-600"></i></div>
+                                {% elif category == 'error' %}
+                                <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0"><i class="bi bi-x-lg text-red-600" style="font-size: 0.75rem;"></i></div>
+                                {% else %}
+                                <div class="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0"><i class="bi bi-exclamation-lg text-amber-600"></i></div>
+                                {% endif %}
+                                <p class="flex-1 text-sm font-medium {% if category == 'success' %}text-emerald-800{% elif category == 'error' %}text-red-800{% else %}text-amber-800{% endif %}">{{ message }}</p>
+                                <button onclick="this.parentElement.style.display='none'" class="text-gray-400 hover:text-gray-600 p-1"><i class="bi bi-x-lg" style="font-size: 0.65rem;"></i></button>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    {% block dashboard_content %}{% endblock %}
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('sidebar-hidden');
+            document.getElementById('sidebar-overlay').classList.toggle('active');
+        }
+
+        function toggleMenu(name) {
+            const submenu = document.getElementById(name + '-submenu');
+            const chevron = document.getElementById(name + '-chevron');
+            submenu.classList.toggle('open');
+            chevron.classList.toggle('open');
+        }
+
+        // Auto-expand active menus
+        document.addEventListener('DOMContentLoaded', function() {
+            const path = window.location.pathname;
+            const menus = {
+                'inbound': ['/inbound'],
+                'outbound': ['/outbound', '/campaign'],
+                'socials': ['/whatsapp']
+            };
+            Object.entries(menus).forEach(([name, paths]) => {
+                if (paths.some(p => path.includes(p))) {
+                    const submenu = document.getElementById(name + '-submenu');
+                    const chevron = document.getElementById(name + '-chevron');
+                    if (submenu && chevron) {
+                        submenu.classList.add('open');
+                        chevron.classList.add('open');
+                    }
+                }
+            });
+        });
+    </script>
+
+    {% else %}
+    <!-- Non-authenticated layout -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="fixed top-4 right-4 z-50 space-y-2" style="max-width: 400px;">
+            {% for category, message in messages %}
+            <div class="p-4 rounded-xl {% if category == 'success' %}bg-emerald-50 border border-emerald-200{% elif category == 'error' %}bg-red-50 border border-red-200{% else %}bg-amber-50 border border-amber-200{% endif %} flex items-start gap-3 shadow-lg">
+                <div class="flex-shrink-0">
+                    {% if category == 'success' %}<i class="bi bi-check-circle text-emerald-600 text-lg"></i>
+                    {% elif category == 'error' %}<i class="bi bi-exclamation-circle text-red-600 text-lg"></i>
+                    {% else %}<i class="bi bi-info-circle text-amber-600 text-lg"></i>{% endif %}
+                </div>
+                <p class="flex-1 text-sm font-medium text-gray-800">{{ message }}</p>
+                <button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-gray-600"><i class="bi bi-x-lg"></i></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

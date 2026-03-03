@@ -1,0 +1,428 @@
+{% extends "base.html" %}
+
+{% block title %}Call Logs{% endblock %}
+{% block page_title %}Manage Calls{% endblock %}
+
+{% block dashboard_content %}
+<div class="mb-8">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Call Logs</h1>
+            <p class="text-gray-600 mt-2">View and manage all call records</p>
+        </div>
+        <a href="{{ url_for('core.dashboard') }}" class="inline-flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg font-medium transition-colors">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+</div>
+
+<div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <!-- Header -->
+    <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-blue-50">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i class="bi bi-clock-history text-indigo-600 text-lg"></i>
+                <h2 class="text-lg font-bold text-gray-900">All Call Logs</h2>
+                {% if pagination %}
+                <span class="text-xs font-medium text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-200">{{ pagination.total }} total</span>
+                {% endif %}
+            </div>
+
+            <div class="flex items-center gap-3">
+                <!-- Filter Toggle Button -->
+                <button onclick="toggleFilters()" class="inline-flex items-center gap-2 px-4 py-2 text-indigo-600 hover:bg-indigo-50 rounded-lg font-medium transition-colors border border-indigo-200">
+                    <i class="bi bi-funnel"></i>
+                    <span>Filters</span>
+                    <i class="bi bi-chevron-down" id="filterChevron"></i>
+                </button>
+
+                <!-- Per Page Selector -->
+                <div class="flex items-center gap-2">
+                    <label for="perPage" class="text-xs font-medium text-gray-600">Show:</label>
+                    <select id="perPage" onchange="changePerPage(this.value)"
+                            class="px-3 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+                        <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                        <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+                        <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                        <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+                    </select>
+                    <span class="text-xs text-gray-600">per page</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div id="filtersSection" class="px-6 py-4 border-b border-gray-200 bg-gray-50 hidden">
+        <form id="filterForm" method="GET" action="{{ url_for('core.call_logs') }}" class="space-y-4">
+            <!-- Preserve per_page -->
+            <input type="hidden" name="per_page" value="{{ per_page }}">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <!-- Status Filter -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Status</label>
+                    <select name="status" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+                        <option value="">All Statuses</option>
+                        <option value="completed" {% if filters.status == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="no_answer" {% if filters.status == 'no_answer' %}selected{% endif %}>No Answer</option>
+                        <option value="failed" {% if filters.status == 'failed' %}selected{% endif %}>Failed</option>
+                    </select>
+                </div>
+
+                <!-- Call Type Filter -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Call Type</label>
+                    <select name="call_type" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+                        <option value="">All Types</option>
+                        <option value="inbound" {% if filters.call_type == 'inbound' %}selected{% endif %}>Inbound</option>
+                        <option value="outbound" {% if filters.call_type == 'outbound' %}selected{% endif %}>Outbound</option>
+                    </select>
+                </div>
+
+                <!-- Interest Filter -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Interest</label>
+                    <select name="interest" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+                        <option value="">All Levels</option>
+                        <option value="interested" {% if filters.interest == 'interested' %}selected{% endif %}>Interested</option>
+                        <option value="not_interested" {% if filters.interest == 'not_interested' %}selected{% endif %}>Not Interested</option>
+                        <option value="na" {% if filters.interest == 'na' %}selected{% endif %}>N/A (No Answer/Failed)</option>
+                    </select>
+                </div>
+
+                <!-- Agent Filter -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Agent</label>
+                    <select name="agent" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+                        <option value="">All Agents</option>
+                        {% for agent in agents %}
+                        <option value="{{ agent.id }}" {% if filters.agent == agent.id|string %}selected{% endif %}>{{ agent.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Phone Search -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Phone Number</label>
+                    <input type="text" name="phone" value="{{ filters.phone }}"
+                           placeholder="Search phone..."
+                           class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+                </div>
+            </div>
+
+            <!-- Date Range Row -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mt-3">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">From Date</label>
+                    <input type="date" name="date_from" value="{{ filters.date_from }}"
+                           class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">To Date</label>
+                    <input type="date" name="date_to" value="{{ filters.date_to }}"
+                           class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+                </div>
+            </div>
+
+            <!-- Filter Actions -->
+            <div class="flex items-center gap-2">
+                <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors text-sm">
+                    <i class="bi bi-search"></i>
+                    Apply Filters
+                </button>
+                <a href="{{ url_for('core.call_logs', per_page=per_page) }}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium transition-colors text-sm">
+                    <i class="bi bi-x-circle"></i>
+                    Clear Filters
+                </a>
+                <button type="button" onclick="exportExcel()" class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors text-sm">
+                    <i class="bi bi-file-earmark-excel"></i>
+                    Export Excel
+                </button>
+                {% if filters.status or filters.call_type or filters.interest or filters.agent or filters.phone or filters.date_from or filters.date_to %}
+                <span class="text-xs text-green-600 font-medium ml-2">
+                    <i class="bi bi-check-circle"></i> Filters active
+                </span>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Content -->
+    {% if call_logs %}
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b border-gray-200 bg-gray-50">
+                    <th style="display:none;" class="text-left py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Call ID</th>
+                    <th class="text-left py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Agent</th>
+                    <th class="text-left py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">To Number</th>
+                    <th class="text-left py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">From Number</th>
+                    <th class="text-center py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Stats</th>
+                    <th class="text-center py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Interest</th>
+                    <th style="display: none;" class="text-center py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Sentiment</th>
+                    <th class="text-center py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Call Type</th>
+                    <th class="text-left py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
+                    <th class="text-center py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                    <th class="text-right py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in call_logs %}
+                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <td style="display:none;" class="py-3 px-6">
+                        <span class="text-sm font-mono text-gray-600">#{{ log.id }}</span>
+                    </td>
+                    <td class="py-3 px-6">
+                        {% if log.agent %}
+                        <a href="{{ url_for('agents.view_agent', agent_id=log.agent_id) }}" class="text-indigo-600 hover:text-indigo-700 font-medium">
+                            {{ log.agent.name }}
+                        </a>
+                        {% else %}
+                        <span class="text-gray-500 text-sm">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-3 px-6">
+                        <span class="font-medium text-gray-900">{{ log.to_number }}</span>
+                    </td>
+                    <td class="py-3 px-6">
+                        <span class="text-sm text-gray-600">{{ log.from_number }}</span>
+                    </td>
+                    <td class="py-3 px-6 text-center">
+                        {% set msg_count = (log.transcription_data|from_json).get('message_count', 0) if log.transcription_data and log.transcription_data != '{}' else 0 %}
+                        <div class="flex items-center justify-center gap-3">
+                            <span class="inline-flex items-center gap-1 text-sm text-gray-700">
+                                <i class="bi bi-clock"></i> {{ log.duration_seconds }}s
+                            </span>
+                            <span class="text-gray-300">|</span>
+                            <span class="inline-flex items-center gap-1 text-sm {{ 'text-blue-600 font-medium' if msg_count > 0 else 'text-gray-400' }}">
+                                <i class="bi bi-chat-dots"></i> {{ msg_count }}
+                            </span>
+                        </div>
+                    </td>
+                    <td class="py-3 px-6 text-center">
+                        {% if log.status == 'no_answer' or log.status == 'failed' %}
+                        <span class="text-gray-400 text-sm">-</span>
+                        {% else %}
+                        {% set interest_data = log.sentiment_summary|from_json if log.sentiment_summary and log.sentiment_summary != '{}' else {} %}
+                        {% if interest_data and 'interest' in interest_data %}
+                        {% set interest = interest_data.get('interest') %}
+                        {% if interest == 'Interested' %}
+                        <i class="bi bi-hand-thumbs-up text-green-600 text-xl" title="Interested"></i>
+                        {% else %}
+                        <i class="bi bi-hand-thumbs-down text-red-600 text-xl" title="Not Interested"></i>
+                        {% endif %}
+                        {% else %}
+                        <span class="text-gray-400 text-sm">-</span>
+                        {% endif %}
+                        {% endif %}
+                    </td>
+                    <td style="display: none;" class="py-3 px-6 text-center">
+                        {% set sentiment = (log.sentiment_summary|from_json).get('overall', 'neutral') if log.sentiment_summary and log.sentiment_summary != '{}' else 'neutral' %}
+                        {% if sentiment == 'very_positive' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
+                            😊 Very Positive
+                        </span>
+                        {% elif sentiment == 'positive' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-600 rounded text-xs font-medium">
+                            🙂 Positive
+                        </span>
+                        {% elif sentiment == 'neutral' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-medium">
+                            😐 Neutral
+                        </span>
+                        {% elif sentiment == 'negative' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-orange-50 text-orange-600 rounded text-xs font-medium">
+                            😕 Negative
+                        </span>
+                        {% elif sentiment == 'very_negative' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
+                            😞 Very Negative
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="py-3 px-6 text-center">
+                        <span class="badge-primary">{{ log.call_type }} </span>
+                    </td>
+                    <td class="py-3 px-6">
+                        <span class="text-sm text-gray-600">{{ log.created_at.strftime('%b %d, %Y %H:%M') }}</span>
+                    </td>
+                    <td class="py-3 px-6 text-center">
+                        {% if log.status == 'completed' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
+                            <i class="bi bi-check-circle"></i> Completed
+                        </span>
+                        {% elif log.status == 'no_answer' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs font-medium">
+                            <i class="bi bi-phone-x"></i> No Answer
+                        </span>
+                        {% elif log.status == 'failed' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
+                            <i class="bi bi-x-circle"></i> Failed
+                        </span>
+                        {% else %}
+                        <span class="badge-primary">{{ log.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-3 px-6 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            {% if log.recording_url %}
+                            <span style="display: none;" class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs" title="Recording available">
+                                <i class="bi bi-mic-fill"></i>
+                            </span>
+                            {% endif %}
+                            <a href="{{ url_for('core.view_call_log', log_id=log.id) }}" class="inline-flex items-center gap-1 px-3 py-1 text-indigo-600 hover:bg-indigo-50 rounded font-medium transition-colors text-sm">
+                                <i class="bi bi-arrow-right"></i> View
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination Controls -->
+    {% if pagination and pagination.pages > 1 %}
+    <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+        <div class="flex items-center justify-between">
+            <!-- Page Info -->
+            <div class="text-sm text-gray-600">
+                Showing <span class="font-medium">{{ pagination.per_page * (pagination.page - 1) + 1 }}</span>
+                to <span class="font-medium">{{ [pagination.per_page * pagination.page, pagination.total]|min }}</span>
+                of <span class="font-medium">{{ pagination.total }}</span> results
+            </div>
+
+            <!-- Pagination Buttons -->
+            <div class="flex items-center gap-2">
+                <!-- First Page -->
+                {% if pagination.has_prev %}
+                <a href="{{ url_for('core.call_logs', page=1, per_page=per_page, status=filters.status, call_type=filters.call_type, interest=filters.interest, agent=filters.agent, phone=filters.phone, date_from=filters.date_from, date_to=filters.date_to) }}"
+                   class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                    <i class="bi bi-chevron-bar-left"></i>
+                </a>
+                {% else %}
+                <span class="px-3 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed">
+                    <i class="bi bi-chevron-bar-left"></i>
+                </span>
+                {% endif %}
+
+                <!-- Previous Page -->
+                {% if pagination.has_prev %}
+                <a href="{{ url_for('core.call_logs', page=pagination.prev_num, per_page=per_page, status=filters.status, call_type=filters.call_type, interest=filters.interest, agent=filters.agent, phone=filters.phone, date_from=filters.date_from, date_to=filters.date_to) }}"
+                   class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                    <i class="bi bi-chevron-left"></i> Previous
+                </a>
+                {% else %}
+                <span class="px-3 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed">
+                    <i class="bi bi-chevron-left"></i> Previous
+                </span>
+                {% endif %}
+
+                <!-- Page Numbers -->
+                <div class="flex items-center gap-1">
+                    {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if page_num %}
+                            {% if page_num == pagination.page %}
+                                <span class="px-4 py-2 text-sm font-bold text-white bg-indigo-600 border border-indigo-600 rounded-lg">
+                                    {{ page_num }}
+                                </span>
+                            {% else %}
+                                <a href="{{ url_for('core.call_logs', page=page_num, per_page=per_page, status=filters.status, call_type=filters.call_type, interest=filters.interest, agent=filters.agent, phone=filters.phone, date_from=filters.date_from, date_to=filters.date_to) }}"
+                                   class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                    {{ page_num }}
+                                </a>
+                            {% endif %}
+                        {% else %}
+                            <span class="px-2 py-2 text-sm text-gray-400">...</span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <!-- Next Page -->
+                {% if pagination.has_next %}
+                <a href="{{ url_for('core.call_logs', page=pagination.next_num, per_page=per_page, status=filters.status, call_type=filters.call_type, interest=filters.interest, agent=filters.agent, phone=filters.phone, date_from=filters.date_from, date_to=filters.date_to) }}"
+                   class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                    Next <i class="bi bi-chevron-right"></i>
+                </a>
+                {% else %}
+                <span class="px-3 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed">
+                    Next <i class="bi bi-chevron-right"></i>
+                </span>
+                {% endif %}
+
+                <!-- Last Page -->
+                {% if pagination.has_next %}
+                <a href="{{ url_for('core.call_logs', page=pagination.pages, per_page=per_page, status=filters.status, call_type=filters.call_type, interest=filters.interest, agent=filters.agent, phone=filters.phone, date_from=filters.date_from, date_to=filters.date_to) }}"
+                   class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                    <i class="bi bi-chevron-bar-right"></i>
+                </a>
+                {% else %}
+                <span class="px-3 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed">
+                    <i class="bi bi-chevron-bar-right"></i>
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="p-12 text-center">
+        <div class="flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mx-auto mb-4">
+            <i class="bi bi-telephone-x text-gray-400 text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-1">No call logs available</h3>
+        <p class="text-gray-600 mb-6">Your call history will appear here once you make calls with your agents</p>
+        <a href="{{ url_for('core.dashboard') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function changePerPage(perPage) {
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('per_page', perPage);
+    urlParams.set('page', '1'); // Reset to first page when changing per_page
+    window.location.search = urlParams.toString();
+}
+
+function toggleFilters() {
+    const filtersSection = document.getElementById('filtersSection');
+    const chevron = document.getElementById('filterChevron');
+
+    if (filtersSection.classList.contains('hidden')) {
+        filtersSection.classList.remove('hidden');
+        chevron.classList.remove('bi-chevron-down');
+        chevron.classList.add('bi-chevron-up');
+    } else {
+        filtersSection.classList.add('hidden');
+        chevron.classList.remove('bi-chevron-up');
+        chevron.classList.add('bi-chevron-down');
+    }
+}
+
+function exportExcel() {
+    const form = document.getElementById('filterForm');
+    const formData = new FormData(form);
+    const params = new URLSearchParams(formData);
+    params.delete('per_page');
+    window.location.href = "{{ url_for('core.export_call_logs') }}?" + params.toString();
+}
+
+// Auto-open filters if any filter is active
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasFilters = urlParams.has('status') || urlParams.has('call_type') ||
+                       urlParams.has('interest') || urlParams.has('agent') ||
+                       urlParams.has('phone') || urlParams.has('date_from') || urlParams.has('date_to');
+    if (hasFilters) {
+        toggleFilters();
+    }
+});
+</script>
+{% endblock %}

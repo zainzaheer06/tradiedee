@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Configure Emergency Contacts{% endblock %}
+
+{% block dashboard_content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <h2 class="mb-4">🚨 Emergency Contact Configuration</h2>
+
+            <div class="alert alert-info">
+                <strong>How This Works</strong><br>
+                When an emergency is detected (burst pipe, power outage, etc.), we'll try to contact these people in order. If they don't answer, we'll send an SMS alert.
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <form id="emergencyForm">
+                        <div id="contactsList">
+                            {% for i in range(1, 4) %}
+                                {% set contact = current_contacts[i-1] if i-1 < current_contacts|length else None %}
+                                <div class="contact-card mb-4 p-3 border rounded" data-contact="{{ i }}">
+                                    <h5 class="mb-3">Contact #{{ i }}</h5>
+
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Name</label>
+                                            <input type="text" class="form-control" placeholder="e.g., John" value="{{ contact.name if contact else '' }}">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Phone</label>
+                                            <input type="tel" class="form-control" placeholder="+61412345678" value="{{ contact.phone if contact else '' }}">
+                                        </div>
+                                    </div>
+
+                                    <small class="text-muted">
+                                        This person will be contact #{{ i }} in the escalation chain
+                                    </small>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-4 p-3 border border-info rounded bg-light">
+                            <h6 class="mb-3">⚙️ Settings</h6>
+
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="enableEmergency" name="enabled" value="1" {% if business.emergency_escalation_enabled %}checked{% endif %}>
+                                <label class="form-check-label" for="enableEmergency">
+                                    Enable emergency escalation
+                                </label>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="timeout" class="form-label">Transfer Timeout (seconds)</label>
+                                <input type="number" id="timeout" name="timeout" class="form-control" min="10" max="60" value="{{ business.emergency_transfer_timeout or 30 }}">
+                                <small class="text-muted">How long to wait for a technician to answer before trying the next contact</small>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-danger btn-lg w-100">Save Emergency Contacts</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Test Button -->
+            <div class="mt-4">
+                <a href="{{ url_for('business_setup.configure_service_areas') }}" class="btn btn-secondary btn-lg w-100">
+                    Continue to Service Areas →
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('emergencyForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const contacts = [];
+        document.querySelectorAll('.contact-card').forEach((card, index) => {
+            const nameInput = card.querySelector('input[type="text"]');
+            const phoneInput = card.querySelector('input[type="tel"]');
+
+            if (nameInput.value && phoneInput.value) {
+                contacts.push({
+                    name: nameInput.value,
+                    phone: phoneInput.value,
+                    priority: index + 1
+                });
+            }
+        });
+
+        if (contacts.length === 0) {
+            alert('Please add at least one emergency contact');
+            return;
+        }
+
+        const data = {
+            contacts: contacts,
+            enabled: document.getElementById('enableEmergency').checked,
+            timeout: document.getElementById('timeout').value
+        };
+
+        fetch('{{ url_for("business_setup.configure_emergency") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                window.location.href = data.redirect;
+            } else {
+                alert('Error: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error);
+        });
+    });
+</script>
+
+<style>
+    .contact-card {
+        background-color: #f8f9fa;
+        border-left: 4px solid #007bff !important;
+    }
+
+    .btn-lg {
+        font-size: 1.1rem;
+        padding: 0.75rem 1rem;
+    }
+</style>
+{% endblock %}

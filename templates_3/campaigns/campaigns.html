@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+
+{% block title %}Campaigns - Nevox AI{% endblock %}
+{% block breadcrumb_parent %}Outbound{% endblock %}
+{% block breadcrumb_current %}Campaigns{% endblock %}
+
+{% block extra_css %}
+<style>
+    .campaign-row { position: relative; transition: all 0.15s ease; }
+    .campaign-row:hover { background-color: rgba(79,70,229,0.02); }
+    .campaign-row::before {
+        content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+        background: linear-gradient(180deg, #4F46E5, #a78bfa);
+        opacity: 0; transition: opacity 0.15s ease; border-radius: 0 2px 2px 0;
+    }
+    .campaign-row:hover::before { opacity: 1; }
+    .progress-track { height: 5px; border-radius: 3px; background: #f3f4f6; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+    .line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<!-- Header -->
+<div class="mb-6">
+    <div class="flex items-center justify-between mb-5">
+        <div>
+            <h1 class="text-xl font-bold text-gray-900">Campaigns</h1>
+            <p class="text-sm text-gray-500 mt-0.5">{{ pagination.total if pagination else campaigns|length }} outbound campaigns</p>
+        </div>
+        <a href="{{ url_for('campaigns.create_campaign') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-nevox-600 text-white text-sm font-semibold rounded-xl hover:bg-nevox-700 transition-colors shadow-sm shadow-nevox-600/20">
+            <i class="bi bi-plus-lg" style="font-size: 0.7rem;"></i> New Campaign
+        </a>
+    </div>
+
+    <!-- Search & Filters -->
+    <div class="bg-white rounded-xl border border-gray-200/80 p-3">
+        <form method="GET" action="{{ url_for('campaigns.campaigns') }}" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div class="flex-1 relative">
+                <i class="bi bi-search absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-400" style="font-size: 0.8rem;"></i>
+                <input type="text" name="search" value="{{ search_query or '' }}"
+                       placeholder="Search campaigns..."
+                       class="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-nevox-500/20 focus:border-nevox-400 outline-none transition-all">
+            </div>
+            <select name="status" class="px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-nevox-500/20 focus:border-nevox-400 outline-none bg-white font-medium text-gray-600 cursor-pointer">
+                <option value="">All Statuses</option>
+                <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Draft</option>
+                <option value="running" {% if status_filter == 'running' %}selected{% endif %}>Running</option>
+                <option value="paused" {% if status_filter == 'paused' %}selected{% endif %}>Paused</option>
+                <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                <option value="stopped" {% if status_filter == 'stopped' %}selected{% endif %}>Stopped</option>
+            </select>
+            <button type="submit" class="px-4 py-2.5 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 font-semibold transition-colors">
+                Filter
+            </button>
+            {% if search_query or status_filter %}
+            <a href="{{ url_for('campaigns.campaigns') }}" class="px-3 py-2.5 text-sm text-gray-500 hover:text-gray-700 font-medium transition-colors text-center">
+                Clear
+            </a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+{% if campaigns %}
+<!-- Campaigns Table -->
+<div class="bg-white rounded-xl border border-gray-200/80 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b border-gray-100 bg-gray-50/60">
+                    <th class="text-left py-3 px-5 text-[0.65rem] font-bold text-gray-400 uppercase tracking-wider">Campaign</th>
+                    <th class="text-left py-3 px-4 text-[0.65rem] font-bold text-gray-400 uppercase tracking-wider">Agent</th>
+                    <th class="text-center py-3 px-4 text-[0.65rem] font-bold text-gray-400 uppercase tracking-wider">Status</th>
+                    <th class="text-center py-3 px-4 text-[0.65rem] font-bold text-gray-400 uppercase tracking-wider">Progress</th>
+                    <th class="text-center py-3 px-4 text-[0.65rem] font-bold text-gray-400 uppercase tracking-wider">Contacts</th>
+                    <th class="text-center py-3 px-4 text-[0.65rem] font-bold text-gray-400 uppercase tracking-wider">Interest</th>
+                    <th class="text-center py-3 px-4 text-[0.65rem] font-bold text-gray-400 uppercase tracking-wider">Created</th>
+                    <th class="text-right py-3 px-5 text-[0.65rem] font-bold text-gray-400 uppercase tracking-wider"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for campaign in campaigns %}
+                <tr class="campaign-row border-b border-gray-50">
+                    <!-- Campaign Name -->
+                    <td class="py-3.5 px-5">
+                        <div class="max-w-[220px]">
+                            <p class="text-sm font-bold text-gray-900 truncate">{{ campaign.name }}</p>
+                            {% if campaign.description %}
+                            <p class="text-xs text-gray-400 line-clamp-1 mt-0.5">{{ campaign.description[:60] }}{% if campaign.description|length > 60 %}...{% endif %}</p>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <!-- Agent -->
+                    <td class="py-3.5 px-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-6 rounded-md bg-nevox-50 flex items-center justify-center flex-shrink-0">
+                                <i class="bi bi-robot text-nevox-500" style="font-size: 0.6rem;"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-sm font-semibold text-gray-900 truncate">{{ campaign.agent.name }}</p>
+                                <p class="text-[0.6rem] text-gray-400">{{ campaign.agent.voice_name or 'Default' }}</p>
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- Status -->
+                    <td class="py-3.5 px-4 text-center">
+                        {% if campaign.status == 'running' %}
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[0.65rem] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Running
+                        </span>
+                        {% elif campaign.status == 'paused' %}
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[0.65rem] font-bold bg-amber-50 text-amber-600 border border-amber-100">
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Paused
+                        </span>
+                        {% elif campaign.status == 'completed' %}
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[0.65rem] font-bold bg-blue-50 text-blue-600 border border-blue-100">
+                            <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Completed
+                        </span>
+                        {% elif campaign.status == 'stopped' %}
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[0.65rem] font-bold bg-red-50 text-red-600 border border-red-100">
+                            <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Stopped
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[0.65rem] font-bold bg-gray-100 text-gray-500">
+                            <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span> Draft
+                        </span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Progress -->
+                    <td class="py-3.5 px-4 text-center">
+                        <div class="w-full max-w-[100px] mx-auto">
+                            <p class="text-xs font-bold text-gray-700 mb-1">{{ campaign.stats.progress }}%</p>
+                            <div class="progress-track">
+                                <div class="progress-fill bg-gradient-to-r from-nevox-600 to-nevox-400" style="width: {{ campaign.stats.progress }}%"></div>
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- Contacts -->
+                    <td class="py-3.5 px-4 text-center">
+                        <p class="text-sm font-bold text-gray-900">{{ campaign.stats.processed }}<span class="text-gray-400 font-normal">/{{ campaign.stats.total }}</span></p>
+                        <p class="text-[0.6rem] text-gray-400">
+                            {% if campaign.stats.pending > 0 %}{{ campaign.stats.pending }} pending{% endif %}
+                            {% if campaign.stats.failed > 0 or campaign.stats.no_answer > 0 %}{% if campaign.stats.pending > 0 %}, {% endif %}{{ campaign.stats.failed + campaign.stats.no_answer }} failed{% endif %}
+                        </p>
+                    </td>
+
+                    <!-- Interest -->
+                    <td class="py-3.5 px-4 text-center">
+                        {% if campaign.stats.interested > 0 or campaign.stats.not_interested > 0 %}
+                        <div class="flex items-center justify-center gap-3">
+                            <div class="text-center">
+                                <i class="bi bi-hand-thumbs-up-fill text-emerald-500" style="font-size: 0.8rem;"></i>
+                                <p class="text-[0.6rem] font-bold text-emerald-600">{{ campaign.stats.interested }}</p>
+                            </div>
+                            <div class="text-center">
+                                <i class="bi bi-hand-thumbs-down-fill text-red-400" style="font-size: 0.8rem;"></i>
+                                <p class="text-[0.6rem] font-bold text-red-500">{{ campaign.stats.not_interested }}</p>
+                            </div>
+                        </div>
+                        {% else %}
+                        <span class="text-gray-300">-</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Created -->
+                    <td class="py-3.5 px-4 text-center">
+                        <p class="text-sm text-gray-600">{{ campaign.created_at.strftime('%b %d') }}</p>
+                        <p class="text-[0.6rem] text-gray-400">{{ campaign.created_at.strftime('%H:%M') }}</p>
+                    </td>
+
+                    <!-- Actions -->
+                    <td class="py-3.5 px-5 text-right">
+                        <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id) }}" class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-gray-500 hover:text-nevox-600 hover:bg-nevox-50 rounded-lg transition-all">
+                            View <i class="bi bi-chevron-right" style="font-size: 0.55rem;"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if pagination.pages > 1 %}
+<div class="flex items-center justify-center mt-6">
+    <div class="flex items-center gap-2">
+        {% if pagination.has_prev %}
+        <a href="{{ url_for('campaigns.campaigns', page=pagination.prev_num) }}" class="px-3.5 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+            <i class="bi bi-chevron-left" style="font-size: 0.65rem;"></i> Previous
+        </a>
+        {% endif %}
+        <span class="px-4 py-2 text-xs font-bold text-nevox-700 bg-nevox-50 rounded-lg border border-nevox-100">
+            {{ pagination.page }} / {{ pagination.pages }}
+        </span>
+        {% if pagination.has_next %}
+        <a href="{{ url_for('campaigns.campaigns', page=pagination.next_num) }}" class="px-3.5 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+            Next <i class="bi bi-chevron-right" style="font-size: 0.65rem;"></i>
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<!-- Empty State -->
+<div class="bg-white rounded-xl border border-dashed border-gray-300 p-16 text-center">
+    <div class="relative inline-block mb-5">
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-nevox-100 to-nevox-50 flex items-center justify-center">
+            <i class="bi bi-megaphone text-nevox-400" style="font-size: 1.5rem;"></i>
+        </div>
+        <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-gray-100 rounded-full flex items-center justify-center border-2 border-white">
+            <i class="bi bi-plus text-gray-400" style="font-size: 0.6rem;"></i>
+        </div>
+    </div>
+    <h3 class="text-base font-bold text-gray-900 mb-1">No Campaigns Yet</h3>
+    <p class="text-sm text-gray-500 mb-6 max-w-sm mx-auto">Create your first outbound campaign to start calling customers at scale</p>
+    <a href="{{ url_for('campaigns.create_campaign') }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-nevox-600 text-white text-sm font-semibold rounded-xl hover:bg-nevox-700 transition-colors shadow-sm shadow-nevox-600/20">
+        <i class="bi bi-plus-lg" style="font-size: 0.75rem;"></i> Create First Campaign
+    </a>
+</div>
+{% endif %}
+{% endblock %}

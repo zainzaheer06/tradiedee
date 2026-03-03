@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}Appointment Booking Config — Nevox AI{% endblock %}
+
+{% block dashboard_content %}
+
+<!-- Back Link -->
+<a href="{{ url_for('clinic.clinic_hub') }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 mb-6" style="text-decoration:none;">
+    <i class="bi bi-arrow-left" style="font-size:14px;"></i> Back to Clinic Hub
+</a>
+
+<!-- Page Header -->
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-xl font-semibold text-gray-900">Appointment Booking</h1>
+        <p class="text-sm text-gray-500 mt-0.5">Configure how the AI handles appointment requests</p>
+    </div>
+</div>
+
+<!-- Status Banner -->
+<div class="bg-white rounded-lg border border-gray-200 p-4 mb-6 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+        <i class="bi bi-info-circle" style="font-size:16px; color:var(--t3);"></i>
+        <span class="text-sm text-gray-700">Status:</span>
+        <span class="badge badge-gray">Not Configured</span>
+    </div>
+    <button class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors" onclick="enableFeature()">Enable Feature</button>
+</div>
+
+<!-- Agent Assignment Card -->
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-5">
+    <div class="flex items-center gap-2 mb-4">
+        <i class="bi bi-robot" style="font-size:16px; color:#4F46E5;"></i>
+        <h2 class="text-sm font-semibold text-gray-900">AI Agent Assignment</h2>
+    </div>
+    <div>
+        <label for="agentSelect" class="block text-xs font-medium text-gray-700 mb-2">Select Agent <span class="text-red-500">*</span></label>
+        <select id="agentSelect" class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC;">
+            <option value="">-- Select an agent --</option>
+            {% if agents %}
+                {% for agent in agents %}
+                    <option value="{{ agent.id }}" {% if config.get('agent_id') == agent.id %}selected{% endif %}>{{ agent.name }}</option>
+                {% endfor %}
+            {% else %}
+                <option value="" disabled>No agents configured yet</option>
+            {% endif %}
+        </select>
+        <p class="text-xs text-gray-500 mt-1.5">This agent will handle all appointment booking calls.</p>
+    </div>
+</div>
+
+<!-- Booking Hours Card -->
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-5">
+    <div class="flex items-center gap-2 mb-4">
+        <i class="bi bi-clock" style="font-size:16px; color:#D97706;"></i>
+        <h2 class="text-sm font-semibold text-gray-900">Availability Window</h2>
+    </div>
+
+    <!-- Time Range -->
+    <div class="mb-5">
+        <label class="block text-xs font-medium text-gray-700 mb-2">Operating Hours</label>
+        <div class="flex gap-3 items-end">
+            <div style="flex:1;">
+                <label class="block text-xs text-gray-600 mb-1">Opening Time</label>
+                <input type="time" value="08:00" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+            </div>
+            <div class="text-gray-400" style="padding-bottom:2px;">to</div>
+            <div style="flex:1;">
+                <label class="block text-xs text-gray-600 mb-1">Closing Time</label>
+                <input type="time" value="18:00" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+            </div>
+        </div>
+    </div>
+
+    <!-- Days of Week -->
+    <div class="mb-5">
+        <label class="block text-xs font-medium text-gray-700 mb-2">Operating Days</label>
+        <div class="flex gap-2">
+            <button class="day-toggle px-3 py-1.5 text-xs font-medium rounded-md border transition-all day-selected" style="background:#EEF2FF; color:#4F46E5; border:1px solid #C7D2FE;">Mon</button>
+            <button class="day-toggle px-3 py-1.5 text-xs font-medium rounded-md border transition-all day-selected" style="background:#EEF2FF; color:#4F46E5; border:1px solid #C7D2FE;">Tue</button>
+            <button class="day-toggle px-3 py-1.5 text-xs font-medium rounded-md border transition-all day-selected" style="background:#EEF2FF; color:#4F46E5; border:1px solid #C7D2FE;">Wed</button>
+            <button class="day-toggle px-3 py-1.5 text-xs font-medium rounded-md border transition-all day-selected" style="background:#EEF2FF; color:#4F46E5; border:1px solid #C7D2FE;">Thu</button>
+            <button class="day-toggle px-3 py-1.5 text-xs font-medium rounded-md border transition-all day-selected" style="background:#EEF2FF; color:#4F46E5; border:1px solid #C7D2FE;">Fri</button>
+            <button class="day-toggle px-3 py-1.5 text-xs font-medium rounded-md border transition-all" style="background:#F9FAFB; color:var(--t3); border:1px solid var(--card-border);">Sat</button>
+            <button class="day-toggle px-3 py-1.5 text-xs font-medium rounded-md border transition-all" style="background:#F9FAFB; color:var(--t3); border:1px solid var(--card-border);">Sun</button>
+        </div>
+    </div>
+
+    <!-- After-hours Voicemail -->
+    <div class="flex items-start gap-2.5 p-3 bg-gray-50 rounded-md">
+        <input type="checkbox" id="afterHoursVoicemail" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500 mt-0.5">
+        <label for="afterHoursVoicemail" class="text-sm text-gray-700">Enable after-hours voicemail capture</label>
+    </div>
+</div>
+
+<!-- Confirmation Behavior Card -->
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-5">
+    <div class="flex items-center gap-2 mb-4">
+        <i class="bi bi-check-circle" style="font-size:16px; color:#059669;"></i>
+        <h2 class="text-sm font-semibold text-gray-900">Post-Booking Confirmation</h2>
+    </div>
+
+    <!-- Confirmation Call Checkbox -->
+    <div class="flex items-start gap-2.5 p-3 bg-gray-50 rounded-md mb-3">
+        <input type="checkbox" id="confirmationCall" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500 mt-0.5" checked>
+        <label for="confirmationCall" class="text-sm text-gray-700">Send confirmation call after booking</label>
+    </div>
+
+    <!-- Delay Before Confirmation (hidden by default) -->
+    <div style="margin-left:28px; margin-bottom:12px; padding-left:8px; border-left:2px solid #E5E7EB;">
+        <label for="confirmDelay" class="block text-xs font-medium text-gray-700 mb-2">Delay before confirmation call</label>
+        <select id="confirmDelay" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC;">
+            <option value="">Immediately</option>
+            <option value="5">5 minutes</option>
+            <option value="15">15 minutes</option>
+            <option value="30" selected>30 minutes</option>
+            <option value="60">1 hour</option>
+        </select>
+    </div>
+
+    <!-- SMS Confirmation Checkbox -->
+    <div class="flex items-start gap-2.5 p-3 bg-gray-50 rounded-md">
+        <input type="checkbox" id="smsConfirmation" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500 mt-0.5">
+        <label for="smsConfirmation" class="text-sm text-gray-700">Send SMS confirmation (if phone number available)</label>
+    </div>
+</div>
+
+<!-- Booking Constraints Card -->
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-5">
+    <div class="flex items-center gap-2 mb-4">
+        <i class="bi bi-sliders" style="font-size:16px; color:#2563EB;"></i>
+        <h2 class="text-sm font-semibold text-gray-900">Booking Constraints</h2>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+            <label for="minAdvance" class="block text-xs font-medium text-gray-700 mb-2">Minimum advance booking (hours) <span class="text-red-500">*</span></label>
+            <input type="number" id="minAdvance" value="2" min="0" max="48" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+            <p class="text-xs text-gray-500 mt-1">Patients must book at least this many hours in advance</p>
+        </div>
+        <div>
+            <label for="maxAdvance" class="block text-xs font-medium text-gray-700 mb-2">Maximum advance booking (days) <span class="text-red-500">*</span></label>
+            <input type="number" id="maxAdvance" value="30" min="1" max="365" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+            <p class="text-xs text-gray-500 mt-1">Patients can book up to this many days in advance</p>
+        </div>
+    </div>
+
+    <div>
+        <label for="duration" class="block text-xs font-medium text-gray-700 mb-2">Default appointment duration <span class="text-red-500">*</span></label>
+        <select id="duration" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC;">
+            <option value="15">15 minutes</option>
+            <option value="30" selected>30 minutes</option>
+            <option value="45">45 minutes</option>
+            <option value="60">60 minutes</option>
+            <option value="90">90 minutes</option>
+        </select>
+    </div>
+</div>
+
+<!-- n8n Integration Card -->
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-5">
+    <div class="flex items-center gap-2 mb-4">
+        <i class="bi bi-link-45deg" style="font-size:16px; color:#7C3AED;"></i>
+        <h2 class="text-sm font-semibold text-gray-900">n8n Webhook Integration</h2>
+    </div>
+
+    <!-- Pre-call Webhook -->
+    <div class="mb-4">
+        <label for="preCallUrl" class="block text-xs font-medium text-gray-700 mb-2">
+            <i class="bi bi-arrow-right" style="font-size:10px; color:var(--t3); margin-right:4px;"></i>Pre-call Webhook (Patient Lookup)
+        </label>
+        <input type="url" id="preCallUrl" placeholder="https://n8n.yourdomain.com/webhook/clinic/pre-booking" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none font-mono" style="background-color:#FAFBFC; font-size:11px;">
+        <p class="text-xs text-gray-500 mt-1">Called BEFORE booking — n8n fetches patient record by phone number from HMS</p>
+    </div>
+
+    <!-- Post-call Webhook -->
+    <div>
+        <label for="postCallUrl" class="block text-xs font-medium text-gray-700 mb-2">
+            <i class="bi bi-arrow-right" style="font-size:10px; color:var(--t3); margin-right:4px;"></i>Post-call Webhook (Appointment Creation)
+        </label>
+        <input type="url" id="postCallUrl" placeholder="https://n8n.yourdomain.com/webhook/clinic/post-booking" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none font-mono" style="background-color:#FAFBFC; font-size:11px;">
+        <p class="text-xs text-gray-500 mt-1">Called AFTER booking — n8n writes appointment to HMS</p>
+    </div>
+
+    <!-- Info callout -->
+    <div style="margin-top:12px; padding:10px 12px; background:#F0F9FF; border-left:3px solid #0EA5E9; border-radius:4px;">
+        <p style="font-size:11px; color:#0369A1;">
+            <strong>Optional:</strong> Add your n8n webhook URLs for custom HMS integration. Leave blank to use default webhook endpoints.
+        </p>
+    </div>
+</div>
+
+<!-- Info Callout -->
+<div style="padding:12px 14px; background:#ECFDF5; border:1px solid #86EFAC; border-radius:8px; margin-bottom:24px; font-size:12px; color:#15803D;">
+    <i class="bi bi-check-circle" style="margin-right:6px;"></i>
+    Your appointment booking configuration will be saved and active immediately. The AI agent will start handling booking calls using these settings.
+</div>
+
+<!-- Save/Cancel Buttons -->
+<div class="flex gap-3 justify-end">
+    <a href="{{ url_for('clinic.clinic_hub') }}" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors" style="text-decoration:none;">Cancel</a>
+    <button onclick="saveConfiguration()" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors">Save Configuration</button>
+</div>
+
+<script>
+// Toggle day buttons
+document.querySelectorAll('.day-toggle').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        this.classList.toggle('day-selected');
+        if (this.classList.contains('day-selected')) {
+            this.style.background = '#EEF2FF';
+            this.style.color = '#4F46E5';
+            this.style.borderColor = '#C7D2FE';
+        } else {
+            this.style.background = '#F9FAFB';
+            this.style.color = 'var(--t3)';
+            this.style.borderColor = 'var(--card-border)';
+        }
+    });
+});
+
+// Save configuration — Phase 2 (with backend)
+async function saveConfiguration() {
+    const agent = document.getElementById('agentSelect').value;
+    if (!agent) {
+        showToast('Please select an agent', 'error');
+        return;
+    }
+
+    const selectedDays = Array.from(document.querySelectorAll('.day-toggle.day-selected'))
+        .map(btn => btn.textContent.trim());
+
+    const data = {
+        agent_id: parseInt(agent),
+        opening_time: document.querySelectorAll('input[type="time"]')[0].value,
+        closing_time: document.querySelectorAll('input[type="time"]')[1].value,
+        operating_days: selectedDays,
+        after_hours_voicemail: document.getElementById('afterHoursVoicemail').checked,
+        send_confirmation_call: document.getElementById('confirmationCall').checked,
+        confirmation_delay: document.getElementById('confirmDelay').value,
+        send_sms_confirmation: document.getElementById('smsConfirmation').checked,
+        min_advance_hours: parseInt(document.getElementById('minAdvance').value),
+        max_advance_days: parseInt(document.getElementById('maxAdvance').value),
+        default_duration: document.getElementById('duration').value,
+        pre_call_webhook_url: document.getElementById('preCallUrl').value,
+        post_call_webhook_url: document.getElementById('postCallUrl').value,
+    };
+
+    try {
+        const response = await fetch('/clinic/api/appointment-booking', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            showToast(result.error || 'Failed to save', 'error');
+            return;
+        }
+
+        showToast('Appointment booking configured successfully!', 'success');
+        setTimeout(() => {
+            window.location.href = '{{ url_for('clinic.clinic_hub') }}';
+        }, 1500);
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Failed to save configuration', 'error');
+    }
+}
+
+// Enable feature
+function enableFeature() {
+    showToast('Coming in next update', 'info');
+}
+
+// Toast notification
+function showToast(message, type = 'info') {
+    const colors = {
+        success: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+        error: 'bg-red-50 border-red-200 text-red-800',
+        info: 'bg-blue-50 border-blue-200 text-blue-800'
+    };
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 z-[60] px-4 py-3 rounded-lg border text-sm font-medium shadow-lg ${colors[type] || colors.info}`;
+    toast.innerHTML = `<i class="bi bi-check-circle-fill" style="margin-right:8px;"></i>${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+</script>
+
+{% endblock %}

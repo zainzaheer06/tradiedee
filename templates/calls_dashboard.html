@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+
+{% block title %}Tradiedee - Active Calls{% endblock %}
+
+{% block dashboard_content %}
+
+<div class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">📞 Active Calls</h1>
+        <p class="text-gray-600">Real-time call monitoring and management</p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-4 gap-4 mb-8">
+        <div class="bg-white rounded-lg p-4 border border-gray-200">
+            <div class="text-3xl font-bold text-blue-600" id="activeCalls">0</div>
+            <div class="text-sm text-gray-700 mt-1">Active Calls</div>
+        </div>
+        <div class="bg-white rounded-lg p-4 border border-gray-200">
+            <div class="text-3xl font-bold text-green-600" id="completedToday">0</div>
+            <div class="text-sm text-gray-700 mt-1">Completed Today</div>
+        </div>
+        <div class="bg-white rounded-lg p-4 border border-gray-200">
+            <div class="text-3xl font-bold text-red-600" id="emergencies">0</div>
+            <div class="text-sm text-gray-700 mt-1">Emergencies</div>
+        </div>
+        <div class="bg-white rounded-lg p-4 border border-gray-200">
+            <div class="text-3xl font-bold text-purple-600" id="avgDuration">0s</div>
+            <div class="text-sm text-gray-700 mt-1">Avg Duration</div>
+        </div>
+    </div>
+
+    <!-- Active Calls Section -->
+    <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200 mb-8">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Currently Active</h2>
+
+        <div id="activeCalls" class="space-y-4">
+            <!-- Will be populated by JavaScript -->
+        </div>
+
+        <div id="noActiveCalls" class="text-center py-8 text-gray-500">
+            <div class="text-4xl mb-2">☎️</div>
+            <p>No active calls at the moment</p>
+        </div>
+    </div>
+
+    <!-- Recent Calls -->
+    <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Recent Calls (Last 24h)</h2>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-200">
+                        <th class="text-left py-2 px-4 font-semibold text-gray-700">Time</th>
+                        <th class="text-left py-2 px-4 font-semibold text-gray-700">Caller</th>
+                        <th class="text-left py-2 px-4 font-semibold text-gray-700">Phone</th>
+                        <th class="text-left py-2 px-4 font-semibold text-gray-700">Service</th>
+                        <th class="text-left py-2 px-4 font-semibold text-gray-700">Duration</th>
+                        <th class="text-left py-2 px-4 font-semibold text-gray-700">Status</th>
+                        <th class="text-left py-2 px-4 font-semibold text-gray-700">Result</th>
+                    </tr>
+                </thead>
+                <tbody id="recentCallsList">
+                    <!-- Populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Call Details Modal -->
+<div id="callModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-8 max-w-2xl w-full mx-4">
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">Call Details</h2>
+
+        <div id="callDetails" class="space-y-4 mb-6">
+            <!-- Details will be populated -->
+        </div>
+
+        <div class="flex gap-3">
+            <button onclick="closeCallModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold py-2 px-4 rounded">
+                Close
+            </button>
+            <button id="transferBtn" onclick="transferCall()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Transfer Call
+            </button>
+            <button id="endBtn" onclick="endActiveCall()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                End Call
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentCallId = null;
+let activeCallsData = [];
+
+// Load calls on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadActiveCalls();
+    loadRecentCalls();
+    // Refresh every 5 seconds
+    setInterval(() => {
+        loadActiveCalls();
+        loadRecentCalls();
+    }, 5000);
+});
+
+// Load active calls
+async function loadActiveCalls() {
+    try {
+        const response = await fetch('/jobs/api/stats');
+        const data = await response.json();
+
+        document.getElementById('activeCalls').textContent = 0; // Will update with actual active calls count
+        document.getElementById('completedToday').textContent = data.today_jobs || 0;
+        document.getElementById('emergencies').textContent = data.emergencies || 0;
+
+        // Fetch actual active calls
+        const callsRes = await fetch('/voice/active-calls');
+        const callsData = await callsRes.json();
+
+        if (callsData.calls && callsData.calls.length > 0) {
+            activeCallsData = callsData.calls;
+            renderActiveCalls();
+        } else {
+            document.getElementById('noActiveCalls').classList.remove('hidden');
+            document.querySelector('#activeCalls').innerHTML = '';
+        }
+    } catch (error) {
+        console.error('Error loading calls:', error);
+    }
+}
+
+// Render active calls
+function renderActiveCalls() {
+    const container = document.querySelector('#activeCalls');
+    container.innerHTML = '';
+
+    activeCallsData.forEach(call => {
+        const callHtml = `
+            <div class="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
+                <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                        <div class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <span class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+                            ${call.caller_name || 'Unknown'}
+                        </div>
+                        <div class="text-sm text-gray-600 mt-2">
+                            <div>📞 ${call.from_number}</div>
+                            <div>📍 ${call.address || 'Address not collected'}</div>
+                            <div>💼 ${call.service_type || 'Service type pending'}</div>
+                            <div>🕐 Duration: <span id="duration-${call.id}">0s</span></div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm font-semibold text-gray-700 mb-3">
+                            State: <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded">${call.state}</span>
+                        </div>
+                        <button onclick="viewCallDetails('${call.id}')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm">
+                            View Details
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        container.innerHTML += callHtml;
+    });
+
+    document.getElementById('activeCalls').textContent = activeCallsData.length;
+}
+
+// View call details
+function viewCallDetails(callId) {
+    currentCallId = callId;
+    const call = activeCallsData.find(c => c.id == callId);
+
+    const detailsHtml = `
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <p class="text-sm font-semibold text-gray-600">Caller Name</p>
+                <p class="text-lg font-bold text-gray-900">${call.caller_name || 'Not collected'}</p>
+            </div>
+            <div>
+                <p class="text-sm font-semibold text-gray-600">Phone Number</p>
+                <p class="text-lg font-bold text-gray-900">${call.from_number}</p>
+            </div>
+            <div>
+                <p class="text-sm font-semibold text-gray-600">Address</p>
+                <p class="text-lg font-bold text-gray-900">${call.address || 'Pending'}</p>
+            </div>
+            <div>
+                <p class="text-sm font-semibold text-gray-600">Service Type</p>
+                <p class="text-lg font-bold text-gray-900">${call.service_type || 'Pending'}</p>
+            </div>
+            <div>
+                <p class="text-sm font-semibold text-gray-600">Current State</p>
+                <p class="text-lg font-bold text-gray-900">${call.state}</p>
+            </div>
+            <div>
+                <p class="text-sm font-semibold text-gray-600">Is Emergency</p>
+                <p class="text-lg font-bold ${call.is_emergency ? 'text-red-600' : 'text-green-600'}">
+                    ${call.is_emergency ? 'YES - ESCALATING' : 'No'}
+                </p>
+            </div>
+            ${call.transcript ? `
+                <div class="col-span-2">
+                    <p class="text-sm font-semibold text-gray-600">Conversation Transcript</p>
+                    <div class="bg-gray-100 p-3 rounded text-sm text-gray-700 max-h-40 overflow-y-auto">
+                        ${call.transcript}
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+    `;
+
+    document.getElementById('callDetails').innerHTML = detailsHtml;
+    document.getElementById('callModal').classList.remove('hidden');
+}
+
+// Close modal
+function closeCallModal() {
+    document.getElementById('callModal').classList.add('hidden');
+    currentCallId = null;
+}
+
+// Transfer call
+function transferCall() {
+    if (currentCallId) {
+        // Transfer logic
+        alert('Transferring call to business owner...');
+        closeCallModal();
+    }
+}
+
+// End call
+async function endActiveCall() {
+    if (currentCallId) {
+        try {
+            const response = await fetch('/voice/end-call', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({call_id: currentCallId})
+            });
+            const data = await response.json();
+            alert('Call ended');
+            closeCallModal();
+            loadActiveCalls();
+        } catch (error) {
+            alert('Error ending call');
+        }
+    }
+}
+
+// Load recent calls
+async function loadRecentCalls() {
+    try {
+        const response = await fetch('/voice/recent-calls');
+        const data = await response.json();
+
+        const tbody = document.getElementById('recentCallsList');
+        tbody.innerHTML = '';
+
+        if (data.calls && data.calls.length > 0) {
+            data.calls.forEach(call => {
+                const row = `
+                    <tr class="border-b border-gray-200">
+                        <td class="py-2 px-4">${new Date(call.created_at).toLocaleString()}</td>
+                        <td class="py-2 px-4">${call.customer_name || 'Unknown'}</td>
+                        <td class="py-2 px-4">${call.from_number}</td>
+                        <td class="py-2 px-4">${call.service_type || '-'}</td>
+                        <td class="py-2 px-4">${call.duration_seconds || 0}s</td>
+                        <td class="py-2 px-4">
+                            <span class="px-2 py-1 rounded text-xs font-semibold
+                                ${call.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                                ${call.status}
+                            </span>
+                        </td>
+                        <td class="py-2 px-4">
+                            ${call.job_created ? '<span class="text-green-600 font-bold">✓ Job Created</span>' :
+                              call.is_emergency ? '<span class="text-red-600 font-bold">🚨 Emergency</span>' :
+                              '<span class="text-gray-500">No action</span>'}
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">No recent calls</td></tr>';
+        }
+    } catch (error) {
+        console.error('Error loading recent calls:', error);
+    }
+}
+</script>
+
+{% endblock %}

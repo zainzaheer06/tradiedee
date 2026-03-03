@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}WhatsApp Agents — Nevox AI{% endblock %}
+
+{% block dashboard_content %}
+
+<div class="ph">
+    <div>
+        <h1 class="ph-title">WhatsApp Agents</h1>
+        <p class="ph-sub">Connect your AI agents to WhatsApp — {{ pagination.total if pagination else agents|length }} total</p>
+    </div>
+    <a href="{{ url_for('whatsapp.new_whatsapp_agent') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle" style="font-size:13px;"></i> Create WhatsApp Agent
+    </a>
+</div>
+
+{% if agents %}
+<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:16px;">
+    {% for wa in agents %}
+    <div class="card" style="overflow:hidden;">
+        <!-- Card Header -->
+        <div style="padding:14px 16px; border-bottom:1px solid var(--card-border); background:#F0FDF4; display:flex; align-items:flex-start; justify-content:space-between;">
+            <div style="flex:1; min-width:0;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                    <div style="width:32px; height:32px; border-radius:8px; background:#ECFDF5; border:1px solid #BBF7D0; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <i class="bi bi-whatsapp" style="font-size:15px; color:#059669;"></i>
+                    </div>
+                    <h3 style="font-size:14px; font-weight:700; color:var(--t1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin:0;">{{ wa.name }}</h3>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                    <span style="font-size:11.5px; color:var(--t3); display:flex; align-items:center; gap:4px;">
+                        <i class="bi bi-robot" style="font-size:10px;"></i>
+                        {{ wa.agent.name if wa.agent else 'No Agent' }}
+                    </span>
+                    {% if wa.status == 'active' %}
+                    <span class="badge badge-green" style="font-size:11px;"><span style="width:5px; height:5px; background:#059669; border-radius:50%; display:inline-block; margin-right:3px;"></span> Active</span>
+                    {% elif wa.status == 'paused' %}
+                    <span class="badge badge-amber" style="font-size:11px;">Paused</span>
+                    {% elif wa.status == 'error' %}
+                    <span class="badge badge-red" style="font-size:11px;">Error</span>
+                    {% elif wa.status == 'deploying' %}
+                    <span class="badge badge-indigo" style="font-size:11px;">Deploying</span>
+                    {% else %}
+                    <span class="badge badge-gray" style="font-size:11px;">Draft</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Card Body -->
+        <div style="padding:14px 16px;">
+            <!-- Features -->
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:12px;">
+                <span style="display:inline-flex; align-items:center; gap:4px; padding:3px 8px; background:#F3F4F6; border-radius:5px; font-size:11.5px; color:var(--t3);">
+                    <i class="bi bi-mic{% if wa.enable_voice_response %}-fill" style="color:#059669;{% else %}" style="color:var(--t4);{% endif %}"></i>
+                    Voice
+                </span>
+            </div>
+
+<!-- Meta info -->
+            <div style="margin-bottom:12px;">
+                {% if wa.whatsapp_phone_number %}
+                <p style="font-size:12px; color:var(--t4); margin-bottom:2px;"><i class="bi bi-phone" style="font-size:11px;"></i> {{ wa.whatsapp_phone_number }}</p>
+                {% endif %}
+                <p style="font-size:12px; color:var(--t4);"><i class="bi bi-clock" style="font-size:11px;"></i> Created {{ wa.created_at.strftime('%b %d, %Y') }}</p>
+            </div>
+
+            <!-- Actions -->
+            <div style="display:flex; gap:6px;">
+                <a href="{{ url_for('whatsapp.view_whatsapp_agent', agent_id=wa.id) }}" class="btn btn-ghost btn-sm" style="flex:1; justify-content:center;">
+                    <i class="bi bi-eye" style="font-size:12px;"></i> View
+                </a>
+                <a href="{{ url_for('whatsapp.edit_whatsapp_agent', agent_id=wa.id) }}" class="btn btn-ghost btn-sm" style="flex:1; justify-content:center;">
+                    <i class="bi bi-pencil" style="font-size:12px;"></i> Edit
+                </a>
+                {% if wa.status == 'draft' or wa.status == 'error' %}
+                <form method="POST" action="{{ url_for('whatsapp.deploy_whatsapp_agent', agent_id=wa.id) }}" style="flex:1;">
+                    <button type="submit" class="btn btn-primary btn-sm" style="width:100%; justify-content:center;">
+                        <i class="bi bi-rocket" style="font-size:12px;"></i> Deploy
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if pagination and pagination.pages > 1 %}
+<div class="pag" style="margin-top:28px;">
+    {% if pagination.has_prev %}
+    <a href="{{ url_for('whatsapp.whatsapp_agents_list', page=pagination.prev_num) }}" class="pag-btn">Previous</a>
+    {% endif %}
+    {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+        {% if p %}
+            <a href="{{ url_for('whatsapp.whatsapp_agents_list', page=p) }}"
+               class="pag-btn {% if p == pagination.page %}pag-btn-active{% endif %}">{{ p }}</a>
+        {% else %}
+            <span style="padding:0 6px; color:var(--t4);">...</span>
+        {% endif %}
+    {% endfor %}
+    {% if pagination.has_next %}
+    <a href="{{ url_for('whatsapp.whatsapp_agents_list', page=pagination.next_num) }}" class="pag-btn">Next</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<!-- Empty State -->
+<div class="empty" style="padding:64px 24px;">
+    <div class="empty-icon" style="background:#ECFDF5; width:72px; height:72px; border-radius:50%; margin:0 auto 20px;">
+        <i class="bi bi-whatsapp" style="font-size:28px; color:#059669;"></i>
+    </div>
+    <p style="font-size:16px; font-weight:700; color:var(--t1); margin-bottom:6px;">No WhatsApp Agents Yet</p>
+    <p style="font-size:13.5px; color:var(--t3); margin-bottom:24px; max-width:400px; margin-left:auto; margin-right:auto;">Connect your AI agents to WhatsApp and let them handle customer conversations automatically.</p>
+    <a href="{{ url_for('whatsapp.new_whatsapp_agent') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle" style="font-size:13px;"></i> Create Your First WhatsApp Agent
+    </a>
+</div>
+{% endif %}
+
+{% endblock %}

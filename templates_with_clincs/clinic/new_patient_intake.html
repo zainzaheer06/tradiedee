@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+
+{% block title %}Patient Intake Config — Nevox AI{% endblock %}
+
+{% block dashboard_content %}
+
+<a href="{{ url_for('clinic.clinic_hub') }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 mb-6" style="text-decoration:none;">
+    <i class="bi bi-arrow-left" style="font-size:14px;"></i> Back to Clinic Hub
+</a>
+
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-xl font-semibold text-gray-900">New Patient Intake</h1>
+        <p class="text-sm text-gray-500 mt-0.5">Configure how the AI registers new patients and collects intake information</p>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg border border-gray-200 p-4 mb-6 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+        <i class="bi bi-info-circle" style="font-size:16px; color:var(--t3);"></i>
+        <span class="text-sm text-gray-700">Status:</span>
+        <span class="badge badge-gray">Not Configured</span>
+    </div>
+    <button class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors" onclick="enableFeature()">Enable Feature</button>
+</div>
+
+<!-- Intake Agent & Mode -->
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-5">
+    <div class="flex items-center gap-2 mb-4">
+        <i class="bi bi-robot" style="font-size:16px; color:#4F46E5;"></i>
+        <h2 class="text-sm font-semibold text-gray-900">AI Agent</h2>
+    </div>
+
+    <div class="mb-4">
+        <label for="agentSelect5" class="block text-xs font-medium text-gray-700 mb-2">Select Agent <span class="text-red-500">*</span></label>
+        <select id="agentSelect5" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC;">
+            <option value="">-- Select an agent --</option>
+            {% if agents %}
+                {% for agent in agents %}
+                    <option value="{{ agent.id }}" {% if config.get('agent_id') == agent.id %}selected{% endif %}>{{ agent.name }}</option>
+                {% endfor %}
+            {% else %}
+                <option value="" disabled>No agents configured yet</option>
+            {% endif %}
+        </select>
+    </div>
+
+    <div>
+        <label class="block text-xs font-medium text-gray-700 mb-2">Intake mode</label>
+        <div class="space-y-2">
+            <div class="flex items-center">
+                <input type="radio" id="modeInbound" name="intakeMode" value="inbound" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500" checked>
+                <label for="modeInbound" class="ml-2 text-sm text-gray-700">Inbound (patient calls in)</label>
+            </div>
+            <div class="flex items-center">
+                <input type="radio" id="modeOutbound" name="intakeMode" value="outbound" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500">
+                <label for="modeOutbound" class="ml-2 text-sm text-gray-700">Outbound (we call the patient after referral)</label>
+            </div>
+            <div class="flex items-center">
+                <input type="radio" id="modeBoth" name="intakeMode" value="both" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500">
+                <label for="modeBoth" class="ml-2 text-sm text-gray-700">Both</label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Questionnaire -->
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-5">
+    <div class="flex items-center gap-2 mb-4">
+        <i class="bi bi-clipboard-check" style="font-size:16px; color:#059669;"></i>
+        <h2 class="text-sm font-semibold text-gray-900">Information to Collect</h2>
+    </div>
+
+    <p class="text-xs text-gray-600 mb-3">Select which information the AI should collect. Unchecked fields will be skipped.</p>
+
+    <div class="space-y-2">
+        <!-- Full Name (Required) -->
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+            <input type="checkbox" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500" disabled checked>
+            <div style="flex:1;">
+                <label class="text-sm font-medium text-gray-900">Full Name</label>
+                <span class="badge" style="display:inline-block; background:#FEE2E2; color:#991B1B; font-size:10px; margin-left:6px;">Required</span>
+            </div>
+        </div>
+
+        <!-- Phone Number (Required) -->
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+            <input type="checkbox" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500" disabled checked>
+            <div style="flex:1;">
+                <label class="text-sm font-medium text-gray-900">Phone Number</label>
+                <span class="badge" style="display:inline-block; background:#FEE2E2; color:#991B1B; font-size:10px; margin-left:6px;">Required</span>
+            </div>
+        </div>
+
+        <!-- Date of Birth -->
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+            <input type="checkbox" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500" checked>
+            <label class="text-sm text-gray-700">Date of Birth</label>
+        </div>
+
+        <!-- National ID -->
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+            <input type="checkbox" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500" checked>
+            <label class="text-sm text-gray-700">National ID / Iqama Number</label>
+        </div>
+
+        <!-- Insurance Provider (Pro+) -->
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+            <input type="checkbox" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500" disabled>
+            <div style="flex:1;">
+                <label class="text-sm text-gray-700">Insurance Provider</label>
+                <span class="badge badge-indigo" style="font-size:10px; margin-left:6px;">Pro+</span>
+            </div>
+        </div>
+
+        <!-- Insurance Policy (Pro+) -->
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+            <input type="checkbox" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500" disabled>
+            <div style="flex:1;">
+                <label class="text-sm text-gray-700">Insurance Policy Number</label>
+                <span class="badge badge-indigo" style="font-size:10px; margin-left:6px;">Pro+</span>
+            </div>
+        </div>
+
+        <!-- Primary Doctor -->
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+            <input type="checkbox" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500" checked>
+            <label class="text-sm text-gray-700">Primary Doctor Preference</label>
+        </div>
+
+        <!-- Allergies -->
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+            <input type="checkbox" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500">
+            <label class="text-sm text-gray-700">Known Allergies</label>
+        </div>
+
+        <!-- Medications -->
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+            <input type="checkbox" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500">
+            <label class="text-sm text-gray-700">Current Medications</label>
+        </div>
+
+        <!-- Reason for Visit -->
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+            <input type="checkbox" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500" checked>
+            <label class="text-sm text-gray-700">Reason for Visit</label>
+        </div>
+
+        <!-- Emergency Contact -->
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+            <input type="checkbox" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500" checked>
+            <label class="text-sm text-gray-700">Emergency Contact</label>
+        </div>
+    </div>
+</div>
+
+<!-- Intake Script -->
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-5">
+    <div class="flex items-center gap-2 mb-4">
+        <i class="bi bi-chat-text" style="font-size:16px; color:#D97706;"></i>
+        <h2 class="text-sm font-semibold text-gray-900">Intake Script</h2>
+    </div>
+
+    <div class="mb-4">
+        <label for="intakeScript" class="block text-xs font-medium text-gray-700 mb-2">Intake opening message <span class="text-red-500">*</span></label>
+        <textarea id="intakeScript" rows="3" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC; font-family:system-ui;">Welcome to [Clinic Name]. I'm your AI assistant and I'll help you complete your patient registration. This will take about 3 minutes. Is that okay?</textarea>
+    </div>
+
+    <div class="flex items-start gap-2.5 p-3 bg-gray-50 rounded-md mb-3">
+        <input type="checkbox" id="holdMusic" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500 mt-0.5">
+        <label for="holdMusic" class="text-sm text-gray-700">Play hold music between questions</label>
+    </div>
+
+    <div>
+        <label for="language" class="block text-xs font-medium text-gray-700 mb-2">Language</label>
+        <select id="language" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC;">
+            <option value="ar">Arabic</option>
+            <option value="en" selected>English</option>
+            <option value="ar-en">Both (Arabic first)</option>
+            <option value="en-ar">Both (English first)</option>
+        </select>
+    </div>
+</div>
+
+<!-- Completion Actions -->
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-5">
+    <div class="flex items-center gap-2 mb-4">
+        <i class="bi bi-check2-all" style="font-size:16px; color:#059669;"></i>
+        <h2 class="text-sm font-semibold text-gray-900">After Intake</h2>
+    </div>
+
+    <div class="space-y-2">
+        <div class="flex items-start gap-2.5 p-3 bg-gray-50 rounded-md">
+            <input type="checkbox" id="bookAppointment" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500 mt-0.5" checked>
+            <label for="bookAppointment" class="text-sm text-gray-700">Book initial appointment after intake</label>
+        </div>
+
+        <div class="flex items-start gap-2.5 p-3 bg-gray-50 rounded-md">
+            <input type="checkbox" id="sendSms" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500 mt-0.5">
+            <label for="sendSms" class="text-sm text-gray-700">Send intake summary to patient via SMS</label>
+        </div>
+
+        <div class="flex items-start gap-2.5 p-3 bg-gray-50 rounded-md">
+            <input type="checkbox" id="notifyDoctor" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500 mt-0.5">
+            <label for="notifyDoctor" class="text-sm text-gray-700">Notify assigned doctor via email</label>
+        </div>
+
+        <div id="doctorEmailRow" style="display:none; margin-top:8px;">
+            <label for="doctorEmail" class="block text-xs font-medium text-gray-700 mb-2" style="margin-left:24px;">Doctor notification email</label>
+            <input type="email" id="doctorEmail" placeholder="doctor@clinic.com" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="margin-left:24px;">
+        </div>
+    </div>
+</div>
+
+<!-- n8n Integration -->
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-5">
+    <div class="flex items-center gap-2 mb-4">
+        <i class="bi bi-link-45deg" style="font-size:16px; color:#7C3AED;"></i>
+        <h2 class="text-sm font-semibold text-gray-900">n8n Webhook Integration</h2>
+    </div>
+
+    <div class="mb-3">
+        <label class="block text-xs font-medium text-gray-700 mb-2">Pre-call Webhook (Existing Patient Check)</label>
+        <input type="url" placeholder="https://n8n.yourdomain.com/webhook/clinic/pre-intake" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none font-mono" style="background-color:#FAFBFC; font-size:11px;">
+        <p class="text-xs text-gray-500 mt-1">Check if patient already exists in HMS</p>
+    </div>
+
+    <div>
+        <label class="block text-xs font-medium text-gray-700 mb-2">Post-call Webhook (Save Patient Record)</label>
+        <input type="url" placeholder="https://n8n.yourdomain.com/webhook/clinic/post-intake" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none font-mono" style="background-color:#FAFBFC; font-size:11px;">
+        <p class="text-xs text-gray-500 mt-1">Save collected patient data to HMS and create medical record</p>
+    </div>
+</div>
+
+<div style="padding:12px 14px; background:#ECFDF5; border:1px solid #86EFAC; border-radius:8px; margin-bottom:24px; font-size:12px; color:#15803D;">
+    <i class="bi bi-check-circle" style="margin-right:6px;"></i>
+    The intake process is fully automated. Patient data will be collected, saved to your HMS, and appointments can be booked automatically.
+</div>
+
+<div class="flex gap-3 justify-end">
+    <a href="{{ url_for('clinic.clinic_hub') }}" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors" style="text-decoration:none;">Cancel</a>
+    <button onclick="saveConfiguration()" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors">Save Configuration</button>
+</div>
+
+<script>
+document.getElementById('notifyDoctor').addEventListener('change', function() {
+    document.getElementById('doctorEmailRow').style.display = this.checked ? 'block' : 'none';
+});
+
+async function saveConfiguration() {
+    const agent = document.getElementById('agentSelect5').value;
+    if (!agent) {
+        showToast('Please select an agent', 'error');
+        return;
+    }
+
+    // Collect selected fields
+    const fieldsToCollect = [];
+    document.querySelectorAll('[id^="collect"]').forEach(checkbox => {
+        if (checkbox.checked) {
+            fieldsToCollect.push(checkbox.id.replace('collect', ''));
+        }
+    });
+
+    const intakeMode = document.querySelector('input[name="intakeMode"]:checked').value;
+
+    const data = {
+        agent_id: parseInt(agent),
+        intake_mode: intakeMode,
+        fields_to_collect: fieldsToCollect,
+        intake_script: document.getElementById('intakeScript').value,
+        hold_music: document.getElementById('holdMusic').checked,
+        language: document.getElementById('language').value,
+        book_appointment: document.getElementById('bookAppointment').checked,
+        send_sms_summary: document.getElementById('sendSms').checked,
+        notify_doctor: document.getElementById('notifyDoctor').checked,
+        doctor_email: document.getElementById('doctorEmail').value,
+        pre_call_webhook_url: document.querySelectorAll('input[type="url"]')[0].value,
+        post_call_webhook_url: document.querySelectorAll('input[type="url"]')[1].value,
+    };
+
+    try {
+        const response = await fetch('/clinic/api/new-patient-intake', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            showToast(result.error || 'Failed to save', 'error');
+            return;
+        }
+
+        showToast('Patient intake configured successfully!', 'success');
+        setTimeout(() => { window.location.href = '{{ url_for('clinic.clinic_hub') }}'; }, 1500);
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Failed to save configuration', 'error');
+    }
+}
+
+function enableFeature() {
+    showToast('Coming in next update', 'info');
+}
+
+function showToast(message, type = 'info') {
+    const colors = {
+        success: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+        error: 'bg-red-50 border-red-200 text-red-800',
+        info: 'bg-blue-50 border-blue-200 text-blue-800'
+    };
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 z-[60] px-4 py-3 rounded-lg border text-sm font-medium shadow-lg ${colors[type] || colors.info}`;
+    toast.innerHTML = `<i class="bi bi-check-circle-fill" style="margin-right:8px;"></i>${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+</script>
+
+{% endblock %}

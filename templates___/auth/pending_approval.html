@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Pending Approval — NevoxAI{% endblock %}
+
+{% block dashboard_content %}
+<div style="min-height:60vh; display:flex; align-items:center; justify-content:center; padding:24px;">
+    <div style="width:100%; max-width:420px;">
+
+        <!-- Card -->
+        <div class="card" style="overflow:hidden; text-align:center;">
+
+            <!-- Icon header -->
+            <div style="padding:32px 24px 24px; border-bottom:1px solid #f3f4f6;">
+                <div style="width:56px; height:56px; border-radius:14px; background:#fef3c7;
+                            display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+                    <i class="bi bi-hourglass-split" style="font-size:22px; color:#d97706;"></i>
+                </div>
+                <h2 style="font-size:17px; font-weight:700; color:#111827; margin:0 0 6px;">Account Pending Approval
+                </h2>
+                <p style="font-size:13px; color:#6b7280; line-height:1.6; margin:0;">
+                    Your account has been created. We're reviewing your request and will approve it shortly.
+                </p>
+            </div>
+
+            <!-- Steps -->
+            <div style="padding:20px 24px; text-align:left; border-bottom:1px solid #f3f4f6;">
+                <p style="font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em;
+                           color:#9ca3af; margin:0 0 12px;">What happens next</p>
+                {% for step in [
+                ('1', 'Admin reviews your request'),
+                ('2', 'You receive free minutes upon approval'),
+                ('3', 'Start creating voice agents')
+                ] %}
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                    <div style="width:22px; height:22px; border-radius:50%; background:#eef2ff;
+                                display:flex; align-items:center; justify-content:center; flex-shrink:0;
+                                font-size:11px; font-weight:700; color:#4f46e5;">{{ step[0] }}</div>
+                    <span style="font-size:13px; color:#374151;">{{ step[1] }}</span>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Stats row -->
+            <div style="padding:16px 24px; display:flex; gap:0; border-bottom:1px solid #f3f4f6;">
+                {% for stat in [('bi-clock', '5,000', 'Free Minutes'), ('bi-infinity', '∞', 'Agents'), ('bi-globe',
+                '180+', 'Countries')] %}
+                <div
+                    style="flex:1; text-align:center; {% if not loop.last %}border-right:1px solid #f3f4f6;{% endif %} padding:0 8px;">
+                    <i class="{{ stat[0] }}" style="font-size:16px; color:#4f46e5;"></i>
+                    <p style="font-size:14px; font-weight:700; color:#111827; margin:4px 0 2px;">{{ stat[1] }}</p>
+                    <p style="font-size:11px; color:#9ca3af; margin:0;">{{ stat[2] }}</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Actions -->
+            <div style="padding:16px 24px;">
+                <p style="font-size:12.5px; color:#9ca3af; margin:0 0 14px;">
+                    Approval usually takes less than <strong style="color:#374151;">24 hours</strong>
+                </p>
+                <a href="{{ url_for('core.logout') }}" style="display:inline-flex; align-items:center; gap:6px; padding:8px 20px;
+                          background:#f3f4f6; border:1px solid #e5e7eb; border-radius:8px;
+                          font-size:13px; font-weight:500; color:#374151; text-decoration:none;
+                          transition:background 0.15s;" onmouseover="this.style.background='#e5e7eb'"
+                    onmouseout="this.style.background='#f3f4f6'">
+                    <i class="bi bi-box-arrow-right"></i> Sign Out
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

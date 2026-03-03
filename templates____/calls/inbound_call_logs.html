@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block title %}Inbound Call Logs - Nevox AI{% endblock %}
+
+{% block page_title %}Inbound{% endblock %}
+
+
+
+{% block dashboard_content %}
+<!-- Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">Call Logs</h1>
+    <p class="text-gray-600">View all incoming calls received by your agents</p>
+</div>
+
+{% if calls %}
+<!-- Calls Table Card -->
+<div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b border-gray-200 bg-gray-50">
+                    <th class="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Date & Time</th>
+                    <th class="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">From</th>
+                    <th class="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Agent</th>
+                    <th class="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Duration</th>
+                    <th class="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                    <th class="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Interest</th>
+                    <th class="text-right py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for call in calls %}
+                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <td class="py-4 px-6">
+                        <div class="text-sm">
+                            <div class="font-semibold text-gray-900">{{ call.created_at.strftime('%Y-%m-%d') }}</div>
+                            <div class="text-gray-600">{{ call.created_at.strftime('%H:%M:%S') }}</div>
+                        </div>
+                    </td>
+                    <td class="py-4 px-6">
+                        <span class="font-mono text-sm font-medium text-gray-900">{{ call.from_number }}</span>
+                    </td>
+                    <td class="py-4 px-6">
+                        {% if call.agent %}
+                        <span class="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold">{{ call.agent.name }}</span>
+                        {% else %}
+                        <span class="text-gray-400 text-sm">Unknown</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-4 px-6">
+                        <span class="text-sm text-gray-600">{{ call.duration_seconds }}s</span>
+                    </td>
+                    <td class="py-4 px-6">
+                        {% if call.status == 'completed' %}
+                        <span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">Completed</span>
+                        {% elif call.status == 'failed' %}
+                        <span class="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">Failed</span>
+                        {% elif call.status == 'no_answer' %}
+                        <span class="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold">No Answer</span>
+                        {% else %}
+                        <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold">{{ call.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-4 px-6">
+                        {% set interest_data = call.sentiment_summary|from_json if call.sentiment_summary and call.sentiment_summary != '{}' else {} %}
+                        {% if interest_data and interest_data.get('interest') %}
+                            {% if interest_data.get('interest') == 'Interested' %}
+                            <span class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                                <i class="bi bi-hand-thumbs-up"></i>
+                              
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
+                                <i class="bi bi-hand-thumbs-down"></i>
+                               
+                            </span>
+                            {% endif %}
+                        {% else %}
+                        <span class="text-gray-400 text-sm">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-4 px-6 text-right">
+                        <a href="{{ url_for('core.view_call_log', log_id=call.id) }}"
+                           class="inline-flex items-center gap-1 px-3 py-1 text-indigo-600 hover:bg-indigo-50 rounded font-medium transition-colors text-sm">
+                            <i class="bi bi-eye"></i>
+                            View
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if pagination.pages > 1 %}
+    <div class="px-6 py-4 border-t border-gray-200">
+        <nav class="flex items-center justify-center gap-2">
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('inbound.inbound_call_logs', page=pagination.prev_num) }}"
+               class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors text-sm">
+                Previous
+            </a>
+            {% endif %}
+
+            <div class="flex items-center gap-1">
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                    {% if page_num %}
+                        {% if page_num == pagination.page %}
+                        <span class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium text-sm">{{ page_num }}</span>
+                        {% else %}
+                        <a href="{{ url_for('inbound.inbound_call_logs', page=page_num) }}"
+                           class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors text-sm">
+                            {{ page_num }}
+                        </a>
+                        {% endif %}
+                    {% else %}
+                        <span class="px-4 py-2 text-gray-400 text-sm">...</span>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            {% if pagination.has_next %}
+            <a href="{{ url_for('inbound.inbound_call_logs', page=pagination.next_num) }}"
+               class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors text-sm">
+                Next
+            </a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+{% else %}
+<!-- Empty State -->
+<div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="p-12 text-center">
+        <div class="flex items-center justify-center w-20 h-20 bg-indigo-100 rounded-full mx-auto mb-4">
+            <i class="bi bi-telephone-x text-indigo-600 text-3xl"></i>
+        </div>
+        <h3 class="text-xl font-bold text-gray-900 mb-2">No Inbound Calls Yet</h3>
+        <p class="text-gray-600">When customers call your inbound number, they will appear here</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

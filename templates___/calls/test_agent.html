@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+
+{% block title %}Test Agent{% endblock %}
+
+{% block extra_head %}
+<!-- LiveKit Client SDK -->
+<script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Test Agent</h1>
+    <p class="text-gray-600 mt-1">Talk to your agent directly through your browser</p>
+</div>
+
+<div class="max-w-2xl mx-auto">
+    <!-- Main Card -->
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <!-- Header -->
+        <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-blue-50">
+            <div class="flex items-center gap-3">
+                <div class="flex items-center justify-center w-12 h-12 bg-indigo-600 rounded-lg">
+                    <i class="bi bi-mic-fill text-white text-lg"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900">Voice Test</h2>
+                    <p class="text-sm text-gray-600">Test your agent via browser microphone</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <!-- Agent Selection -->
+            <div>
+                <label for="agent_select" class="block text-sm font-semibold text-gray-700 mb-2">Select Agent</label>
+                <select id="agent_select" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+                    <option value="">-- Choose an agent --</option>
+                    {% for agent in agents %}
+                    <option value="{{ agent.id }}">{{ agent.name }}</option>
+                    {% endfor %}
+                </select>
+                {% if not agents %}
+                <p class="text-sm text-amber-600 mt-2">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    No agents found. <a href="{{ url_for('agents.agents_list') }}" class="underline">Create an agent</a> first.
+                </p>
+                {% endif %}
+            </div>
+
+            <!-- Call Status -->
+            <div id="call_status" class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div class="flex items-center gap-3">
+                    <div id="status_indicator" class="w-3 h-3 rounded-full bg-gray-400"></div>
+                    <span id="status_text" class="text-sm font-medium text-gray-600">Ready to call</span>
+                </div>
+            </div>
+
+            <!-- Call Duration -->
+            <div id="call_duration_container" class="hidden p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium text-indigo-700">Call Duration</span>
+                    <span id="call_duration" class="text-lg font-bold text-indigo-900">00:00</span>
+                </div>
+            </div>
+
+            <!-- Audio Visualizer -->
+            <div id="audio_visualizer" class="hidden p-4 bg-gray-900 rounded-lg">
+                <div class="flex items-center justify-center gap-1 h-16">
+                    <div class="audio-bar w-1 bg-indigo-500 rounded-full"></div>
+                    <div class="audio-bar w-1 bg-indigo-500 rounded-full"></div>
+                    <div class="audio-bar w-1 bg-indigo-500 rounded-full"></div>
+                    <div class="audio-bar w-1 bg-indigo-500 rounded-full"></div>
+                    <div class="audio-bar w-1 bg-indigo-500 rounded-full"></div>
+                    <div class="audio-bar w-1 bg-indigo-500 rounded-full"></div>
+                    <div class="audio-bar w-1 bg-indigo-500 rounded-full"></div>
+                    <div class="audio-bar w-1 bg-indigo-500 rounded-full"></div>
+                </div>
+            </div>
+
+            <!-- Call Controls -->
+            <div class="flex gap-4">
+                <button id="start_call_btn" onclick="startCall()"
+                        class="flex-1 inline-flex items-center justify-center gap-2 px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold transition-colors btn-hover disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    <i class="bi bi-telephone-fill text-lg"></i>
+                    <span>Start Call</span>
+                </button>
+
+                <button id="end_call_btn" onclick="endCall()"
+                        class="flex-1 inline-flex items-center justify-center gap-2 px-6 py-4 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold transition-colors btn-hover hidden">
+                    <i class="bi bi-telephone-x-fill text-lg"></i>
+                    <span>End Call</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+        <div class="flex items-start gap-3">
+            <i class="bi bi-info-circle text-amber-600 text-lg mt-0.5"></i>
+            <div class="text-sm text-amber-800">
+                <p class="font-semibold mb-1">How it works:</p>
+                <ol class="list-decimal list-inside space-y-1 text-amber-700">
+                    <li>Select an agent from the dropdown</li>
+                    <li>Click "Start Call" and allow microphone access</li>
+                    <li>Talk to your agent through your browser</li>
+                    <li>Click "End Call" when finished</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes audioBar {
+        0%, 100% { height: 8px; }
+        50% { height: 100%; }
+    }
+
+    .audio-bar {
+        animation: audioBar 0.5s ease-in-out infinite;
+    }
+
+    .audio-bar:nth-child(1) { animation-delay: 0s; }
+    .audio-bar:nth-child(2) { animation-delay: 0.1s; }
+    .audio-bar:nth-child(3) { animation-delay: 0.2s; }
+    .audio-bar:nth-child(4) { animation-delay: 0.3s; }
+    .audio-bar:nth-child(5) { animation-delay: 0.4s; }
+    .audio-bar:nth-child(6) { animation-delay: 0.3s; }
+    .audio-bar:nth-child(7) { animation-delay: 0.2s; }
+    .audio-bar:nth-child(8) { animation-delay: 0.1s; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let room = null;
+    let currentRoomName = null;
+    let callStartTime = null;
+    let durationInterval = null;
+
+    // Update call status UI
+    function updateStatus(status, color) {
+        const indicator = document.getElementById('status_indicator');
+        const text = document.getElementById('status_text');
+
+        indicator.className = 'w-3 h-3 rounded-full';
+
+        switch(color) {
+            case 'green':
+                indicator.classList.add('bg-green-500');
+                break;
+            case 'yellow':
+                indicator.classList.add('bg-yellow-500');
+                break;
+            case 'red':
+                indicator.classList.add('bg-red-500');
+                break;
+            default:
+                indicator.classList.add('bg-gray-400');
+        }
+
+        text.textContent = status;
+    }
+
+    // Format duration as MM:SS
+    function formatDuration(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // Update duration display
+    function updateDuration() {
+        if (callStartTime) {
+            const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+            document.getElementById('call_duration').textContent = formatDuration(elapsed);
+        }
+    }
+
+    // Start the call
+    async function startCall() {
+        const agentSelect = document.getElementById('agent_select');
+        const agentId = agentSelect.value;
+
+        if (!agentId) {
+            alert('Please select an agent first');
+            return;
+        }
+
+        const startBtn = document.getElementById('start_call_btn');
+        const endBtn = document.getElementById('end_call_btn');
+
+        startBtn.disabled = true;
+        startBtn.innerHTML = '<i class="bi bi-hourglass-split animate-spin"></i> <span>Connecting...</span>';
+        updateStatus('Connecting...', 'yellow');
+
+        try {
+            // Request token from backend
+            const response = await fetch('{{ url_for("test_agent.start_test_call") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ agent_id: agentId })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to start call');
+            }
+
+            currentRoomName = data.room_name;
+
+            // Connect to LiveKit room
+            room = new LivekitClient.Room({
+                adaptiveStream: true,
+                dynacast: true,
+            });
+
+            // Set up event handlers
+            room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
+                if (track.kind === 'audio') {
+                    const audioElement = track.attach();
+                    document.body.appendChild(audioElement);
+                }
+            });
+
+            room.on(LivekitClient.RoomEvent.Disconnected, () => {
+                updateStatus('Disconnected', 'red');
+                resetUI();
+            });
+
+            // Connect to room
+            await room.connect(data.url, data.token);
+
+            // Publish microphone
+            await room.localParticipant.setMicrophoneEnabled(true);
+
+            // Update UI
+            updateStatus('Connected to ' + data.agent_name, 'green');
+            startBtn.classList.add('hidden');
+            endBtn.classList.remove('hidden');
+            document.getElementById('audio_visualizer').classList.remove('hidden');
+            document.getElementById('call_duration_container').classList.remove('hidden');
+
+            // Start duration timer
+            callStartTime = Date.now();
+            durationInterval = setInterval(updateDuration, 1000);
+
+        } catch (error) {
+            console.error('Error starting call:', error);
+            alert('Failed to start call: ' + error.message);
+            updateStatus('Error: ' + error.message, 'red');
+            resetUI();
+        }
+    }
+
+    // End the call
+    async function endCall() {
+        const endBtn = document.getElementById('end_call_btn');
+        endBtn.disabled = true;
+        endBtn.innerHTML = '<i class="bi bi-hourglass-split animate-spin"></i> <span>Ending...</span>';
+
+        try {
+            // Disconnect from LiveKit room
+            if (room) {
+                await room.disconnect();
+                room = null;
+            }
+
+            // Notify backend and get minutes used
+            let minutesUsed = 0;
+            if (currentRoomName) {
+                const response = await fetch('{{ url_for("test_agent.end_test_call") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ room_name: currentRoomName })
+                });
+                const data = await response.json();
+                minutesUsed = data.minutes_used || 0;
+                currentRoomName = null;
+            }
+
+            if (minutesUsed > 0) {
+                updateStatus(`Call ended - ${minutesUsed} minute(s) used`, 'gray');
+            } else {
+                updateStatus('Call ended', 'gray');
+            }
+
+        } catch (error) {
+            console.error('Error ending call:', error);
+        }
+
+        resetUI();
+    }
+
+    // Reset UI to initial state
+    function resetUI() {
+        const startBtn = document.getElementById('start_call_btn');
+        const endBtn = document.getElementById('end_call_btn');
+
+        startBtn.classList.remove('hidden');
+        startBtn.disabled = false;
+        startBtn.innerHTML = '<i class="bi bi-telephone-fill text-lg"></i> <span>Start Call</span>';
+
+        endBtn.classList.add('hidden');
+        endBtn.disabled = false;
+        endBtn.innerHTML = '<i class="bi bi-telephone-x-fill text-lg"></i> <span>End Call</span>';
+
+        document.getElementById('audio_visualizer').classList.add('hidden');
+        document.getElementById('call_duration_container').classList.add('hidden');
+
+        // Stop duration timer
+        if (durationInterval) {
+            clearInterval(durationInterval);
+            durationInterval = null;
+        }
+        callStartTime = null;
+        document.getElementById('call_duration').textContent = '00:00';
+
+        // Remove any audio elements
+        document.querySelectorAll('audio').forEach(el => el.remove());
+    }
+
+    // Handle page unload
+    window.addEventListener('beforeunload', () => {
+        if (room) {
+            room.disconnect();
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Inbound{% endblock %}
+
+{% block title %}Inbound Agents - Nevox AI{% endblock %}
+
+{% block dashboard_content %}
+<!-- Header -->
+<div class="flex items-center justify-between mb-8">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Inbound Agents</h1>
+        <p class="text-gray-600">Manage agents that receive incoming phone calls</p>
+    </div>
+    <a href="{{ url_for('inbound.create_inbound_agent') }}" class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors">
+        <i class="bi bi-plus-circle"></i>
+        Create Inbound Agent
+    </a>
+</div>
+
+{% if configs %}
+<!-- Inbound Configurations Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for config in configs %}
+    <div class="bg-white rounded-xl border border-gray-200 p-6 card-hover transition-all">
+        <!-- Header -->
+        <div class="flex items-start justify-between mb-4">
+            <div class="flex-1">
+                <h3 class="text-lg font-bold text-gray-900 mb-2">{{ config.name }}</h3>
+                <span class="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                    <i class="bi bi-telephone-inbound"></i>
+                    Inbound
+                </span>
+            </div>
+            <!-- Actions Dropdown -->
+            <div class="relative dropdown">
+                <button style="display:none;" styleclass="p-2 hover:bg-gray-100 rounded-lg transition-colors" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-three-dots-vertical text-gray-600"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <a href="{{ url_for('inbound.edit_inbound_agent', config_id=config.id) }}" class="dropdown-item flex items-center gap-2">
+                            <i class="bi bi-pencil-square"></i>
+                            Edit
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <form action="{{ url_for('inbound.delete_inbound_agent', config_id=config.id) }}" method="POST"
+                              onsubmit="return confirm('Delete this inbound configuration?');">
+                            <button type="submit" class="dropdown-item text-red-600 flex items-center gap-2">
+                                <i class="bi bi-trash"></i>
+                                Delete
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Configuration Details -->
+        <div class="space-y-3 mb-4">
+            <!-- Linked Agent -->
+            <div class="flex items-center gap-2 text-sm text-gray-600">
+                <div class="flex items-center justify-center w-8 h-8 bg-purple-100 rounded">
+                    <i class="bi bi-robot text-purple-600"></i>
+                </div>
+                <div>
+                    <span class="text-gray-500">Agent:</span>
+                    <span class="font-medium text-gray-900">{{ config.agent.name }}</span>
+                </div>
+            </div>
+
+            <!-- Voice -->
+            <div class="flex items-center gap-2 text-sm text-gray-600">
+                <div class="flex items-center justify-center w-8 h-8 bg-indigo-100 rounded">
+                    <i class="bi bi-mic-fill text-indigo-600"></i>
+                </div>
+                <div>
+                    <span class="text-gray-500">Voice:</span>
+                    <span class="font-medium text-gray-900">{{ config.agent.voice_name }}</span>
+                </div>
+            </div>
+
+            <!-- Phone Number -->
+            {% if config.phone_number %}
+            <div class="flex items-center gap-2 text-sm text-gray-600">
+                <div class="flex items-center justify-center w-8 h-8 bg-blue-100 rounded">
+                    <i class="bi bi-telephone-fill text-blue-600"></i>
+                </div>
+                <div>
+                    <span class="text-gray-500">Number:</span>
+                    <span class="font-medium text-gray-900">{{ config.phone_number }}</span>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Status -->
+            {% if config.dispatch_rule_id %}
+            <div class="flex items-center gap-2 text-sm">
+                <div class="flex items-center justify-center w-8 h-8 bg-green-100 rounded">
+                    <i class="bi bi-check-circle-fill text-green-600"></i>
+                </div>
+                <span class="font-medium text-green-600">Active</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Footer -->
+        <div class="border-t border-gray-200 pt-3 space-y-1">
+            <p class="text-xs text-gray-500">
+                <i class="bi bi-calendar3 text-gray-400 mr-1"></i>
+                Created: {{ config.created_at.strftime('%Y-%m-%d %H:%M') }}
+            </p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% else %}
+<!-- Empty State -->
+<div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="p-12 text-center">
+        <div class="flex items-center justify-center w-20 h-20 bg-indigo-100 rounded-full mx-auto mb-4">
+            <i class="bi bi-telephone-inbound text-indigo-600 text-3xl"></i>
+        </div>
+        <h3 class="text-xl font-bold text-gray-900 mb-2">No Inbound Agents Yet</h3>
+        <p class="text-gray-600 mb-6">Create an inbound agent to start receiving calls</p>
+        <a href="{{ url_for('inbound.create_inbound_agent') }}" class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors">
+            <i class="bi bi-plus-circle"></i>
+            Create First Inbound Agent
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

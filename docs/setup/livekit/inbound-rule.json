@@ -1,0 +1,36 @@
+from livekit import api
+
+lkapi = api.LiveKitAPI()
+
+# Create a dispatch rule to give each caller its own AI room
+rule = api.SIPDispatchRule(
+  dispatch_rule_individual = api.SIPDispatchRuleIndividual(
+    room_prefix = 'call-',
+  )
+)
+
+request = api.CreateSIPDispatchRuleRequest(
+  dispatch_rule = api.SIPDispatchRuleInfo(
+    rule = rule,
+    name = 'Nevox AI Inbound Rule',
+    # optional trunk IDs (omit to match all)
+    trunk_ids = [],
+    room_config = api.RoomConfiguration(
+      agents = [
+        api.RoomAgentDispatch(
+          agent_name = "nevox-agent",
+          metadata = "{\"language\": \"ar\", \"model\": \"gpt-4o-realtime\"}"
+        )
+      ]
+    ),
+    metadata = "{\"auto_ai\": true}",
+    attributes = {
+      "project": "Nevox",
+      "type": "ai_call"
+    }
+  )
+)
+
+dispatch = await lkapi.sip.create_sip_dispatch_rule(request)
+print("✅ Created dispatch rule:", dispatch)
+await lkapi.aclose()

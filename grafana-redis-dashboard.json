@@ -1,0 +1,193 @@
+{
+  "dashboard": {
+    "title": "Nevox Voice Agent - Redis Metrics",
+    "tags": ["voice-agent", "redis", "costs"],
+    "timezone": "browser",
+    "refresh": "10s",
+    "time": {"from": "now-6h", "to": "now"},
+    "panels": [
+      {
+        "id": 1,
+        "title": "💰 Total Cost Today (USD)",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+        "targets": [{
+          "expr": "sum(nevox_cost_usd_total{period=\"today\"})",
+          "legendFormat": "Total Cost"
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "decimals": 4,
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 1, "color": "yellow"},
+                {"value": 10, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "📞 Total Calls Today",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+        "targets": [{
+          "expr": "sum(nevox_calls_total{period=\"today\"})",
+          "legendFormat": "Calls"
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "decimals": 0,
+            "color": {"mode": "fixed", "fixedColor": "blue"}
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "🔥 Active Calls Right Now",
+        "type": "gauge",
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+        "targets": [{
+          "expr": "sum(nevox_active_calls_current)",
+          "legendFormat": "Active"
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "min": 0,
+            "max": 15,
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 10, "color": "yellow"},
+                {"value": 13, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "💾 Cache Hit Rate",
+        "type": "gauge",
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+        "targets": [{
+          "expr": "nevox_cache_hit_rate_pct{period=\"today\"}",
+          "legendFormat": "Cache %"
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 50, "color": "yellow"},
+                {"value": 70, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "💸 Cost by Agent",
+        "type": "bargauge",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+        "targets": [{
+          "expr": "nevox_cost_usd_total{period=\"today\"}",
+          "legendFormat": "Agent {{agent_id}}"
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "decimals": 4
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "📊 Token Usage Today",
+        "type": "piechart",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+        "targets": [
+          {
+            "expr": "sum(nevox_tokens_total{period=\"today\",token_type=\"uncached\"})",
+            "legendFormat": "Uncached Tokens"
+          },
+          {
+            "expr": "sum(nevox_tokens_total{period=\"today\",token_type=\"cached\"})",
+            "legendFormat": "Cached Tokens"
+          },
+          {
+            "expr": "sum(nevox_tokens_total{period=\"today\",token_type=\"completion\"})",
+            "legendFormat": "Completion Tokens"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "📈 Calls by Agent",
+        "type": "bargauge",
+        "gridPos": {"h": 6, "w": 12, "x": 0, "y": 12},
+        "targets": [{
+          "expr": "nevox_calls_total{period=\"today\"}",
+          "legendFormat": "Agent {{agent_id}}"
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "decimals": 0
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "⏱️ Average Call Duration",
+        "type": "stat",
+        "gridPos": {"h": 6, "w": 12, "x": 12, "y": 12},
+        "targets": [{
+          "expr": "nevox_avg_call_duration_sec{period=\"today\"}",
+          "legendFormat": "Agent {{agent_id}}"
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "decimals": 0,
+            "color": {"mode": "fixed", "fixedColor": "purple"}
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "❌ Errors Today",
+        "type": "table",
+        "gridPos": {"h": 6, "w": 24, "x": 0, "y": 18},
+        "targets": [{
+          "expr": "nevox_errors_count{period=\"today\"}",
+          "format": "table",
+          "instant": true
+        }],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "__name__": true,
+                "Time": true,
+                "period": true
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}Agents — Tradiedee{% endblock %}
+
+{% block dashboard_content %}
+
+<!-- Page header -->
+<div class="ph">
+    <div>
+        <h1 class="ph-title">Voice Agents</h1>
+        <p class="ph-sub">{{ pagination.total if pagination else agents|length }} agent{{ 's' if (pagination.total if pagination else agents|length) != 1 else '' }} configured</p>
+    </div>
+    <a href="{{ url_for('agents.new_agent_form') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg" style="font-size:11px;"></i> New Agent
+    </a>
+</div>
+
+<!-- Search bar -->
+<div class="card" style="padding:12px 16px; margin-bottom:20px;">
+    <form method="GET" action="{{ url_for('agents.agents_list') }}" style="display:flex; align-items:center; gap:10px;">
+        <div style="position:relative; flex:1;">
+            <i class="bi bi-search" style="position:absolute; left:11px; top:50%; transform:translateY(-50%); color:#9CA3AF; font-size:13px;"></i>
+            <input type="text" name="search" value="{{ search_query or '' }}"
+                   placeholder="Search agents by name, prompt, or voice…"
+                   class="inp" style="padding-left:34px;">
+        </div>
+        <button type="submit" class="btn btn-secondary">Search</button>
+        {% if search_query %}
+        <a href="{{ url_for('agents.agents_list') }}" class="btn btn-ghost">Clear</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Agents table -->
+{% if agents %}
+<div class="card" style="overflow:hidden;">
+    <table class="tbl">
+        <thead>
+            <tr>
+                <th>Agent</th>
+                <th>Voice</th>
+                <th>Prompt Preview</th>
+                <th>Created</th>
+                <th style="text-align:right;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for agent in agents %}
+            <tr>
+                <!-- Agent name + icon -->
+                <td>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="width:32px; height:32px; border-radius:8px; background:#EEF2FF; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <i class="bi bi-robot" style="color:#4F46E5; font-size:14px;"></i>
+                        </div>
+                        <span style="font-weight:600; color:var(--t1);">{{ agent.name }}</span>
+                    </div>
+                </td>
+                <!-- Voice -->
+                <td>
+                    <div style="display:flex; align-items:center; gap:5px; color:var(--t3);">
+                        <i class="bi bi-mic" style="font-size:12px;"></i>
+                        {{ agent.voice_name or 'Default' }}
+                    </div>
+                </td>
+                <!-- Prompt preview -->
+                <td style="max-width:360px;">
+                    <p class="clamp2" style="font-size:13px; color:var(--t3); line-height:1.5;">{{ agent.prompt }}</p>
+                </td>
+                <!-- Created -->
+                <td style="color:var(--t3); white-space:nowrap;">
+                    {{ agent.created_at.strftime('%b %d, %Y') }}
+                </td>
+                <!-- Actions -->
+                <td style="text-align:right;">
+                    <div style="display:flex; align-items:center; justify-content:flex-end; gap:6px;">
+                        <a href="{{ url_for('agents.view_agent', agent_id=agent.id) }}" class="btn btn-secondary btn-sm">
+                            <i class="bi bi-eye" style="font-size:11px;"></i> View
+                        </a>
+                        <a href="{{ url_for('agents.edit_agent_form', agent_id=agent.id) }}" class="btn btn-secondary btn-sm">
+                            <i class="bi bi-pencil" style="font-size:11px;"></i> Edit
+                        </a>
+                        <button onclick="confirmDelete({{ agent.id }}, '{{ agent.name }}')" class="btn btn-danger btn-sm">
+                            <i class="bi bi-trash" style="font-size:11px;"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Pagination -->
+    {% if pagination and pagination.pages > 1 %}
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-top:1px solid var(--card-border); background:#FAFAFA;">
+        <p style="font-size:12.5px; color:var(--t3);">
+            Page <strong style="color:var(--t1);">{{ pagination.page }}</strong> of <strong style="color:var(--t1);">{{ pagination.pages }}</strong>
+        </p>
+        <div class="pag">
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('agents.agents_list', page=pagination.prev_num) }}">&laquo; Prev</a>
+            {% else %}
+            <span class="dis">&laquo; Prev</span>
+            {% endif %}
+
+            {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if p %}
+                    {% if p == pagination.page %}<span class="cur">{{ p }}</span>
+                    {% else %}<a href="{{ url_for('agents.agents_list', page=p) }}">{{ p }}</a>{% endif %}
+                {% else %}<span class="dis" style="border:none; background:none;">…</span>{% endif %}
+            {% endfor %}
+
+            {% if pagination.has_next %}
+            <a href="{{ url_for('agents.agents_list', page=pagination.next_num) }}">Next &raquo;</a>
+            {% else %}
+            <span class="dis">Next &raquo;</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% else %}
+<!-- Empty state -->
+<div class="card">
+    <div class="empty">
+        <div class="empty-icon">
+            <i class="bi bi-robot" style="font-size:22px; color:#9CA3AF;"></i>
+        </div>
+        <p style="font-size:14px; font-weight:600; color:var(--t1); margin-bottom:4px;">
+            {% if search_query %}No agents match "{{ search_query }}"{% else %}No agents yet{% endif %}
+        </p>
+        <p style="font-size:13px; color:var(--t3); margin-bottom:20px;">
+            {% if search_query %}Try a different search term{% else %}Create your first AI voice agent to get started{% endif %}
+        </p>
+        {% if not search_query %}
+        <a href="{{ url_for('agents.new_agent_form') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg" style="font-size:11px;"></i> Create Agent
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Delete modal -->
+<div id="deleteModal" class="modal-bg" style="display:none;">
+    <div class="modal">
+        <div style="padding:20px 24px; border-bottom:1px solid var(--card-border); display:flex; align-items:center; gap:12px;">
+            <div style="width:36px; height:36px; border-radius:8px; background:var(--red-bg); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <i class="bi bi-trash" style="color:var(--red); font-size:15px;"></i>
+            </div>
+            <div>
+                <p style="font-size:14px; font-weight:600; color:var(--t1);">Delete Agent</p>
+                <p style="font-size:12px; color:var(--t3); margin-top:2px;">This action cannot be undone</p>
+            </div>
+        </div>
+        <div style="padding:20px 24px;">
+            <p style="font-size:13.5px; color:var(--t2);">
+                Are you sure you want to delete <strong id="agentNameToDelete" style="color:var(--t1);"></strong>?
+            </p>
+        </div>
+        <div style="padding:0 24px 20px; display:flex; justify-content:flex-end; gap:8px;">
+            <button onclick="closeDeleteModal()" class="btn btn-secondary">Cancel</button>
+            <form id="deleteForm" method="POST" style="display:inline;">
+                <button type="submit" class="btn btn-danger">Delete Agent</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(agentId, agentName) {
+    document.getElementById('agentNameToDelete').textContent = agentName;
+    document.getElementById('deleteForm').action = '/agent/' + agentId + '/delete';
+    document.getElementById('deleteModal').style.display = 'flex';
+}
+function closeDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+}
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDeleteModal();
+});
+</script>
+{% endblock %}

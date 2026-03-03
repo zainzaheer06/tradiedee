@@ -1,0 +1,1083 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit Agent' if agent else 'Create New Agent' }}{% endblock %}
+
+{% block page_title %}{{ 'Edit Agent' if agent else 'Create New Agent' }}{% endblock %}
+
+{% block dashboard_content %}
+<div class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center gap-4 mb-4">
+            <a href="{{ url_for('agents.create_agent') }}" class="inline-flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                <i class="bi bi-arrow-left"></i> Back to Agents
+            </a>
+        </div>
+        <h2 class="text-3xl font-bold text-gray-900">{{ 'Edit Agent' if agent else 'Create New Agent' }}</h2>
+        <p class="text-gray-600 mt-2">{{ 'Update your agent settings and knowledge base' if agent else 'Configure your AI voice agent with custom behavior and knowledge' }}</p>
+    </div>
+
+    <!-- Agent Settings Form -->
+    <form method="POST" action="{{ url_for('agents.edit_agent_form', agent_id=agent.id) if agent else url_for('agents.new_agent_form') }}" class="space-y-8">
+        <!-- Basic Information Card -->
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-4">
+                <h3 class="text-xl font-bold text-white">Basic Information</h3>
+            </div>
+            <div class="p-6 space-y-6">
+                <!-- Agent Name -->
+                <div>
+                    <label for="name" class="block text-sm font-semibold text-gray-700 mb-2">
+                        Agent Name <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="name" name="name" required
+                           value="{{ agent.name if agent else '' }}"
+                           placeholder="e.g., Customer Support Agent"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+                    <p class="text-xs text-gray-500 mt-1">A unique name to identify this agent</p>
+                </div>
+
+                <!-- Voice Selection -->
+                <div>
+                    <label for="voice_id" class="block text-sm font-semibold text-gray-700 mb-2">
+                        Voice Selection <span class="text-red-500">*</span>
+                    </label>
+                    <select id="voice_id" name="voice_id"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+                        <option value="G1L6zhS0TTaBvSr18eUY" {% if agent and agent.voice_id == 'G1L6zhS0TTaBvSr18eUY' %}selected{% endif %}>Fatima (Female)</option>
+                        <option value="6XO1vwWJxHDXGcEu6pMV" {% if agent and agent.voice_id == '6XO1vwWJxHDXGcEu6pMV' %}selected{% endif %}>Ayesha (Female)</option>
+                        <option value="kgxi5e6hsB6HuAGpjbQ5" {% if agent and agent.voice_id == 'kgxi5e6hsB6HuAGpjbQ5' %}selected{% endif %}>Hiba (Female)</option>
+                        <option value="KjDucWgG5NYuMBznv52L" {% if agent and agent.voice_id == 'KjDucWgG5NYuMBznv52L' %}selected{% endif %}>Zainab (Female)</option>
+                        <option value="YdWLuz4rVsaG3kWAECFE" {% if agent and agent.voice_id == 'YdWLuz4rVsaG3kWAECFE' %}selected{% endif %}>Ali (Male)</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Select a voice for your agent</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Greeting Message Card -->
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-500 to-cyan-600 px-6 py-4">
+                <h3 class="text-xl font-bold text-white">Greeting Message</h3>
+            </div>
+            <div class="p-6">
+                <label for="greeting" class="block text-sm font-semibold text-gray-700 mb-2">
+                    Initial Greeting <span class="text-red-500">*</span>
+                </label>
+                <textarea id="greeting" name="greeting" rows="3" required
+                          placeholder="Enter the greeting message your agent will say when the call starts..."
+                          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none">{{ agent.greeting if agent else 'السلام عليكم ورحمة الله وبركاته، أهلاً وسهلاً فيك. أنا مساعدك الذكي، كيف أقدر أساعدك اليوم؟' }}</textarea>
+                <p class="text-xs text-gray-500 mt-1">This message will be played at the start of every call</p>
+            </div>
+        </div>
+
+        <!-- Agent Prompt Builder Card -->
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-purple-500 to-pink-600 px-6 py-4 flex items-center justify-between">
+                <h3 class="text-xl font-bold text-white">Agent Prompt Builder</h3>
+                <div class="flex gap-2">
+                    <button type="button" id="editModeBtn" onclick="switchMode('edit')" 
+                            class="px-4 py-2 bg-white text-purple-600 rounded-lg font-semibold text-sm hover:bg-purple-50 transition-colors">
+                         Edit Form
+                    </button>
+                    <button type="button" id="viewModeBtn" onclick="switchMode('view')" 
+                            class="px-4 py-2 bg-white/20 text-white rounded-lg font-semibold text-sm hover:bg-white/30 transition-colors">
+                         View Prompt
+                    </button>
+                    <button type="button" id="rawModeBtn" onclick="switchMode('raw')" 
+                            class="px-4 py-2 bg-white/20 text-white rounded-lg font-semibold text-sm hover:bg-white/30 transition-colors">
+                         Raw Text
+                    </button>
+                </div>
+            </div>
+
+            <!-- EDIT MODE: Section Builder -->
+            <div id="editMode" class="p-6">
+                <!-- Section Selection -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Select Sections to Include:</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <!-- Role & Objective -->
+                        <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input type="checkbox" id="section_role" onchange="toggleSection('role')" class="w-4 h-4 text-indigo-600">
+                            <span class="flex-1 font-medium text-gray-700">Role & Objective</span>
+                            <span class="text-gray-400 hover:text-indigo-600 cursor-help" title="Define who the agent is and what success means">ⓘ</span>
+                        </label>
+
+                        <!-- Personality & Tone -->
+                        <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input type="checkbox" id="section_personality" onchange="toggleSection('personality')" class="w-4 h-4 text-indigo-600">
+                            <span class="flex-1 font-medium text-gray-700">Personality & Tone</span>
+                            <span class="text-gray-400 hover:text-indigo-600 cursor-help" title="Set voice style, brevity, and pacing">ⓘ</span>
+                        </label>
+
+                        <!-- Instructions / Rules -->
+                        <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input type="checkbox" id="section_instructions" onchange="toggleSection('instructions')" class="w-4 h-4 text-indigo-600">
+                            <span class="flex-1 font-medium text-gray-700">Instructions / Rules</span>
+                            <span class="text-gray-400 hover:text-indigo-600 cursor-help" title="Do's, don'ts, and approach">ⓘ</span>
+                        </label>
+
+                        <!-- Business Information -->
+                        <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input type="checkbox" id="section_business" onchange="toggleSection('business')" class="w-4 h-4 text-indigo-600">
+                            <span class="flex-1 font-medium text-gray-700">Business Information</span>
+                            <span class="text-gray-400 hover:text-indigo-600 cursor-help" title="Hours, location, services, pricing">ⓘ</span>
+                        </label>
+
+                        <!-- FAQs -->
+                        <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input type="checkbox" id="section_faqs" onchange="toggleSection('faqs')" class="w-4 h-4 text-indigo-600">
+                            <span class="flex-1 font-medium text-gray-700">Common Questions (FAQs)</span>
+                            <span class="text-gray-400 hover:text-indigo-600 cursor-help" title="Frequent customer questions and answers">ⓘ</span>
+                        </label>
+
+                        <!-- Context -->
+                        <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input type="checkbox" id="section_context" onchange="toggleSection('context')" class="w-4 h-4 text-indigo-600">
+                            <span class="flex-1 font-medium text-gray-700">Context</span>
+                            <span class="text-gray-400 hover:text-indigo-600 cursor-help" title="Retrieved context and relevant info">ⓘ</span>
+                        </label>
+
+                        <!-- Reference Pronunciations -->
+                        <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input type="checkbox" id="section_pronunciations" onchange="toggleSection('pronunciations')" class="w-4 h-4 text-indigo-600">
+                            <span class="flex-1 font-medium text-gray-700">Reference Pronunciations</span>
+                            <span class="text-gray-400 hover:text-indigo-600 cursor-help" title="Phonetic guides for tricky words">ⓘ</span>
+                        </label>
+
+                        <!-- Tools -->
+                        <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input type="checkbox" id="section_tools" onchange="toggleSection('tools')" class="w-4 h-4 text-indigo-600">
+                            <span class="flex-1 font-medium text-gray-700">Tools</span>
+                            <span class="text-gray-400 hover:text-indigo-600 cursor-help" title="Function tools, usage rules">ⓘ</span>
+                        </label>
+
+                        <!-- Conversation Flow -->
+                        <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input type="checkbox" id="section_flow" onchange="toggleSection('flow')" class="w-4 h-4 text-indigo-600">
+                            <span class="flex-1 font-medium text-gray-700">Conversation Flow</span>
+                            <span class="text-gray-400 hover:text-indigo-600 cursor-help" title="States, goals, and transitions">ⓘ</span>
+                        </label>
+
+                        <!-- Safety & Escalation -->
+                        <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input type="checkbox" id="section_safety" onchange="toggleSection('safety')" class="w-4 h-4 text-indigo-600">
+                            <span class="flex-1 font-medium text-gray-700">Safety & Escalation</span>
+                            <span class="text-gray-400 hover:text-indigo-600 cursor-help" title="Fallback and handoff logic">ⓘ</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Custom Sections -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Custom Sections:</h4>
+                    <div class="flex gap-2">
+                        <input type="text" id="customSectionName" placeholder="Section name (e.g., Company Policies)" 
+                               class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <button type="button" onclick="addCustomSection()" 
+                                class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold transition-colors whitespace-nowrap">
+                            + Add
+                        </button>
+                    </div>
+                    <div id="customSections" class="mt-3 space-y-2"></div>
+                </div>
+
+                <!-- Section Forms (appear when checked) -->
+                <div id="sectionForms" class="space-y-6">
+                    <!-- Forms will be dynamically inserted here -->
+                </div>
+            </div>
+
+            <!-- VIEW MODE: Generated Prompt -->
+            <div id="viewMode" class="p-6" style="display: none;">
+                <div class="flex justify-between items-center mb-4">
+                    <h4 class="text-sm font-bold text-gray-700 uppercase tracking-wide">Generated Prompt:</h4>
+                    <button type="button" onclick="copyPrompt()" 
+                            class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold text-sm transition-colors">
+                        📋 Copy to Clipboard
+                    </button>
+                </div>
+                <div class="bg-gray-50 rounded-lg border border-gray-300 p-4">
+                    <pre id="promptPreview" class="whitespace-pre-wrap font-mono text-sm text-gray-800 max-h-[600px] overflow-y-auto"></pre>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">
+                    <i class="bi bi-info-circle"></i> This text will be saved as your agent's system prompt
+                </p>
+            </div>
+
+            <!-- RAW TEXT MODE: Free Text Editor -->
+            <div id="rawMode" class="p-6" style="display: none;">
+                <div class="mb-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="text-sm font-bold text-gray-700 uppercase tracking-wide">Raw Text Editor:</h4>
+                        <div class="flex gap-2">
+                            <button type="button" onclick="syncFromEditToRaw()" 
+                                    class="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">
+                                ⬅️ Load from Edit Form
+                            </button>
+                            <button type="button" onclick="syncFromRawToEdit()" 
+                                    class="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">
+                                ➡️ Sync to Edit Form
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500">
+                        💡 Write your prompt freely. Use <code class="bg-gray-200 px-1 rounded"># Section Name</code> for headings. Unknown sections will become custom sections automatically.
+                    </p>
+                </div>
+                
+                <div class="bg-gray-50 rounded-lg border border-gray-300 p-4">
+                    <textarea id="rawTextEditor" rows="25"
+                              placeholder="# Role & Objective
+أنت [اسم الوكيل] من [اسم الشركة].
+هدفك هو [الهدف الرئيسي].
+
+# Personality & Tone
+## Personality
+- ودود، هادئ، محترف
+
+## Tone
+- دافئ، موجز، واثق
+
+# Instructions / Rules
+يمكنني مساعدتك في:
+- [خدمة 1]
+- [خدمة 2]
+- [خدمة 3]
+
+# Your Custom Section
+Add any custom sections you need..."
+                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none resize-none font-mono text-sm"
+                              style="direction: ltr; text-align: left;"></textarea>
+                </div>
+                
+                <div class="flex justify-between items-center mt-3">
+                    <p class="text-xs text-gray-500">
+                        <span id="charCount">0</span> characters | <span id="wordCount">0</span> words
+                    </p>
+                    <button type="button" onclick="copyRawText()" 
+                            class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm">
+                        📋 Copy Text
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hidden field for final prompt -->
+        <textarea name="prompt" id="finalPromptField" style="display: none;"></textarea>
+
+        <!-- Action Buttons -->
+        <div class="flex gap-4">
+            <a href="{{ url_for('agents.create_agent') }}" class="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-semibold text-center transition-colors">
+                Cancel
+            </a>
+            <button type="submit" onclick="return prepareSubmit()" class="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold transition-colors">
+                <i class="bi bi-{{ 'check-circle' if agent else 'plus-circle' }}"></i>
+                {{ 'Save Changes' if agent else 'Create Agent' }}
+            </button>
+        </div>
+    </form>
+
+    <!-- Knowledge Base Card (Always visible) -->
+    <div class="mt-8 bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4 flex items-center justify-between">
+            <h3 class="text-xl font-bold text-white">Knowledge Base (RAG) - Optional</h3>
+            {% if agent %}
+            <span class="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-sm text-white">
+                {{ document_count if document_count else 0 }} Documents
+            </span>
+            {% endif %}
+        </div>
+        <div class="p-6">
+            {% if agent %}
+            <!-- EDIT MODE: Show upload + existing documents -->
+            <div class="mb-6">
+                <h4 class="text-sm font-semibold text-gray-700 mb-3">Upload Documents</h4>
+                <form action="{{ url_for('agents.upload_knowledge_base', agent_id=agent.id) }}" method="POST" enctype="multipart/form-data" class="space-y-3" id="uploadForm">
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <div class="flex-1">
+                            <label for="files" class="block w-full cursor-pointer">
+                                <div class="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors">
+                                    <i class="bi bi-cloud-upload text-gray-400 text-xl"></i>
+                                    <span class="text-sm text-gray-600">Choose files or drag here</span>
+                                    <input type="file" id="files" name="files" multiple accept=".txt,.pdf,.doc,.docx,.md,.csv"
+                                           class="hidden" onchange="updateFileList(this)" required>
+                                </div>
+                            </label>
+                            <div id="fileList" class="mt-2 text-xs text-gray-600"></div>
+                        </div>
+                        <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold transition-colors whitespace-nowrap h-fit">
+                            <i class="bi bi-upload me-1"></i> Upload
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Supported: TXT, PDF, DOC, DOCX, MD, CSV (Multiple files allowed)
+                    </p>
+                </form>
+            </div>
+
+            <!-- Documents List -->
+            {% if documents %}
+            <div>
+                <h4 class="text-sm font-semibold text-gray-700 mb-3">Uploaded Documents ({{ documents|length }})</h4>
+                <div class="space-y-2 max-h-96 overflow-y-auto">
+                    {% for doc in documents %}
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors">
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                            <i class="bi bi-file-earmark-text text-green-600 text-xl"></i>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-medium text-gray-900 truncate">{{ doc.filename }}</p>
+                                <p class="text-xs text-gray-500">
+                                    {{ "%.2f"|format(doc.file_size / 1024) }} KB •
+                                    <span class="inline-block px-2 py-0.5 rounded text-xs font-semibold
+                                        {% if doc.status == 'ready' %}bg-green-100 text-green-800
+                                        {% elif doc.status == 'processing' %}bg-yellow-100 text-yellow-800
+                                        {% else %}bg-red-100 text-red-800{% endif %}">
+                                        {{ doc.status }}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                        <form action="{{ url_for('agents.delete_knowledge_base_document', agent_id=agent.id, doc_id=doc.id) }}"
+                              method="POST" class="ml-3" onsubmit="return confirm('Delete this document?');">
+                            <button type="submit" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-8 text-gray-500">
+                <i class="bi bi-inbox text-6xl mb-3 block opacity-50"></i>
+                <p class="font-medium">No documents uploaded yet</p>
+                <p class="text-xs mt-1">Upload documents to enable RAG for this agent</p>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <!-- CREATE MODE: Show file selection (files will be uploaded after creation) -->
+            <div class="mb-4">
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <div class="flex items-start gap-3">
+                        <i class="bi bi-info-circle text-blue-600 text-xl mt-0.5"></i>
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-blue-900 mb-1">How Knowledge Base Works</h4>
+                            <p class="text-sm text-blue-800">
+                                Upload documents (PDFs, TXT, DOCX, etc.) that your agent can reference when answering questions. 
+                                Documents will be indexed and processed after the agent is created.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <h4 class="text-sm font-semibold text-gray-700 mb-3">Select Documents to Upload (Optional)</h4>
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-green-500 hover:bg-green-50 transition-colors">
+                    <label for="kb_files" class="cursor-pointer block text-center">
+                        <input type="file" id="kb_files" name="kb_files" multiple 
+                               accept=".txt,.pdf,.doc,.docx,.md,.csv" 
+                               class="hidden" onchange="displaySelectedKBFiles(this)">
+                        <i class="bi bi-cloud-upload text-gray-400 text-5xl block mb-3"></i>
+                        <p class="text-sm text-gray-700 font-medium mb-1">
+                            Click to select files or drag and drop here
+                        </p>
+                        <p class="text-xs text-gray-500">
+                            PDF, TXT, DOC, DOCX, MD, CSV • Multiple files allowed
+                        </p>
+                    </label>
+                </div>
+                
+                <!-- Selected files preview -->
+                <div id="kbFilesPreview" class="mt-4 space-y-2"></div>
+                
+                <div class="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <p class="text-xs text-yellow-800 flex items-start gap-2">
+                        <i class="bi bi-exclamation-triangle text-yellow-600 mt-0.5"></i>
+                        <span>
+                            <strong>Note:</strong> Documents will be automatically uploaded and indexed after you create the agent. 
+                            You can also add more documents later by editing the agent.
+                        </span>
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Custom Tools Card (Only show in edit mode) -->
+    {% if agent %}
+    <div class="mt-8 bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-orange-500 to-red-600 px-6 py-4 flex items-center justify-between">
+            <h3 class="text-xl font-bold text-white">Custom Tools - Optional</h3>
+            <a href="{{ url_for('agents.agent_tools', agent_id=agent.id) }}"
+               class="px-4 py-2 bg-white text-orange-600 rounded-lg font-semibold text-sm hover:bg-orange-50 transition-colors">
+                <i class="bi bi-gear"></i> Manage Tools
+            </a>
+        </div>
+        <div class="p-6">
+            <div class="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+                <div class="flex items-start gap-3">
+                    <i class="bi bi-tools text-orange-600 text-xl mt-0.5"></i>
+                    <div class="flex-1">
+                        <h4 class="font-semibold text-orange-900 mb-1">Extend Your Agent's Capabilities</h4>
+                        <p class="text-sm text-orange-800 mb-2">
+                            Add custom tools to allow your agent to call external APIs, trigger webhooks, or communicate with your frontend application.
+                        </p>
+                        <ul class="text-xs text-orange-800 space-y-1 ml-4 list-disc">
+                            <li><strong>API Call Tools:</strong> Make HTTP requests to external services</li>
+                            <li><strong>Webhook Tools:</strong> POST data to custom endpoints</li>
+                            <li><strong>RPC Tools:</strong> Forward calls to your frontend app</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center py-4">
+                <a href="{{ url_for('agents.agent_tools', agent_id=agent.id) }}"
+                   class="inline-flex items-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-semibold transition-colors">
+                    <i class="bi bi-tools"></i>
+                    Manage Tools for This Agent
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Section templates and configuration
+const sectionConfig = {
+    role: {
+        title: 'Role & Objective',
+        placeholder: `أنت [اسم الوكيل] من [اسم الشركة].\nهدفك هو [الهدف الرئيسي].\n\nمثال:\nأنت موظف استقبال في مطعم الأصالة.\nهدفك هو مساعدة العملاء في حجز الطاولات والإجابة على استفساراتهم.`
+    },
+    personality: {
+        title: 'Personality & Tone',
+        placeholder: `## Personality\n- ودود، هادئ، محترف\n\n## Tone\n- دافئ، موجز، واثق\n\n## Length\n- 2-3 جمل في كل رد\n\n## Language\n- المحادثة بالعربية فقط`
+    },
+    instructions: {
+        title: 'Instructions / Rules',
+        placeholder: `يمكنني مساعدتك في:\n- [خدمة 1]\n- [خدمة 2]\n- [خدمة 3]\n\nقواعد مهمة:\n- [قاعدة 1]\n- [قاعدة 2]\n- [قاعدة 3]`
+    },
+    business: {
+        title: 'Business Information',
+        placeholder: `- الاسم: [اسم الشركة]\n- العنوان: [العنوان الكامل]\n- ساعات العمل: من [وقت] إلى [وقت]\n- أيام العمل: [الأيام]\n- رقم التواصل: [رقم]\n\nالخدمات والأسعار:\n- [خدمة 1]: [سعر] ريال\n- [خدمة 2]: [سعر] ريال`
+    },
+    faqs: {
+        title: 'Common Questions (FAQs)',
+        placeholder: `س: [السؤال الشائع 1]\nج: [الإجابة التفصيلية]\n\nس: [السؤال الشائع 2]\nج: [الإجابة التفصيلية]\n\nس: [السؤال الشائع 3]\nج: [الإجابة التفصيلية]`
+    },
+    context: {
+        title: 'Context',
+        placeholder: `معلومات السياق:\n- [معلومة 1]\n- [معلومة 2]\n- [معلومة 3]`
+    },
+    pronunciations: {
+        title: 'Reference Pronunciations',
+        placeholder: `عند نطق هذه الكلمات، استخدم النطق المحدد:\n- نطق "SQL" كـ "سيكوال"\n- نطق "PostgreSQL" كـ "بوستجريس"\n- نطق "[كلمة]" كـ "[النطق]"`
+    },
+    tools: {
+        title: 'Tools',
+        placeholder: `## lookup_account(email_or_phone)\nاستخدم عندما: [الحالة]\nلا تستخدم عندما: [الحالة]\n\n## [tool_name](parameters)\nاستخدم عندما: [الحالة]\nلا تستخدم عندما: [الحالة]`
+    },
+    flow: {
+        title: 'Conversation Flow',
+        placeholder: `## 1) Greeting\nالهدف: [الهدف]\nكيف تستجيب: [التعليمات]\nالخروج عندما: [الشرط]\n\n## 2) Discover\nالهدف: [الهدف]\nكيف تستجيب: [التعليمات]\nالخروج عندما: [الشرط]`
+    },
+    safety: {
+        title: 'Safety & Escalation',
+        placeholder: `متى تحول للإنسان:\n- [حالة 1]\n- [حالة 2]\n- [حالة 3]\n\nماذا تقول عند التحويل:\n"[الرسالة]"`
+    }
+};
+
+let customSectionCounter = 0;
+
+// Store for preserving content
+let sectionContentStore = {};
+
+// Toggle section visibility
+function toggleSection(sectionId) {
+    const checkbox = document.getElementById(`section_${sectionId}`);
+    const formsContainer = document.getElementById('sectionForms');
+    const formId = `form_${sectionId}`;
+    
+    if (checkbox.checked) {
+        // Check if form already exists (when switching modes)
+        let existingForm = document.getElementById(formId);
+        if (existingForm) {
+            return; // Form already exists, don't recreate
+        }
+        
+        // Add form
+        const config = sectionConfig[sectionId];
+        const savedContent = sectionContentStore[sectionId] || '';
+        const formHTML = `
+            <div id="${formId}" class="bg-gray-50 rounded-lg border border-gray-300 p-4">
+                <h4 class="text-lg font-bold text-gray-800 mb-3">#${config.title}</h4>
+                <textarea id="content_${sectionId}" rows="8"
+                          placeholder="${config.placeholder}"
+                          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none font-mono text-sm">${savedContent}</textarea>
+            </div>
+        `;
+        formsContainer.insertAdjacentHTML('beforeend', formHTML);
+    } else {
+        // Save content before removing
+        const contentField = document.getElementById(`content_${sectionId}`);
+        if (contentField) {
+            sectionContentStore[sectionId] = contentField.value;
+        }
+        
+        // Remove form
+        const form = document.getElementById(formId);
+        if (form) form.remove();
+    }
+}
+
+// Add custom section
+function addCustomSection() {
+    const nameInput = document.getElementById('customSectionName');
+    const sectionName = nameInput.value.trim();
+    
+    if (!sectionName) {
+        alert('Please enter a section name');
+        return;
+    }
+    
+    customSectionCounter++;
+    const sectionId = `custom_${customSectionCounter}`;
+    
+    // Add to custom sections list
+    const customSectionsDiv = document.getElementById('customSections');
+    const customSectionHTML = `
+        <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors bg-green-50">
+            <input type="checkbox" id="section_${sectionId}" onchange="toggleCustomSection('${sectionId}', '${sectionName}')" checked class="w-4 h-4 text-green-600">
+            <span class="flex-1 font-medium text-gray-700">${sectionName}</span>
+            <button type="button" onclick="removeCustomSection('${sectionId}')" class="text-red-600 hover:text-red-800">
+                <i class="bi bi-trash"></i>
+            </button>
+        </label>
+    `;
+    customSectionsDiv.insertAdjacentHTML('beforeend', customSectionHTML);
+    
+    // Auto-add form
+    toggleCustomSection(sectionId, sectionName);
+    
+    // Clear input
+    nameInput.value = '';
+}
+
+// Toggle custom section
+function toggleCustomSection(sectionId, sectionName) {
+    const checkbox = document.getElementById(`section_${sectionId}`);
+    const formsContainer = document.getElementById('sectionForms');
+    const formId = `form_${sectionId}`;
+    
+    if (checkbox.checked) {
+        // Check if form already exists
+        let existingForm = document.getElementById(formId);
+        if (existingForm) {
+            return; // Form already exists
+        }
+        
+        const savedContent = sectionContentStore[sectionId] || '';
+        const formHTML = `
+            <div id="${formId}" class="bg-green-50 rounded-lg border border-green-300 p-4">
+                <h4 class="text-lg font-bold text-gray-800 mb-3">#${sectionName}</h4>
+                <textarea id="content_${sectionId}" rows="8"
+                          placeholder="أدخل محتوى هذا القسم..."
+                          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none resize-none font-mono text-sm">${savedContent}</textarea>
+            </div>
+        `;
+        formsContainer.insertAdjacentHTML('beforeend', formHTML);
+    } else {
+        // Save content before removing
+        const contentField = document.getElementById(`content_${sectionId}`);
+        if (contentField) {
+            sectionContentStore[sectionId] = contentField.value;
+        }
+        
+        const form = document.getElementById(formId);
+        if (form) form.remove();
+    }
+}
+
+// Remove custom section
+function removeCustomSection(sectionId) {
+    // Remove checkbox
+    const checkbox = document.getElementById(`section_${sectionId}`);
+    if (checkbox) checkbox.closest('label').remove();
+    
+    // Remove form
+    const form = document.getElementById(`form_${sectionId}`);
+    if (form) form.remove();
+}
+
+// Switch between edit, view, and raw modes
+function switchMode(mode) {
+    const editMode = document.getElementById('editMode');
+    const viewMode = document.getElementById('viewMode');
+    const rawMode = document.getElementById('rawMode');
+    const editBtn = document.getElementById('editModeBtn');
+    const viewBtn = document.getElementById('viewModeBtn');
+    const rawBtn = document.getElementById('rawModeBtn');
+    
+    // Reset all buttons to inactive state
+    editBtn.className = 'px-4 py-2 bg-white/20 text-white rounded-lg font-semibold text-sm hover:bg-white/30 transition-colors';
+    viewBtn.className = 'px-4 py-2 bg-white/20 text-white rounded-lg font-semibold text-sm hover:bg-white/30 transition-colors';
+    rawBtn.className = 'px-4 py-2 bg-white/20 text-white rounded-lg font-semibold text-sm hover:bg-white/30 transition-colors';
+    
+    // Hide all modes
+    editMode.style.display = 'none';
+    viewMode.style.display = 'none';
+    rawMode.style.display = 'none';
+    
+    if (mode === 'edit') {
+        editMode.style.display = 'block';
+        editBtn.className = 'px-4 py-2 bg-white text-purple-600 rounded-lg font-semibold text-sm hover:bg-purple-50 transition-colors';
+    } else if (mode === 'view') {
+        // Save all current content before viewing
+        saveAllContent();
+        
+        const prompt = generatePrompt();
+        if (!prompt) {
+            alert('الرجاء تحديد قسم واحد على الأقل وملء المحتوى قبل المعاينة.');
+            // Switch back to edit mode
+            switchMode('edit');
+            return;
+        }
+        viewMode.style.display = 'block';
+        viewBtn.className = 'px-4 py-2 bg-white text-purple-600 rounded-lg font-semibold text-sm hover:bg-purple-50 transition-colors';
+    } else if (mode === 'raw') {
+        // Sync from edit form to raw text
+        syncFromEditToRaw();
+        rawMode.style.display = 'block';
+        rawBtn.className = 'px-4 py-2 bg-white text-purple-600 rounded-lg font-semibold text-sm hover:bg-purple-50 transition-colors';
+        
+        // Update character/word count
+        updateRawTextStats();
+    }
+}
+
+// Save all content from visible textareas
+function saveAllContent() {
+    // Save regular sections
+    for (const sectionId in sectionConfig) {
+        const contentField = document.getElementById(`content_${sectionId}`);
+        if (contentField) {
+            sectionContentStore[sectionId] = contentField.value;
+        }
+    }
+    
+    // Save custom sections
+    const customSections = document.querySelectorAll('[id^="content_custom_"]');
+    customSections.forEach(field => {
+        const sectionId = field.id.replace('content_', '');
+        sectionContentStore[sectionId] = field.value;
+    });
+}
+
+// Sync from Edit Form to Raw Text
+function syncFromEditToRaw() {
+    saveAllContent();
+    const prompt = generatePrompt();
+    document.getElementById('rawTextEditor').value = prompt;
+    updateRawTextStats();
+}
+
+// Sync from Raw Text to Edit Form (Parse and create sections)
+function syncFromRawToEdit() {
+    const rawText = document.getElementById('rawTextEditor').value;
+    if (!rawText.trim()) {
+        alert('الرجاء كتابة محتوى في محرر النص أولاً.');
+        return;
+    }
+    
+    // Clear existing forms
+    clearAllForms();
+    
+    // Parse and load
+    parseAndLoadPrompt(rawText);
+    
+    alert('✅ تم تحميل المحتوى إلى نموذج التحرير! يمكنك الآن التبديل إلى وضع التحرير.');
+}
+
+// Clear all forms and reset checkboxes
+function clearAllForms() {
+    // Uncheck all regular sections
+    for (const sectionId in sectionConfig) {
+        const checkbox = document.getElementById(`section_${sectionId}`);
+        if (checkbox && checkbox.checked) {
+            checkbox.checked = false;
+            toggleSection(sectionId);
+        }
+    }
+    
+    // Remove all custom sections
+    const customSectionsDiv = document.getElementById('customSections');
+    customSectionsDiv.innerHTML = '';
+    
+    // Clear forms container
+    document.getElementById('sectionForms').innerHTML = '';
+    
+    // Reset counter
+    customSectionCounter = 0;
+}
+
+// Update character and word count for raw text
+function updateRawTextStats() {
+    const text = document.getElementById('rawTextEditor').value;
+    const charCount = text.length;
+    const wordCount = text.trim().split(/\s+/).filter(word => word.length > 0).length;
+    
+    document.getElementById('charCount').textContent = charCount;
+    document.getElementById('wordCount').textContent = wordCount;
+}
+
+// Copy raw text to clipboard
+function copyRawText() {
+    const text = document.getElementById('rawTextEditor').value;
+    navigator.clipboard.writeText(text).then(() => {
+        alert('✅ تم نسخ النص إلى الحافظة!');
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        alert('❌ فشل النسخ. الرجاء المحاولة مرة أخرى.');
+    });
+}
+
+// Add event listener for raw text editor to update stats
+document.addEventListener('DOMContentLoaded', () => {
+    const rawEditor = document.getElementById('rawTextEditor');
+    if (rawEditor) {
+        rawEditor.addEventListener('input', updateRawTextStats);
+    }
+});
+
+// Generate final prompt
+function generatePrompt() {
+    let prompt = '';
+    
+    // Go through all sections in order
+    for (const [sectionId, config] of Object.entries(sectionConfig)) {
+        const checkbox = document.getElementById(`section_${sectionId}`);
+        if (checkbox && checkbox.checked) {
+            const content = document.getElementById(`content_${sectionId}`)?.value.trim();
+            if (content) {
+                prompt += `# ${config.title}\n${content}\n\n`;
+            }
+        }
+    }
+    
+    // Add custom sections
+    const customSections = document.querySelectorAll('[id^="section_custom_"]');
+    customSections.forEach(checkbox => {
+        if (checkbox.checked) {
+            const sectionId = checkbox.id.replace('section_', '');
+            const sectionName = checkbox.closest('label').querySelector('span').textContent;
+            const content = document.getElementById(`content_${sectionId}`)?.value.trim();
+            if (content) {
+                prompt += `# ${sectionName}\n${content}\n\n`;
+            }
+        }
+    });
+    
+    // Update preview
+    const previewText = prompt.trim() || 'لم يتم إنشاء أي محتوى بعد. الرجاء تحديد الأقسام وملء المحتوى.';
+    document.getElementById('promptPreview').textContent = previewText;
+    
+    // Update hidden field
+    document.getElementById('finalPromptField').value = prompt.trim();
+    
+    return prompt.trim();
+}
+
+// Copy prompt to clipboard
+function copyPrompt() {
+    const promptText = document.getElementById('promptPreview').textContent;
+    navigator.clipboard.writeText(promptText).then(() => {
+        alert('تم نسخ البرومبت إلى الحافظة!');
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+    });
+}
+
+// Prepare form for submission
+function prepareSubmit() {
+    // Check which mode is currently active
+    const rawMode = document.getElementById('rawMode');
+    const editMode = document.getElementById('editMode');
+    
+    let finalPrompt = '';
+    
+    // If raw mode is visible, use raw text content
+    if (rawMode.style.display !== 'none') {
+        finalPrompt = document.getElementById('rawTextEditor').value.trim();
+    } else {
+        // Otherwise generate from edit form
+        finalPrompt = generatePrompt();
+    }
+    
+    const promptField = document.getElementById('finalPromptField');
+    promptField.value = finalPrompt;
+    
+    if (!finalPrompt) {
+        alert('Please create a prompt by selecting sections and filling in content, or write in raw text mode.');
+        return false;
+    }
+    
+    return true;
+}
+
+// Parse and load existing prompt when editing
+{% if agent and agent.prompt %}
+window.addEventListener('DOMContentLoaded', () => {
+    const existingPrompt = `{{ agent.prompt|safe }}`;
+    
+    // Load into edit form (blocks)
+    parseAndLoadPrompt(existingPrompt);
+    
+    // Also load into raw text editor
+    document.getElementById('rawTextEditor').value = existingPrompt;
+    updateRawTextStats();
+});
+{% endif %}
+
+// Function to parse existing prompt and populate form
+function parseAndLoadPrompt(promptText) {
+    if (!promptText || !promptText.trim()) return;
+    
+    // Split by section headers (# Section Name)
+    const lines = promptText.split('\n');
+    let currentSection = null;
+    let currentContent = [];
+    
+    lines.forEach((line, index) => {
+        // Check if line is a section header (starts with #)
+        if (line.trim().startsWith('#') && !line.trim().startsWith('##')) {
+            // Save previous section if exists
+            if (currentSection) {
+                saveParsedSection(currentSection, currentContent.join('\n').trim());
+            }
+            
+            // Start new section
+            currentSection = line.trim().substring(1).trim(); // Remove # and trim
+            currentContent = [];
+        } else {
+            // Add line to current section content
+            if (currentSection) {
+                currentContent.push(line);
+            }
+        }
+    });
+    
+    // Save last section
+    if (currentSection) {
+        saveParsedSection(currentSection, currentContent.join('\n').trim());
+    }
+}
+
+// Save parsed section and check appropriate checkbox
+function saveParsedSection(sectionTitle, content) {
+    if (!content) return;
+    
+    // Map section title to section ID
+    const sectionMap = {
+        'Role & Objective': 'role',
+        'Personality & Tone': 'personality',
+        'Instructions / Rules': 'instructions',
+        'Business Information': 'business',
+        'Common Questions (FAQs)': 'faqs',
+        'Context': 'context',
+        'Reference Pronunciations': 'pronunciations',
+        'Tools': 'tools',
+        'Conversation Flow': 'flow',
+        'Safety & Escalation': 'safety'
+    };
+    
+    const sectionId = sectionMap[sectionTitle];
+    
+    if (sectionId) {
+        // It's a standard section
+        sectionContentStore[sectionId] = content;
+        
+        // Check the checkbox and create the form
+        const checkbox = document.getElementById(`section_${sectionId}`);
+        if (checkbox && !checkbox.checked) {
+            checkbox.checked = true;
+            toggleSection(sectionId);
+        }
+    } else {
+        // It's a custom section
+        customSectionCounter++;
+        const customId = `custom_${customSectionCounter}`;
+        sectionContentStore[customId] = content;
+        
+        // Add custom section
+        const customSectionsDiv = document.getElementById('customSections');
+        const customSectionHTML = `
+            <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors bg-green-50">
+                <input type="checkbox" id="section_${customId}" onchange="toggleCustomSection('${customId}', '${sectionTitle}')" checked class="w-4 h-4 text-green-600">
+                <span class="flex-1 font-medium text-gray-700">${sectionTitle}</span>
+                <button type="button" onclick="removeCustomSection('${customId}')" class="text-red-600 hover:text-red-800">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </label>
+        `;
+        customSectionsDiv.insertAdjacentHTML('beforeend', customSectionHTML);
+        
+        // Create the form
+        toggleCustomSection(customId, sectionTitle);
+    }
+}
+
+// Knowledge Base file handling (for creation mode)
+function displaySelectedKBFiles(input) {
+    const previewDiv = document.getElementById('kbFilesPreview');
+    previewDiv.innerHTML = '';
+    
+    if (input.files.length === 0) return;
+    
+    const fileArray = Array.from(input.files);
+    
+    fileArray.forEach((file, index) => {
+        const fileSize = (file.size / 1024).toFixed(2);
+        const fileHTML = `
+            <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                <div class="flex items-center gap-3">
+                    <i class="bi bi-file-earmark-text text-green-600 text-xl"></i>
+                    <div>
+                        <p class="text-sm font-medium text-gray-900">${file.name}</p>
+                        <p class="text-xs text-gray-500">${fileSize} KB</p>
+                    </div>
+                </div>
+                <button type="button" onclick="removeKBFile(${index})" 
+                        class="text-red-600 hover:text-red-800 text-sm">
+                    <i class="bi bi-x-circle"></i>
+                </button>
+            </div>
+        `;
+        previewDiv.insertAdjacentHTML('beforeend', fileHTML);
+    });
+}
+
+function removeKBFile(index) {
+    const input = document.getElementById('kb_files');
+    const dt = new DataTransfer();
+    const files = Array.from(input.files);
+    
+    files.forEach((file, i) => {
+        if (i !== index) {
+            dt.items.add(file);
+        }
+    });
+    
+    input.files = dt.files;
+    displaySelectedKBFiles(input);
+}
+
+// For edit mode file list update
+function updateFileList(input) {
+    const fileList = document.getElementById('fileList');
+    if (input.files.length > 0) {
+        const files = Array.from(input.files);
+        fileList.innerHTML = '<strong>Selected files:</strong> ' +
+            files.map(f => f.name).join(', ');
+    } else {
+        fileList.innerHTML = '';
+    }
+}
+
+// Drag and drop functionality for edit mode
+{% if agent %}
+const uploadArea = document.querySelector('label[for="files"] div');
+const fileInput = document.getElementById('files');
+
+if (uploadArea && fileInput) {
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, () => {
+            uploadArea.classList.add('border-green-500', 'bg-green-50');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, () => {
+            uploadArea.classList.remove('border-green-500', 'bg-green-50');
+        }, false);
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        fileInput.files = files;
+        updateFileList(fileInput);
+    }, false);
+}
+{% else %}
+// Drag and drop for creation mode KB upload
+const kbUploadArea = document.querySelector('label[for="kb_files"]');
+const kbFileInput = document.getElementById('kb_files');
+
+if (kbUploadArea && kbFileInput) {
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        kbUploadArea.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        kbUploadArea.addEventListener(eventName, () => {
+            kbUploadArea.querySelector('div').classList.add('border-green-500', 'bg-green-100');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        kbUploadArea.addEventListener(eventName, () => {
+            kbUploadArea.querySelector('div').classList.remove('border-green-500', 'bg-green-100');
+        }, false);
+    });
+
+    kbUploadArea.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        kbFileInput.files = files;
+        displaySelectedKBFiles(kbFileInput);
+    }, false);
+}
+{% endif %}
+</script>
+
+<style>
+/* Tooltip styling */
+[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    background: #333;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    margin-left: 10px;
+}
+
+/* Smooth transitions */
+* {
+    transition: background-color 0.2s, border-color 0.2s;
+}
+</style>
+
+{% endblock %}

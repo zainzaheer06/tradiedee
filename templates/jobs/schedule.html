@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}Schedule — Tradiedee{% endblock %}
+
+{% block dashboard_content %}
+
+<!-- Page header -->
+<div class="ph" style="margin-bottom:20px;">
+    <div>
+        <h1 class="ph-title">Schedule</h1>
+        <p class="ph-sub">{{ monday.strftime('%b %d') }} – {{ sunday.strftime('%b %d, %Y') }}</p>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px;">
+        <a href="?week={{ week_offset - 1 }}" class="btn btn-ghost btn-sm" style="padding:6px 10px;">
+            <i class="bi bi-chevron-left" style="font-size:14px;"></i>
+        </a>
+        {% if week_offset != 0 %}
+        <a href="?week=0" class="btn btn-secondary btn-sm">Today</a>
+        {% endif %}
+        <a href="?week={{ week_offset + 1 }}" class="btn btn-ghost btn-sm" style="padding:6px 10px;">
+            <i class="bi bi-chevron-right" style="font-size:14px;"></i>
+        </a>
+    </div>
+</div>
+
+<!-- Stats row -->
+<div style="display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap;">
+    <div style="display:flex; align-items:center; gap:8px; padding:8px 14px; background:var(--card-bg); border:1px solid var(--card-border); border-radius:8px;">
+        <i class="bi bi-calendar-check" style="color:#2563EB; font-size:14px;"></i>
+        <span style="font-size:13px; font-weight:600; color:var(--t1);">{{ total_scheduled }}</span>
+        <span style="font-size:12px; color:var(--t3);">scheduled this week</span>
+    </div>
+    {% if unscheduled %}
+    <div style="display:flex; align-items:center; gap:8px; padding:8px 14px; background:#FFFBEB; border:1px solid #FDE68A; border-radius:8px;">
+        <i class="bi bi-exclamation-circle" style="color:#D97706; font-size:14px;"></i>
+        <span style="font-size:13px; font-weight:600; color:#92400E;">{{ unscheduled|length }}</span>
+        <span style="font-size:12px; color:#92400E;">unscheduled jobs</span>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Weekly calendar grid -->
+<div class="card" style="margin-bottom:24px;">
+    <div style="overflow-x:auto;">
+        <div style="display:grid; grid-template-columns:repeat(7, minmax(140px, 1fr)); min-width:980px;">
+
+            {% for day in days %}
+            <!-- Day column -->
+            <div style="border-right:{% if not loop.last %}1px solid var(--card-border){% else %}none{% endif %};">
+
+                <!-- Day header -->
+                <div style="padding:12px 10px; border-bottom:1px solid var(--card-border); text-align:center;
+                            {% if day.is_today %}background:linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);{% else %}background:var(--card-bg);{% endif %}">
+                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;
+                                {% if day.is_today %}color:#2563EB;{% else %}color:var(--t3);{% endif %}">
+                        {{ day.short }}
+                    </div>
+                    <div style="font-size:18px; font-weight:700; margin-top:2px;
+                                {% if day.is_today %}color:#2563EB;{% else %}color:var(--t1);{% endif %}">
+                        {{ day.date.day }}
+                    </div>
+                </div>
+
+                <!-- Day jobs -->
+                <div style="padding:8px; min-height:200px; display:flex; flex-direction:column; gap:6px;
+                            {% if day.is_today %}background:rgba(37,99,235,0.02);{% endif %}">
+
+                    {% for job in day.jobs %}
+                    <a href="{{ url_for('jobs.view_job', job_id=job.id) }}" style="text-decoration:none; display:block;">
+                        <div class="card-hover" style="padding:8px 10px; border-radius:6px; border-left:3px solid
+                            {% if job.is_emergency %}#DC2626{% elif job.status == 'completed' %}#059669{% elif job.status == 'in_progress' %}#2563EB{% elif job.status == 'scheduled' %}#6366F1{% else %}#D97706{% endif %};
+                            background:var(--card-bg); border-top:1px solid var(--card-border); border-right:1px solid var(--card-border); border-bottom:1px solid var(--card-border);">
+
+                            <!-- Time -->
+                            <div style="font-size:11px; font-weight:700;
+                                {% if job.is_emergency %}color:#DC2626;{% else %}color:var(--t3);{% endif %}">
+                                {% if job.is_emergency %}<i class="bi bi-exclamation-triangle-fill" style="font-size:9px;"></i> {% endif %}
+                                {{ job.scheduled_datetime.strftime('%I:%M %p') }}
+                            </div>
+
+                            <!-- Customer name -->
+                            <div style="font-size:12px; font-weight:600; color:var(--t1); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                {{ job.customer_name or 'Unknown' }}
+                            </div>
+
+                            <!-- Job type -->
+                            <div style="font-size:11px; color:var(--t3); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                {{ job.job_type or 'General' }}
+                            </div>
+
+                            <!-- Status badge -->
+                            <div style="margin-top:4px;">
+                                {% if job.status == 'completed' %}
+                                    <span class="badge badge-green" style="font-size:10px;">Done</span>
+                                {% elif job.status == 'in_progress' %}
+                                    <span class="badge badge-blue" style="font-size:10px;">In Progress</span>
+                                {% elif job.status == 'scheduled' %}
+                                    <span class="badge badge-indigo" style="font-size:10px;">Scheduled</span>
+                                {% elif job.status == 'new' %}
+                                    <span class="badge badge-amber" style="font-size:10px;">New</span>
+                                {% else %}
+                                    <span class="badge badge-gray" style="font-size:10px;">{{ job.status.replace('_', ' ').title() }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+
+                    {% if not day.jobs %}
+                    <div style="display:flex; align-items:center; justify-content:center; height:100%; min-height:60px;">
+                        <span style="font-size:11px; color:var(--t4);">No jobs</span>
+                    </div>
+                    {% endif %}
+
+                </div>
+            </div>
+            {% endfor %}
+
+        </div>
+    </div>
+</div>
+
+<!-- Unscheduled jobs -->
+{% if unscheduled %}
+<div class="card">
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:18px 24px; border-bottom:1px solid var(--card-border);">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <i class="bi bi-clock-history" style="font-size:16px; color:#D97706;"></i>
+            <span style="font-size:15px; font-weight:700; color:var(--t1);">Unscheduled Jobs</span>
+            <span class="badge badge-amber">{{ unscheduled|length }}</span>
+        </div>
+    </div>
+
+    <div style="overflow-x:auto;">
+        <table class="tbl">
+            <thead>
+                <tr>
+                    <th>Customer</th>
+                    <th>Service</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Created</th>
+                    <th style="text-align:right;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in unscheduled %}
+                <tr>
+                    <td>
+                        <div style="font-weight:600; color:var(--t1);">{{ job.customer_name or 'Unknown' }}</div>
+                        <div style="font-size:12px; color:var(--t3);">{{ job.customer_phone or '' }}</div>
+                    </td>
+                    <td>
+                        <span class="badge badge-gray">{{ job.job_type or 'General' }}</span>
+                    </td>
+                    <td>
+                        {% if job.status == 'new' %}
+                            <span class="badge badge-amber">New</span>
+                        {% else %}
+                            <span class="badge badge-gray">{{ job.status.replace('_', ' ').title() }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if job.is_emergency %}
+                            <span class="badge badge-red">Emergency</span>
+                        {% else %}
+                            <span style="color:var(--t3); font-size:12px;">Normal</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:12px; color:var(--t3);">
+                        {{ job.created_at.strftime('%b %d, %H:%M') }}
+                    </td>
+                    <td style="text-align:right;">
+                        <a href="{{ url_for('jobs.view_job', job_id=job.id) }}" class="btn btn-ghost btn-sm" style="padding:6px 10px;">
+                            <i class="bi bi-arrow-right" style="font-size:12px;"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

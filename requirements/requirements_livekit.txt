@@ -1,0 +1,45 @@
+# LiveKit Agent Requirements
+# Updated: November 3, 2025
+# For Nevox AI Voice Agent Platform
+
+# Core LiveKit packages
+livekit
+livekit-api
+livekit-agents
+livekit-protocol
+
+# LiveKit Plugins
+livekit-plugins-openai
+livekit-plugins-elevenlabs
+livekit-plugins-noise-cancellation
+livekit-plugins-google
+
+# Additional LiveKit plugins (installed but not actively used)
+livekit-plugins-aws
+livekit-plugins-cartesia
+livekit-plugins-deepgram
+livekit-plugins-silero
+livekit-plugins-turn-detector
+
+# LiveKit utilities
+livekit-blingfire
+
+# Core dependencies for LiveKit agents
+aiohttp>=3.9.0
+asyncio-mqtt>=0.13.0
+numpy>=1.24.0
+soundfile>=0.12.0
+
+# OpenAI dependencies
+openai>=1.0.0
+tiktoken>=0.5.0
+
+# Audio processing
+sounddevice>=0.4.0
+webrtcvad>=2.0.10
+
+# Environment and configuration
+python-dotenv>=1.0.0
+
+# Logging and monitoring
+structlog>=23.0.0

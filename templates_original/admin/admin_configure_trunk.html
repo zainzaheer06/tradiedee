@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Configure SIP Trunk - {{ user.username }}{% endblock %}
+
+{% block page_title %}Configure SIP Trunk{% endblock %}
+
+{% block dashboard_content %}
+<!-- Back Button -->
+<div class="mb-6">
+    <a href="{{ url_for('core.trunk_management') }}" class="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium">
+        <i class="bi bi-arrow-left"></i>
+        Back to Trunk Management
+    </a>
+</div>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">Configure SIP Trunk</h1>
+    <p class="text-gray-600 mt-2">Assign outbound SIP trunk for {{ user.username }}</p>
+</div>
+
+<!-- User Info Card -->
+<div class="bg-white rounded-xl border border-gray-200 overflow-hidden mb-8">
+    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <i class="bi bi-person-circle text-indigo-600"></i>
+            User Information
+        </h2>
+    </div>
+    <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label class="text-sm font-semibold text-gray-600 mb-1 block">Username</label>
+                <p class="text-lg font-medium text-gray-900">{{ user.username }}</p>
+            </div>
+            <div>
+                <label class="text-sm font-semibold text-gray-600 mb-1 block">Email</label>
+                <p class="text-lg font-medium text-gray-900">{{ user.email }}</p>
+            </div>
+            <div>
+                <label class="text-sm font-semibold text-gray-600 mb-1 block">User ID</label>
+                <p class="text-lg font-medium text-gray-900">#{{ user.id }}</p>
+            </div>
+            <div>
+                <label class="text-sm font-semibold text-gray-600 mb-1 block">Current Status</label>
+                {% if user.sip_configured %}
+                <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
+                    <i class="bi bi-check-circle"></i> Configured
+                </span>
+                {% else %}
+                <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm font-semibold">
+                    <i class="bi bi-x-circle"></i> Not Configured
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if user.sip_configured_at %}
+        <div class="mt-6 pt-6 border-t border-gray-200">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="text-sm font-semibold text-gray-600 mb-1 block">Configured At</label>
+                    <p class="text-gray-900">{{ user.sip_configured_at.strftime('%B %d, %Y at %H:%M') }}</p>
+                </div>
+                {% if user.sip_notes %}
+                <div class="md:col-span-2">
+                    <label class="text-sm font-semibold text-gray-600 mb-1 block">Current Notes</label>
+                    <p class="text-gray-700 bg-gray-50 rounded-lg p-3">{{ user.sip_notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Configuration Form -->
+<div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <i class="bi bi-diagram-3 text-indigo-600"></i>
+            SIP Trunk Configuration
+        </h2>
+    </div>
+    <div class="p-6">
+        <form method="POST" action="{{ url_for('core.configure_user_trunk', user_id=user.id) }}">
+            <!-- Outbound Trunk ID -->
+            <div class="mb-6">
+                <label for="outbound_trunk_id" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                    <i class="bi bi-diagram-3 text-indigo-600"></i>
+                    Outbound Trunk ID
+                </label>
+                <input type="text"
+                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-gray-900 font-mono text-sm"
+                       id="outbound_trunk_id"
+                       name="outbound_trunk_id"
+                       value="{{ user.outbound_trunk_id or '' }}"
+                       placeholder="e.g., ST_abc123xyz456">
+                <p class="mt-2 text-sm text-gray-600">
+                    <i class="bi bi-info-circle"></i>
+                    Enter the LiveKit SIP trunk ID from your LiveKit dashboard (starts with "ST_")
+                </p>
+            </div>
+
+            <!-- Outbound Phone Number -->
+            <div class="mb-6">
+                <label for="outbound_phone_number" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                    <i class="bi bi-telephone text-indigo-600"></i>
+                    Outbound Phone Number
+                </label>
+                <input type="text"
+                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-gray-900 font-mono text-sm"
+                       id="outbound_phone_number"
+                       name="outbound_phone_number"
+                       value="{{ user.outbound_phone_number or '' }}"
+                       placeholder="e.g., 966115108724">
+                <p class="mt-2 text-sm text-gray-600">
+                    <i class="bi bi-info-circle"></i>
+                    Enter the phone number associated with this trunk (will be shown as "From Number" in call logs)
+                </p>
+            </div>
+
+            <!-- Notes -->
+            <div class="mb-6">
+                <label for="sip_notes" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                    <i class="bi bi-sticky text-indigo-600"></i>
+                    Configuration Notes
+                    <span class="text-xs font-normal text-gray-500">(Optional)</span>
+                </label>
+                <textarea
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-gray-900"
+                    id="sip_notes"
+                    name="sip_notes"
+                    rows="4"
+                    placeholder="Add any notes about this trunk configuration (e.g., provider, region, purpose)">{{ user.sip_notes or '' }}</textarea>
+            </div>
+
+            <!-- Info Banner -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div class="flex items-start gap-3">
+                    <i class="bi bi-lightbulb text-blue-600 text-lg mt-0.5"></i>
+                    <div class="text-sm text-gray-700">
+                        <p class="font-semibold mb-2">Configuration Tips:</p>
+                        <ul class="space-y-1">
+                            <li><i class="bi bi-dot"></i> Trunk ID format: ST_xxxxxxxxxxxx (from LiveKit SIP dashboard)</li>
+                            <li><i class="bi bi-dot"></i> Leave empty to remove trunk and use system default</li>
+                            <li><i class="bi bi-dot"></i> Changes take effect immediately for new campaigns</li>
+                            <li><i class="bi bi-dot"></i> Existing running campaigns will continue with their current trunk</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Buttons -->
+            <div class="flex items-center gap-4">
+                <button type="submit"
+                        class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors flex items-center gap-2">
+                    <i class="bi bi-check-circle"></i>
+                    Save Configuration
+                </button>
+                <a href="{{ url_for('core.trunk_management') }}"
+                   class="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-colors flex items-center gap-2">
+                    <i class="bi bi-x-circle"></i>
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Danger Zone -->
+{% if user.sip_configured %}
+<div class="mt-8 bg-white rounded-xl border-2 border-red-200 overflow-hidden">
+    <div class="px-6 py-4 border-b border-red-200 bg-red-50">
+        <h2 class="text-lg font-bold text-red-900 flex items-center gap-2">
+            <i class="bi bi-exclamation-triangle"></i>
+            Danger Zone
+        </h2>
+    </div>
+    <div class="p-6">
+        <p class="text-gray-700 mb-4">Remove the SIP trunk configuration for this user. They will revert to using the system default trunk.</p>
+        <form method="POST" action="{{ url_for('core.remove_user_trunk', user_id=user.id) }}"
+              onsubmit="return confirm('Are you sure you want to remove the SIP trunk from {{ user.username }}? This action cannot be undone.')">
+            <button type="submit"
+                    class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors flex items-center gap-2">
+                <i class="bi bi-trash"></i>
+                Remove SIP Trunk Configuration
+            </button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

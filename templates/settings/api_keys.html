@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+{% block title %}API Keys — Tradiedee{% endblock %}
+
+{% block dashboard_content %}
+
+<style>
+.code-tab { padding:5px 14px; font-size:12px; font-weight:500; border-radius:6px; cursor:pointer; border:1px solid var(--card-border); background:transparent; color:var(--t3); transition:background 0.12s, color 0.12s; }
+.code-tab:hover { background:#F3F4F6; color:var(--t1); }
+.code-tab.active { background:#4F46E5; color:#fff; border-color:#4F46E5; }
+.param-row { display:grid; grid-template-columns:110px 55px 1fr; gap:8px; align-items:center; padding:6px 10px; background:#F9FAFB; border:1px solid var(--card-border); border-radius:6px; }
+</style>
+
+<div class="ph">
+    <div>
+        <h1 class="ph-title">API Keys</h1>
+        <p class="ph-sub">Programmatic access to initiate outbound calls</p>
+    </div>
+</div>
+
+<div style="max-width:960px; margin:0 auto; display:grid; grid-template-columns:340px 1fr; gap:20px; align-items:start;">
+
+    <!-- ── Left column: key management ── -->
+    <div style="display:flex; flex-direction:column; gap:16px;">
+
+        <!-- Key card -->
+        <div class="card">
+            {% if api_key_info %}
+            <div style="padding:16px 20px; border-bottom:1px solid var(--card-border); display:flex; align-items:center; gap:12px;">
+                <div style="width:42px; height:42px; border-radius:10px; background:#EEF2FF; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <i class="bi bi-key-fill" style="font-size:18px; color:#4F46E5;"></i>
+                </div>
+                <div style="flex:1; min-width:0;">
+                    <p style="font-size:14px; font-weight:600; color:var(--t1);">{{ api_key_info.name }}</p>
+                    <p style="font-size:12px; color:var(--t4);">Created {{ api_key_info.created_at.strftime('%b %d, %Y') if api_key_info.created_at else 'N/A' }}</p>
+                </div>
+                {% if api_key_info.is_active %}
+                <span class="badge badge-green"><span style="width:5px;height:5px;background:#059669;border-radius:50%;display:inline-block;margin-right:4px;"></span>Active</span>
+                {% else %}
+                <span class="badge badge-red">Revoked</span>
+                {% endif %}
+            </div>
+            <div style="padding:16px 20px; display:flex; flex-direction:column; gap:14px;">
+                <!-- Key value -->
+                <div style="background:#111827; border-radius:8px; padding:14px 16px; display:flex; align-items:center; gap:10px;">
+                    <div style="flex:1; min-width:0;">
+                        <p style="font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#6B7280; margin-bottom:5px;">API Key (prefix)</p>
+                        <code style="font-size:13.5px; font-family:monospace; color:#34D399; word-break:break-all;">{{ api_key_info.key_prefix }}</code>
+                    </div>
+                    <button onclick="copyText('{{ api_key_info.key_prefix }}', this)"
+                            style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#9CA3AF; padding:5px 10px; border-radius:6px; cursor:pointer; font-size:11.5px; display:flex; align-items:center; gap:5px; white-space:nowrap; flex-shrink:0;">
+                        <i class="bi bi-clipboard" style="font-size:11px;"></i> Copy
+                    </button>
+                </div>
+
+                <!-- Stats -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div style="background:#F9FAFB; border:1px solid var(--card-border); border-radius:8px; padding:12px 14px;">
+                        <p style="font-size:11.5px; color:var(--t4); margin-bottom:3px;">Total Calls</p>
+                        <p style="font-size:22px; font-weight:700; color:var(--t1); line-height:1;">{{ api_key_info.total_calls or 0 }}</p>
+                    </div>
+                    <div style="background:#F9FAFB; border:1px solid var(--card-border); border-radius:8px; padding:12px 14px;">
+                        <p style="font-size:11.5px; color:var(--t4); margin-bottom:3px;">Last Used</p>
+                        <p style="font-size:13.5px; font-weight:600; color:var(--t1); line-height:1.3;">
+                            {% if api_key_info.last_used_at %}{{ api_key_info.last_used_at.strftime('%b %d') }}{% else %}Never{% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                {% if api_key_info.is_active %}
+                <div style="display:flex; gap:8px;">
+                    <form action="{{ url_for('api_v1.regenerate_api_key') }}" method="POST" style="flex:1;">
+                        <button type="submit"
+                                onclick="return confirm('This will invalidate your current key. Any integrations using it will stop working. Continue?')"
+                                class="btn btn-primary" style="width:100%; justify-content:center; font-size:13px;">
+                            <i class="bi bi-arrow-repeat" style="font-size:12px;"></i> Regenerate
+                        </button>
+                    </form>
+                    <form action="{{ url_for('api_v1.revoke_api_key') }}" method="POST">
+                        <button type="submit"
+                                onclick="return confirm('This will permanently revoke your API key. Continue?')"
+                                class="btn btn-danger" style="font-size:13px;">
+                            <i class="bi bi-x-circle" style="font-size:12px;"></i> Revoke
+                        </button>
+                    </form>
+                </div>
+                {% else %}
+                <form action="{{ url_for('api_v1.regenerate_api_key') }}" method="POST">
+                    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">
+                        <i class="bi bi-plus-circle" style="font-size:12px;"></i> Generate New Key
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+
+            {% else %}
+            <div class="empty" style="padding:48px 24px;">
+                <div class="empty-icon">
+                    <i class="bi bi-key" style="font-size:22px; color:#9CA3AF;"></i>
+                </div>
+                <p style="font-size:14px; font-weight:600; color:var(--t1); margin-bottom:4px;">No API Key Yet</p>
+                <p style="font-size:13px; color:var(--t3); margin-bottom:20px;">Generate an API key to start making programmatic calls</p>
+                <form action="{{ url_for('api_v1.regenerate_api_key') }}" method="POST">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-circle" style="font-size:12px;"></i> Generate API Key
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Response Codes -->
+        <div class="card" style="overflow:hidden;">
+            <div style="padding:14px 20px; border-bottom:1px solid var(--card-border);">
+                <p style="font-size:14px; font-weight:600; color:var(--t1);">Response Codes</p>
+            </div>
+            <table class="tbl">
+                <thead>
+                    <tr>
+                        <th style="width:80px;">Code</th>
+                        <th>Meaning</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><code style="color:#059669; font-weight:700;">200</code></td><td style="color:var(--t3); font-size:12.5px;">Call initiated successfully</td></tr>
+                    <tr><td><code style="color:#D97706; font-weight:700;">400</code></td><td style="color:var(--t3); font-size:12.5px;">Bad request — missing required fields</td></tr>
+                    <tr><td><code style="color:#DC2626; font-weight:700;">401</code></td><td style="color:var(--t3); font-size:12.5px;">Invalid or missing API key</td></tr>
+                    <tr><td><code style="color:#DC2626; font-weight:700;">402</code></td><td style="color:var(--t3); font-size:12.5px;">Insufficient minutes balance</td></tr>
+                    <tr><td><code style="color:#DC2626; font-weight:700;">404</code></td><td style="color:var(--t3); font-size:12.5px;">Agent not found</td></tr>
+                    <tr><td><code style="color:#DC2626; font-weight:700;">500</code></td><td style="color:var(--t3); font-size:12.5px;">Server error</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ── Right column: API reference ── -->
+    <div style="display:flex; flex-direction:column; gap:16px;">
+
+        <!-- Endpoint + Request body -->
+        <div class="card">
+            <div style="padding:14px 20px; border-bottom:1px solid var(--card-border);">
+                <p style="font-size:14px; font-weight:600; color:var(--t1);">Endpoint</p>
+            </div>
+            <div style="padding:16px 20px; display:flex; flex-direction:column; gap:14px;">
+                <!-- URL row -->
+                <div style="display:flex; align-items:center; gap:8px; background:#111827; border-radius:8px; padding:12px 14px;">
+                    <span style="background:#4F46E5; color:#fff; font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:4px; flex-shrink:0; letter-spacing:.03em;">POST</span>
+                    <code style="font-size:12px; font-family:monospace; color:#E5E7EB; word-break:break-all; flex:1; line-height:1.5;">{{ request.host_url }}api/v1/calls/outbound</code>
+                    <button onclick="copyText('{{ request.host_url }}api/v1/calls/outbound', this)"
+                            style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#9CA3AF; padding:4px 9px; border-radius:5px; cursor:pointer; font-size:11.5px; display:flex; align-items:center; gap:4px; flex-shrink:0;">
+                        <i class="bi bi-clipboard" style="font-size:11px;"></i>
+                    </button>
+                </div>
+
+                <!-- Header -->
+                <div>
+                    <p style="font-size:12px; font-weight:600; color:var(--t2); margin-bottom:8px;">
+                        <i class="bi bi-braces" style="color:#4F46E5; margin-right:4px;"></i> Request Body Fields
+                    </p>
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <div class="param-row">
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <code style="font-size:12px; color:#4F46E5; font-weight:600;">agent_id</code>
+                                <span style="font-size:10px; background:#FFFBEB; color:#D97706; padding:1px 5px; border-radius:4px; font-weight:600;">required</span>
+                            </div>
+                            <span style="font-size:11px; background:#EFF6FF; color:#2563EB; padding:1px 5px; border-radius:4px; text-align:center;">number</span>
+                            <span style="font-size:12px; color:var(--t3);">ID of the agent to use</span>
+                        </div>
+                        <div class="param-row">
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <code style="font-size:12px; color:#4F46E5; font-weight:600;">phone_number</code>
+                                <span style="font-size:10px; background:#FFFBEB; color:#D97706; padding:1px 5px; border-radius:4px; font-weight:600;">required</span>
+                            </div>
+                            <span style="font-size:11px; background:#ECFDF5; color:#059669; padding:1px 5px; border-radius:4px; text-align:center;">string</span>
+                            <span style="font-size:12px; color:var(--t3);">E.164 format (+9665...)</span>
+                        </div>
+                        <div class="param-row">
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <code style="font-size:12px; color:var(--t3);">context</code>
+                                <span style="font-size:10px; background:#F3F4F6; color:var(--t4); padding:1px 5px; border-radius:4px;">optional</span>
+                            </div>
+                            <span style="font-size:11px; background:#F3F4F6; color:var(--t4); padding:1px 5px; border-radius:4px; text-align:center;">object</span>
+                            <span style="font-size:12px; color:var(--t3);">Extra context for the agent</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Code examples with tabs -->
+        <div class="card" style="overflow:hidden;">
+            <div style="padding:12px 20px; border-bottom:1px solid var(--card-border); display:flex; align-items:center; justify-content:space-between;">
+                <p style="font-size:14px; font-weight:600; color:var(--t1);">Code Examples</p>
+                <div style="display:flex; gap:4px;">
+                    <button onclick="showTab('curl')" id="tab-curl" class="code-tab active">cURL</button>
+                    <button onclick="showTab('python')" id="tab-python" class="code-tab">Python</button>
+                    <button onclick="showTab('node')" id="tab-node" class="code-tab">Node.js</button>
+                </div>
+            </div>
+
+            <!-- cURL -->
+            <div id="code-curl" style="position:relative;">
+                <button onclick="copyCode('pre-curl', this)"
+                        style="position:absolute; top:12px; right:14px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#9CA3AF; padding:4px 10px; border-radius:5px; cursor:pointer; font-size:11.5px; display:flex; align-items:center; gap:5px; z-index:1;">
+                    <i class="bi bi-clipboard" style="font-size:11px;"></i> Copy
+                </button>
+                <div style="background:#111827; padding:18px 20px; overflow-x:auto;">
+                    <pre id="pre-curl" style="font-family:monospace; font-size:12.5px; color:#E5E7EB; margin:0; white-space:pre; line-height:1.7;">curl -X POST {{ request.host_url }}api/v1/calls/outbound \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "agent_id": 12,
+    "phone_number": "+966501234567",
+    "context": {
+      "customer_name": "Ahmed",
+      "order_id": "ORD-456"
+    }
+  }'</pre>
+                </div>
+            </div>
+
+            <!-- Python -->
+            <div id="code-python" style="display:none; position:relative;">
+                <button onclick="copyCode('pre-python', this)"
+                        style="position:absolute; top:12px; right:14px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#9CA3AF; padding:4px 10px; border-radius:5px; cursor:pointer; font-size:11.5px; display:flex; align-items:center; gap:5px; z-index:1;">
+                    <i class="bi bi-clipboard" style="font-size:11px;"></i> Copy
+                </button>
+                <div style="background:#111827; padding:18px 20px; overflow-x:auto;">
+                    <pre id="pre-python" style="font-family:monospace; font-size:12.5px; color:#E5E7EB; margin:0; white-space:pre; line-height:1.7;">import requests
+
+response = requests.post(
+    "{{ request.host_url }}api/v1/calls/outbound",
+    headers={"X-API-Key": "YOUR_API_KEY"},
+    json={
+        "agent_id": 12,
+        "phone_number": "+966501234567",
+        "context": {
+            "customer_name": "Ahmed",
+            "order_id": "ORD-456"
+        }
+    }
+)
+
+print(response.json())
+# {"success": true, "call_id": 789, "status": "initiated"}</pre>
+                </div>
+            </div>
+
+            <!-- Node.js -->
+            <div id="code-node" style="display:none; position:relative;">
+                <button onclick="copyCode('pre-node', this)"
+                        style="position:absolute; top:12px; right:14px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#9CA3AF; padding:4px 10px; border-radius:5px; cursor:pointer; font-size:11.5px; display:flex; align-items:center; gap:5px; z-index:1;">
+                    <i class="bi bi-clipboard" style="font-size:11px;"></i> Copy
+                </button>
+                <div style="background:#111827; padding:18px 20px; overflow-x:auto;">
+                    <pre id="pre-node" style="font-family:monospace; font-size:12.5px; color:#E5E7EB; margin:0; white-space:pre; line-height:1.7;">const response = await fetch(
+  '{{ request.host_url }}api/v1/calls/outbound',
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Key': 'YOUR_API_KEY'
+    },
+    body: JSON.stringify({
+      agent_id: 12,
+      phone_number: '+966501234567',
+      context: {
+        customer_name: 'Ahmed',
+        order_id: 'ORD-456'
+      }
+    })
+  }
+);
+
+const data = await response.json();
+// { success: true, call_id: 789, status: "initiated" }</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New key modal -->
+{% if new_key %}
+<div id="new-key-modal" class="modal-bg" style="display:flex;">
+    <div style="background:#fff; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,0.18); max-width:480px; width:100%; margin:24px;" onclick="event.stopPropagation()">
+        <div style="padding:20px 24px; border-bottom:1px solid var(--card-border); display:flex; align-items:center; gap:12px;">
+            <div style="width:40px; height:40px; border-radius:50%; background:#ECFDF5; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <i class="bi bi-check-circle-fill" style="font-size:18px; color:#059669;"></i>
+            </div>
+            <div>
+                <p style="font-size:15px; font-weight:700; color:var(--t1);">API Key Generated</p>
+                <p style="font-size:12.5px; color:var(--t4);">Copy it now — you won't see it again!</p>
+            </div>
+        </div>
+        <div style="padding:20px 24px;">
+            <div style="background:#FFFBEB; border:1px solid #FDE68A; border-radius:8px; padding:12px 14px; margin-bottom:16px; display:flex; align-items:flex-start; gap:10px;">
+                <i class="bi bi-exclamation-triangle-fill" style="color:#D97706; font-size:14px; margin-top:1px; flex-shrink:0;"></i>
+                <p style="font-size:12.5px; color:#92400E; line-height:1.6;">
+                    <strong>Important:</strong> This is the only time you'll see the full API key. Copy it now and store it securely.
+                </p>
+            </div>
+            <div style="background:#111827; border-radius:8px; padding:14px 16px; margin-bottom:16px; display:flex; align-items:center; gap:12px;">
+                <code id="api-key-value" style="font-family:monospace; font-size:13px; color:#34D399; flex:1; word-break:break-all;">{{ new_key }}</code>
+                <button onclick="copyApiKey()" class="btn btn-ghost btn-sm" style="flex-shrink:0; color:#9CA3AF; border-color:#374151;">
+                    <i class="bi bi-clipboard" style="font-size:12px;"></i> Copy
+                </button>
+            </div>
+            <button onclick="closeModal()" class="btn btn-primary" style="width:100%; justify-content:center;">
+                I've Saved My Key
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function showTab(tab) {
+    ['curl','python','node'].forEach(t => {
+        document.getElementById(`code-${t}`).style.display = t === tab ? 'block' : 'none';
+        const btn = document.getElementById(`tab-${t}`);
+        btn.className = t === tab ? 'code-tab active' : 'code-tab';
+    });
+}
+function copyText(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check" style="font-size:11px;"></i> Copied!';
+        btn.style.color = '#34D399';
+        setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 2000);
+    });
+}
+function copyCode(preId, btn) {
+    const text = document.getElementById(preId).textContent.trim();
+    navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check" style="font-size:11px;"></i> Copied!';
+        btn.style.color = '#34D399';
+        setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 2000);
+    });
+}
+function copyApiKey() {
+    const keyValue = document.getElementById('api-key-value').textContent;
+    navigator.clipboard.writeText(keyValue).then(() => {
+        const btn = event.target.closest('button');
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check" style="font-size:12px;"></i> Copied!';
+        setTimeout(() => { btn.innerHTML = orig; }, 2000);
+    });
+}
+function closeModal() { document.getElementById('new-key-modal').remove(); }
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('new-key-modal');
+        if (modal) modal.remove();
+    }
+});
+</script>
+
+{% endblock %}

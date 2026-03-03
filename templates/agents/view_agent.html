@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+{% block title %}{{ agent.name }} — Tradiedee{% endblock %}
+
+{% block dashboard_content %}
+
+<!-- Back nav -->
+<div style="margin-bottom:20px;">
+    <a href="{{ url_for('agents.create_agent') }}" class="btn btn-ghost btn-sm" style="padding-left:0;">
+        <i class="bi bi-arrow-left" style="font-size:12px;"></i> Back to Agents
+    </a>
+</div>
+
+<!-- Main layout: 2 col -->
+<div style="display:grid; grid-template-columns:1fr 320px; gap:20px; align-items:start;">
+
+    <!-- ── Left column ── -->
+    <div style="display:flex; flex-direction:column; gap:20px;">
+
+        <!-- Agent header card -->
+        <div class="card">
+            <div style="padding:20px 24px; border-bottom:1px solid var(--card-border); display:flex; align-items:center; gap:14px;">
+                <div style="width:44px; height:44px; border-radius:10px; background:#EEF2FF; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <i class="bi bi-robot" style="font-size:20px; color:#4F46E5;"></i>
+                </div>
+                <div style="flex:1; min-width:0;">
+                    <h2 style="font-size:18px; font-weight:700; color:var(--t1);">{{ agent.name }}</h2>
+                    <p style="font-size:12.5px; color:var(--t3); margin-top:2px;">Voice Agent · Created {{ agent.created_at.strftime('%B %d, %Y') }}</p>
+                </div>
+                <a href="{{ url_for('agents.edit_agent_form', agent_id=agent.id) }}" class="btn btn-secondary btn-sm">
+                    <i class="bi bi-pencil" style="font-size:11px;"></i> Edit
+                </a>
+            </div>
+
+            <!-- Meta fields -->
+            <div style="padding:20px 24px; display:grid; grid-template-columns:1fr 1fr; gap:20px; border-bottom:1px solid var(--card-border);">
+                <div>
+                    <p style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--t4); margin-bottom:6px;">Voice</p>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:13.5px; font-weight:500; color:var(--t1);">{{ agent.voice_name or 'Default' }}</span>
+                        <button onclick="navigator.clipboard.writeText('{{ agent.voice_id }}').then(()=>showCopied(this))"
+                                style="background:none; border:none; cursor:pointer; color:var(--t4); padding:2px 4px; border-radius:4px;"
+                                title="Copy Voice ID"
+                                onmouseover="this.style.color='var(--t2)'; this.style.background='#F3F4F6'"
+                                onmouseout="this.style.color='var(--t4)'; this.style.background='none'">
+                            <i class="bi bi-clipboard" style="font-size:12px;"></i>
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <p style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--t4); margin-bottom:6px;">Agent ID</p>
+                    <span style="font-size:13px; color:var(--t3); font-family:monospace;">#{{ agent.id }}</span>
+                </div>
+            </div>
+
+            <!-- Greeting -->
+            <div style="padding:20px 24px; border-bottom:1px solid var(--card-border);">
+                <p style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--t4); margin-bottom:10px;">Greeting Message</p>
+                <div style="background:#F9FAFB; border:1px solid var(--card-border); border-radius:8px; padding:14px 16px;">
+                    <p style="font-size:13.5px; color:var(--t2); line-height:1.6;">{{ agent.greeting or 'No greeting configured.' }}</p>
+                </div>
+            </div>
+
+            <!-- System Prompt -->
+            <div style="padding:20px 24px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                    <p style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--t4);">System Prompt</p>
+                    <button onclick="navigator.clipboard.writeText(document.getElementById('promptText').textContent).then(()=>showCopied(this))"
+                            class="btn btn-ghost btn-sm" style="font-size:12px;">
+                        <i class="bi bi-clipboard" style="font-size:11px;"></i> Copy
+                    </button>
+                </div>
+                <div style="background:#F9FAFB; border:1px solid var(--card-border); border-radius:8px; padding:14px 16px; max-height:280px; overflow-y:auto;">
+                    <pre id="promptText" style="white-space:pre-wrap; word-break:break-words; font-size:13px; color:var(--t2); font-family:inherit; line-height:1.65; margin:0;">{{ agent.prompt }}</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call history table -->
+        <div class="card" style="overflow:hidden;">
+            <div style="padding:14px 20px; border-bottom:1px solid var(--card-border); display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:14px; font-weight:600; color:var(--t1);">Call History</span>
+                    {% if call_logs %}
+                    <span class="badge badge-gray">{{ call_logs|length }}</span>
+                    {% endif %}
+                </div>
+                <a href="{{ url_for('core.call_logs') }}" class="btn btn-ghost btn-sm" style="font-size:12px;">
+                    View all <i class="bi bi-arrow-right" style="font-size:10px;"></i>
+                </a>
+            </div>
+
+            {% if call_logs %}
+            <div style="overflow-x:auto;">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>Number</th>
+                            <th>Duration</th>
+                            <th>Minutes</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th style="text-align:right;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for call in call_logs %}
+                        <tr>
+                            <td style="font-weight:500; color:var(--t1); font-family:monospace; font-size:13px;">{{ call.to_number }}</td>
+                            <td style="color:var(--t3);">{{ call.duration_seconds }}s</td>
+                            <td><span class="badge badge-gray">{{ call.minutes_used }} min</span></td>
+                            <td style="color:var(--t3); white-space:nowrap; font-size:13px;">{{ call.created_at.strftime('%b %d, %Y') }}</td>
+                            <td>
+                                {% if call.status == 'completed' %}
+                                    <span class="badge badge-green"><i class="bi bi-check-circle" style="font-size:10px;"></i> Completed</span>
+                                {% elif call.status == 'no_answer' %}
+                                    <span class="badge badge-amber">No Answer</span>
+                                {% elif call.status == 'failed' %}
+                                    <span class="badge badge-red">Failed</span>
+                                {% else %}
+                                    <span class="badge badge-gray">{{ call.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align:right;">
+                                <a href="{{ url_for('core.view_call_log', log_id=call.id) }}" class="btn btn-ghost btn-sm">
+                                    <i class="bi bi-arrow-right" style="font-size:11px;"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if pagination.pages > 1 %}
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-top:1px solid var(--card-border); background:#FAFAFA;">
+                <p style="font-size:12.5px; color:var(--t3);">
+                    {{ ((pagination.page-1) * pagination.per_page)+1 }}–{{ [pagination.page*pagination.per_page, pagination.total]|min }} of {{ pagination.total }}
+                </p>
+                <div class="pag">
+                    {% if pagination.has_prev %}
+                    <a href="{{ url_for('agents.view_agent', agent_id=agent.id, page=pagination.prev_num) }}"><i class="bi bi-chevron-left"></i> Prev</a>
+                    {% else %}<span class="dis"><i class="bi bi-chevron-left"></i> Prev</span>{% endif %}
+
+                    <span class="cur">{{ pagination.page }}</span>
+
+                    {% if pagination.has_next %}
+                    <a href="{{ url_for('agents.view_agent', agent_id=agent.id, page=pagination.next_num) }}">Next <i class="bi bi-chevron-right"></i></a>
+                    {% else %}<span class="dis">Next <i class="bi bi-chevron-right"></i></span>{% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="empty">
+                <div class="empty-icon">
+                    <i class="bi bi-telephone-x" style="font-size:20px; color:#9CA3AF;"></i>
+                </div>
+                <p style="font-size:14px; font-weight:600; color:var(--t1); margin-bottom:4px;">No calls yet</p>
+                <p style="font-size:13px; color:var(--t3);">Use the panel on the right to make your first call</p>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- ── Right column: Make Call ── -->
+    <div style="position:sticky; top:24px;">
+        <div class="card">
+            <div style="padding:14px 18px; border-bottom:1px solid var(--card-border);">
+                <p style="font-size:14px; font-weight:600; color:var(--t1);">Make a Call</p>
+                <p style="font-size:12.5px; color:var(--t3); margin-top:2px;">Initiate an outbound call with this agent</p>
+            </div>
+            <div style="padding:18px;">
+                <form id="makeCallForm" style="display:flex; flex-direction:column; gap:14px;">
+                    <div>
+                        <label for="phone_number" style="display:block; font-size:12.5px; font-weight:600; color:var(--t2); margin-bottom:6px;">
+                            Phone Number
+                        </label>
+                        <input type="tel" id="phone_number" name="phone_number"
+                               placeholder="966123456789"
+                               class="inp" required>
+                        <p style="font-size:11.5px; color:var(--t4); margin-top:5px;">Include country code (e.g. 966…)</p>
+                        <p id="phone_error" style="font-size:12px; color:var(--red); margin-top:4px; display:none;"></p>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:10px;" id="callButton">
+                        <i class="bi bi-telephone-outbound" style="font-size:13px;"></i> Initiate Call
+                    </button>
+                </form>
+
+                <!-- Status messages -->
+                <div id="call-success" style="display:none; margin-top:12px; padding:12px; background:var(--green-bg); border:1px solid var(--green-b); border-radius:8px; font-size:13px; color:var(--green); text-align:center;">
+                    <i class="bi bi-check-circle-fill"></i> Call initiated successfully
+                </div>
+                <div id="call-error" style="display:none; margin-top:12px; padding:12px; background:var(--red-bg); border:1px solid var(--red-b); border-radius:8px; font-size:13px; color:var(--red); text-align:center;"></div>
+            </div>
+        </div>
+
+        <!-- Quick stats card -->
+        {% if call_logs %}
+        <div class="card" style="margin-top:16px; padding:16px 18px;">
+            <p style="font-size:12px; font-weight:600; color:var(--t4); text-transform:uppercase; letter-spacing:.05em; margin-bottom:12px;">Agent Summary</p>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:13px; color:var(--t3);">Total calls</span>
+                    <span style="font-size:13px; font-weight:600; color:var(--t1);">{{ call_logs|length }}</span>
+                </div>
+                {% set completed = call_logs|selectattr('status','equalto','completed')|list %}
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:13px; color:var(--t3);">Completed</span>
+                    <span class="badge badge-green">{{ completed|length }}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:13px; color:var(--t3);">Success rate</span>
+                    <span style="font-size:13px; font-weight:600; color:var(--t1);">
+                        {{ ((completed|length / call_logs|length) * 100)|round(1) if call_logs|length > 0 else 0 }}%
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showCopied(btn) {
+    const original = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-check" style="font-size:12px;"></i>';
+    setTimeout(() => { btn.innerHTML = original; }, 1500);
+}
+
+function validatePhoneNumber(phone) {
+    phone = phone.trim();
+    if (!phone) return { valid: false, error: 'Phone number is required', cleaned: '' };
+    const cleaned = phone.replace(/[\s\-()\+]/g, '');
+    if (!/^\d+$/.test(cleaned)) return { valid: false, error: 'Only digits, +, -, spaces, and parentheses allowed', cleaned };
+    if (cleaned.length < 10) return { valid: false, error: 'Too short — minimum 10 digits', cleaned };
+    if (cleaned.length > 15) return { valid: false, error: 'Too long — maximum 15 digits', cleaned };
+    return { valid: true, error: '', cleaned };
+}
+
+document.getElementById('phone_number').addEventListener('input', function() {
+    const r = validatePhoneNumber(this.value);
+    const err = document.getElementById('phone_error');
+    if (!r.valid && this.value.trim()) {
+        err.textContent = r.error;
+        err.style.display = 'block';
+        this.style.borderColor = 'var(--red)';
+    } else {
+        err.style.display = 'none';
+        this.style.borderColor = '';
+    }
+});
+
+document.getElementById('makeCallForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const input = document.getElementById('phone_number');
+    const btn   = document.getElementById('callButton');
+    const err   = document.getElementById('phone_error');
+    const ok    = document.getElementById('call-success');
+    const fail  = document.getElementById('call-error');
+
+    const v = validatePhoneNumber(input.value);
+    if (!v.valid) {
+        err.textContent = v.error;
+        err.style.display = 'block';
+        input.style.borderColor = 'var(--red)';
+        return;
+    }
+
+    err.style.display = 'none';
+    ok.style.display = 'none';
+    fail.style.display = 'none';
+    input.style.borderColor = '';
+
+    const origHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Calling…';
+
+    try {
+        const res  = await fetch('{{ url_for("agents.make_call_route", agent_id=agent.id) }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'phone_number=' + encodeURIComponent(v.cleaned)
+        });
+        const data = await res.json();
+        if (res.ok) {
+            ok.style.display = 'block';
+            btn.innerHTML = '<i class="bi bi-check-circle"></i> Call Initiated';
+            setTimeout(() => { location.reload(); }, 2000);
+        } else {
+            throw new Error(data.error || 'Failed to make call');
+        }
+    } catch (error) {
+        fail.textContent = error.message;
+        fail.style.display = 'block';
+        btn.disabled = false;
+        btn.innerHTML = origHTML;
+    }
+});
+</script>
+{% endblock %}

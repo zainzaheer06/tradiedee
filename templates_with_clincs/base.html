@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Nevox AI{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon-logo.svg') }}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ═══════════════════════════════════════
+           DESIGN TOKENS
+        ═══════════════════════════════════════ */
+        :root {
+            /* Sidebar — dark */
+            --sb-w:         240px;
+            --sb-w-collapsed: 64px;
+            --sb-bg:        #111827;
+            --sb-border:    #1F2937;
+            --sb-text:      #6B7280;
+            --sb-text-h:    #D1D5DB;
+            --sb-text-a:    #F9FAFB;
+            --sb-active:    rgba(255,255,255,0.08);
+            --sb-active-bar:#6366F1;
+            --sb-hover:     rgba(255,255,255,0.05);
+            --sb-section:   #374151;
+
+            /* Main — light */
+            --main-bg:      #F3F4F6;
+            --card:         #FFFFFF;
+            --card-border:  #E5E7EB;
+            --card-shadow:  0 1px 3px rgba(0,0,0,0.05);
+
+            /* Typography */
+            --t1:  #111827;
+            --t2:  #374151;
+            --t3:  #6B7280;
+            --t4:  #9CA3AF;
+
+            /* Accent */
+            --accent:       #4F46E5;
+            --accent-h:     #4338CA;
+            --accent-light: #EEF2FF;
+            --accent-border:#C7D2FE;
+
+            /* Status */
+            --green:  #059669; --green-bg:  #ECFDF5; --green-b:  #A7F3D0;
+            --amber:  #D97706; --amber-bg:  #FFFBEB; --amber-b:  #FDE68A;
+            --red:    #DC2626; --red-bg:    #FEF2F2; --red-b:    #FECACA;
+            --blue:   #2563EB; --blue-bg:   #EFF6FF; --blue-b:   #BFDBFE;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--main-bg);
+            color: var(--t2);
+            -webkit-font-smoothing: antialiased;
+            font-size: 14px;
+        }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
+
+        /* ═══════════════════════════════════════
+           SIDEBAR
+        ═══════════════════════════════════════ */
+        #sidebar {
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
+            width: var(--sb-w);
+            background: var(--sb-bg);
+            border-right: 1px solid var(--sb-border);
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            transition: width 0.22s ease, transform 0.22s ease;
+            overflow: hidden;
+        }
+        #sidebar.collapsed { width: var(--sb-w-collapsed); }
+
+        /* Mobile: off-screen by default */
+        @media (max-width: 1023px) {
+            #sidebar { transform: translateX(-100%); width: var(--sb-w) !important; }
+            #sidebar.mobile-open { transform: translateX(0); }
+        }
+
+        /* ── Logo strip ── */
+        .sb-logo {
+            height: 56px;
+            display: flex;
+            align-items: center;
+            padding: 0 14px;
+            border-bottom: 1px solid var(--sb-border);
+            flex-shrink: 0;
+            gap: 10px;
+        }
+        .sb-logo .logo-full { display: flex; align-items: center; gap: 9px; flex: 1; min-width: 0; }
+        .sb-logo .logo-mark { width: 34px; height: 34px; background: #ffffff; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 1px 4px rgba(0,0,0,0.18); }
+        .sb-logo .logo-text { font-size: 15px; font-weight: 700; color: #F9FAFB; letter-spacing: -0.2px; white-space: nowrap; }
+        .sb-logo .logo-icon { display: none; width: 34px; height: 34px; background: #ffffff; border-radius: 9px; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 1px 4px rgba(0,0,0,0.18); }
+        #sidebar.collapsed .logo-full { display: none; }
+        #sidebar.collapsed .logo-icon { display: flex; }
+        #sidebar.collapsed .sb-logo { justify-content: center; padding: 0; }
+
+        /* ── Collapse toggle button ── */
+        #sb-toggle {
+            margin-left: auto;
+            width: 26px; height: 26px;
+            border-radius: 6px;
+            background: transparent;
+            border: 1px solid var(--sb-border);
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--sb-text);
+            transition: background 0.12s, color 0.12s;
+            flex-shrink: 0;
+        }
+        #sb-toggle:hover { background: rgba(255,255,255,0.08); color: var(--sb-text-h); }
+        #sidebar.collapsed #sb-toggle { display: none; }
+
+        /* Bottom expand btn shown when collapsed */
+        #sb-expand {
+            display: none;
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid var(--sb-border);
+            cursor: pointer;
+            align-items: center; justify-content: center;
+            color: var(--sb-text);
+            transition: background 0.12s;
+            flex-shrink: 0;
+        }
+        #sb-expand:hover { background: rgba(255,255,255,0.1); color: var(--sb-text-h); }
+        #sidebar.collapsed #sb-expand { display: flex; }
+
+        /* ── Nav ── */
+        #sb-nav {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 8px 0;
+        }
+        #sb-nav::-webkit-scrollbar { width: 3px; }
+
+        .nav-section {
+            padding: 16px 16px 4px;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--sb-section);
+            white-space: nowrap;
+        }
+        #sidebar.collapsed .nav-section { display: none; }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 12px;
+            margin: 1px 8px;
+            border-radius: 7px;
+            font-size: 13.5px;
+            font-weight: 500;
+            color: var(--sb-text);
+            text-decoration: none;
+            position: relative;
+            transition: background 0.1s, color 0.1s;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            width: calc(100% - 16px);
+            white-space: nowrap;
+        }
+        .nav-item:hover { background: var(--sb-hover); color: var(--sb-text-h); }
+        .nav-item:hover .ni { color: #9CA3AF; }
+
+        .nav-item.active { background: var(--sb-active); color: var(--sb-text-a); }
+        .nav-item.active::before {
+            content: '';
+            position: absolute; left: -8px; top: 22%; bottom: 22%;
+            width: 2px;
+            background: var(--sb-active-bar);
+            border-radius: 0 2px 2px 0;
+        }
+        .nav-item.active .ni { color: #818CF8; }
+
+        .ni { /* nav icon */
+            font-size: 15px;
+            color: #4B5563;
+            flex-shrink: 0;
+            width: 18px;
+            text-align: center;
+            transition: color 0.1s;
+        }
+
+        .nav-label { white-space: nowrap; overflow: hidden; }
+        #sidebar.collapsed .nav-label { display: none; }
+        #sidebar.collapsed .nav-item { justify-content: center; margin: 1px 6px; width: calc(100% - 12px); padding: 8px 0; }
+        #sidebar.collapsed .nav-item::before { left: -6px; }
+        #sidebar.collapsed #sb-nav { padding: 8px 0; }
+
+        /* Tooltip on collapsed hover */
+        .nav-item[data-tip] { position: relative; }
+        #sidebar.collapsed .nav-item[data-tip]:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            left: calc(100% + 10px); top: 50%;
+            transform: translateY(-50%);
+            background: #1F2937;
+            color: #F9FAFB;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 200;
+            border: 1px solid #374151;
+        }
+
+        .chevron {
+            margin-left: auto;
+            font-size: 10px;
+            color: #4B5563;
+            transition: transform 0.18s;
+            flex-shrink: 0;
+        }
+        #sidebar.collapsed .chevron { display: none; }
+        .chevron.open { transform: rotate(180deg); }
+
+        /* Submenu */
+        .submenu { overflow: hidden; max-height: 0; transition: max-height 0.2s ease; }
+        .submenu.open { max-height: 200px; }
+        #sidebar.collapsed .submenu { display: none; }
+
+        .nav-sub {
+            display: flex; align-items: center; gap: 10px;
+            padding: 5px 12px 5px 38px;
+            margin: 1px 8px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 400;
+            color: var(--sb-text);
+            text-decoration: none;
+            transition: background 0.1s, color 0.1s;
+            white-space: nowrap;
+            width: calc(100% - 16px);
+        }
+        .nav-sub:hover { background: var(--sb-hover); color: var(--sb-text-h); }
+        .nav-sub.active { color: #A5B4FC; }
+
+        /* ── Footer ── */
+        .sb-footer {
+            border-top: 1px solid var(--sb-border);
+            padding: 10px 8px;
+            flex-shrink: 0;
+        }
+        .sb-user {
+            display: flex; align-items: center; gap: 9px;
+            padding: 8px 8px; border-radius: 8px;
+            margin-bottom: 2px;
+            overflow: hidden;
+        }
+        .sb-avatar {
+            width: 30px; height: 30px;
+            border-radius: 8px;
+            background: #4F46E5;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px; font-weight: 700; color: #fff;
+        }
+        .sb-uinfo { overflow: hidden; }
+        .sb-uname { font-size: 13px; font-weight: 600; color: var(--sb-text-h); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sb-urole { font-size: 11px; color: var(--sb-section); margin-top: 1px; }
+        #sidebar.collapsed .sb-uinfo { display: none; }
+        #sidebar.collapsed .sb-user { justify-content: center; padding: 8px 0; }
+
+        .sb-logout {
+            display: flex; align-items: center; justify-content: center; gap: 7px;
+            width: 100%; padding: 7px 10px;
+            border-radius: 7px; border: none;
+            font-size: 13px; font-weight: 500;
+            color: #F87171; background: transparent;
+            cursor: pointer; text-decoration: none;
+            transition: background 0.1s;
+        }
+        .sb-logout:hover { background: rgba(239,68,68,0.1); }
+        #sidebar.collapsed .sb-logout-label { display: none; }
+        #sidebar.collapsed .sb-logout { padding: 7px 0; }
+
+        .sb-footer-expand {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 4px;
+        }
+
+        /* ═══════════════════════════════════════
+           LAYOUT
+        ═══════════════════════════════════════ */
+        #layout {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #sb-spacer {
+            width: var(--sb-w);
+            flex-shrink: 0;
+            transition: width 0.22s ease;
+        }
+        #sb-spacer.collapsed { width: var(--sb-w-collapsed); }
+        @media (max-width: 1023px) { #sb-spacer { display: none; } }
+
+        #main-wrap {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        /* Mobile topbar */
+        #mobile-bar {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            height: 52px;
+            padding: 0 16px;
+            background: #fff;
+            border-bottom: 1px solid var(--card-border);
+            flex-shrink: 0;
+        }
+        @media (max-width: 1023px) { #mobile-bar { display: flex; } }
+        #mobile-bar img { height: 26px; border-radius: 5px; }
+
+        /* Mobile overlay */
+        #sb-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 99;
+        }
+        @media (max-width: 1023px) { #sb-overlay.on { display: block; } }
+
+        /* Main content */
+        #main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        /* Page entry */
+        @keyframes fadeUp { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+        .page-enter { animation: fadeUp 0.2s ease forwards; }
+
+        /* Flash */
+        .flash {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 12px 16px; border-radius: 8px;
+            font-size: 13.5px; font-weight: 500;
+            margin-bottom: 16px; border: 1px solid transparent;
+        }
+        .flash-ok  { background: var(--green-bg); border-color: var(--green-b); color: #065F46; }
+        .flash-err { background: var(--red-bg);   border-color: var(--red-b);   color: #991B1B; }
+        .flash-inf { background: var(--amber-bg); border-color: var(--amber-b); color: #92400E; }
+        .flash-close { margin-left: auto; background: none; border: none; cursor: pointer; opacity: .5; }
+        .flash-close:hover { opacity: 1; }
+
+        /* ═══════════════════════════════════════
+           LIGHT UI COMPONENTS
+        ═══════════════════════════════════════ */
+
+        /* Buttons */
+        .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 7px; font-size: 13.5px; font-weight: 500; cursor: pointer; text-decoration: none; border: 1px solid transparent; transition: background .12s, box-shadow .12s, border-color .12s; white-space: nowrap; }
+        .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .btn-primary:hover { background: var(--accent-h); color: #fff; }
+        .btn-secondary { background: #fff; color: var(--t2); border-color: var(--card-border); }
+        .btn-secondary:hover { background: #F9FAFB; border-color: #D1D5DB; color: var(--t1); }
+        .btn-danger { background: var(--red-bg); color: var(--red); border-color: var(--red-b); }
+        .btn-danger:hover { background: #FEE2E2; }
+        .btn-ghost { background: transparent; color: var(--t3); border-color: transparent; }
+        .btn-ghost:hover { background: #F3F4F6; color: var(--t1); }
+        .btn-sm { padding: 5px 10px; font-size: 12.5px; border-radius: 6px; }
+
+        /* Cards */
+        .card { background: var(--card); border: 1px solid var(--card-border); border-radius: 10px; box-shadow: var(--card-shadow); }
+        .card-hover { transition: box-shadow .15s, border-color .15s; }
+        .card-hover:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-color: #D1D5DB; }
+
+        /* Badges */
+        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 99px; font-size: 11.5px; font-weight: 600; border: 1px solid transparent; }
+        .badge-indigo { background: var(--accent-light); color: var(--accent);  border-color: var(--accent-border); }
+        .badge-green  { background: var(--green-bg);     color: var(--green);   border-color: var(--green-b); }
+        .badge-amber  { background: var(--amber-bg);     color: var(--amber);   border-color: var(--amber-b); }
+        .badge-red    { background: var(--red-bg);       color: var(--red);     border-color: var(--red-b); }
+        .badge-blue   { background: var(--blue-bg);      color: var(--blue);    border-color: var(--blue-b); }
+        .badge-gray   { background: #F3F4F6;             color: #374151;        border-color: #E5E7EB; }
+        /* aliases for existing templates */
+        .badge-primary { background: var(--accent-light); color: var(--accent);  border-color: var(--accent-border); display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 99px; font-size: 11.5px; font-weight: 600; }
+        .badge-success { background: var(--green-bg); color: var(--green); border-color: var(--green-b); display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 99px; font-size: 11.5px; font-weight: 600; }
+        .badge-warning { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-b); display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 99px; font-size: 11.5px; font-weight: 600; }
+        .badge-danger  { background: var(--red-bg);   color: var(--red);   border-color: var(--red-b);   display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 99px; font-size: 11.5px; font-weight: 600; }
+
+        /* Inputs */
+        .inp { width: 100%; padding: 8px 12px; background: #fff; border: 1px solid var(--card-border); border-radius: 7px; font-size: 13.5px; color: var(--t1); outline: none; font-family: inherit; transition: border-color .12s, box-shadow .12s; }
+        .inp::placeholder { color: var(--t4); }
+        .inp:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,70,229,.08); }
+        .inp-sm { padding: 6px 10px; font-size: 12.5px; }
+
+        /* Select */
+        select.inp { cursor: pointer; }
+
+        /* Tables */
+        .tbl { width: 100%; border-collapse: collapse; }
+        .tbl thead th { padding: 10px 16px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--t4); background: #F9FAFB; border-bottom: 1px solid var(--card-border); text-align: left; white-space: nowrap; }
+        .tbl tbody td { padding: 11px 16px; font-size: 13.5px; color: var(--t2); border-bottom: 1px solid #F3F4F6; vertical-align: middle; }
+        .tbl tbody tr:last-child td { border-bottom: none; }
+        .tbl tbody tr:hover td { background: #FAFAFA; }
+
+        /* Page header */
+        .ph { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+        .ph-title { font-size: 17px; font-weight: 700; color: var(--t1); }
+        .ph-sub { font-size: 13px; color: var(--t3); margin-top: 2px; }
+
+        /* Stat cards */
+        .stat { background: #fff; border: 1px solid var(--card-border); border-radius: 10px; padding: 18px 20px; }
+        .stat-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--t4); }
+        .stat-val { font-size: 26px; font-weight: 700; color: var(--t1); margin-top: 8px; line-height: 1; }
+        .stat-note { font-size: 12px; color: var(--t3); margin-top: 6px; }
+        .stat-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+
+        /* Empty state */
+        .empty { text-align: center; padding: 56px 24px; }
+        .empty-icon { width: 52px; height: 52px; border-radius: 14px; background: #F3F4F6; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
+
+        /* Pagination */
+        .pag { display: flex; align-items: center; gap: 4px; }
+        .pag a, .pag span { display: inline-flex; align-items: center; padding: 5px 10px; border: 1px solid var(--card-border); border-radius: 6px; font-size: 12.5px; font-weight: 500; color: var(--t3); background: #fff; text-decoration: none; transition: all .1s; }
+        .pag a:hover { border-color: var(--accent); color: var(--accent); }
+        .pag .cur { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .pag .dis { background: #F9FAFB; color: #D1D5DB; cursor: default; }
+
+        /* Modal */
+        .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 16px; }
+        .modal { background: #fff; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.15); width: 100%; max-width: 420px; }
+
+        /* Divider */
+        .divider { height: 1px; background: var(--card-border); margin: 0; }
+
+        /* Link */
+        a.link { color: var(--accent); text-decoration: none; font-weight: 500; }
+        a.link:hover { color: var(--accent-h); text-decoration: underline; }
+
+        /* Line clamp */
+        .clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .clamp3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        /* backward compat */
+        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+        /* ── Section label inside sidebar when expanded ── */
+        #sidebar:not(.collapsed) .sb-expand-wrap { display: none; }
+    </style>
+    {% block extra_css %}{% endblock %}
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+{% if session.user_id %}
+<!-- ══════════════════════════════════════════════
+     AUTHENTICATED LAYOUT
+══════════════════════════════════════════════ -->
+<div id="layout">
+
+    <!-- ────────────────────────────────────────
+         SIDEBAR
+    ──────────────────────────────────────────── -->
+    <aside id="sidebar">
+
+        <!-- Logo -->
+        <div class="sb-logo">
+            <!-- Icon only (collapsed) -->
+            <div class="logo-icon" title="Nevox AI"><img src="{{ url_for('static', filename='images/favicon-logo.svg') }}" style="width:20px; height:20px;"></div>
+            <!-- Wordmark (expanded) -->
+            <div class="logo-full">
+                <div class="logo-mark"><img src="{{ url_for('static', filename='images/favicon-logo.svg') }}" style="width:20px; height:20px;"></div>
+                <span class="logo-text">Nevox AI</span>
+            </div>
+            <!-- Collapse toggle -->
+            <button id="sb-toggle" onclick="sbCollapse()" title="Collapse sidebar">
+                <i class="bi bi-chevron-left" style="font-size:11px;"></i>
+            </button>
+        </div>
+
+        <!-- Navigation -->
+        <nav id="sb-nav">
+
+            {% if session.is_admin %}
+
+            <p class="nav-section">Administration</p>
+            <a href="{{ url_for('core.admin_dashboard') }}"
+               class="nav-item {% if request.endpoint == 'admin_dashboard' %}active{% endif %}"
+               data-tip="Dashboard">
+                <i class="bi bi-speedometer2 ni"></i>
+                <span class="nav-label">Dashboard</span>
+            </a>
+            <a href="{{ url_for('core.trunk_management') }}"
+               class="nav-item {% if request.endpoint in ['trunk_management', 'configure_user_trunk'] %}active{% endif %}"
+               data-tip="Outbound Trunks">
+                <i class="bi bi-diagram-3 ni"></i>
+                <span class="nav-label">Outbound Trunks</span>
+            </a>
+            <a href="{{ url_for('core.inbound_trunk_management') }}"
+               class="nav-item {% if request.endpoint in ['inbound_trunk_management', 'configure_inbound_trunk'] %}active{% endif %}"
+               data-tip="Inbound Trunks">
+                <i class="bi bi-telephone-inbound ni"></i>
+                <span class="nav-label">Inbound Trunks</span>
+            </a>
+
+            {% else %}
+
+            <!-- MAIN -->
+            <p class="nav-section">Main</p>
+            <a href="{{ url_for('core.dashboard') }}"
+               class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}"
+               data-tip="Dashboard">
+                <i class="bi bi-house ni"></i>
+                <span class="nav-label">Dashboard</span>
+            </a>
+            <a href="{{ url_for('core.analytics') }}"
+               class="nav-item {% if request.endpoint == 'analytics' %}active{% endif %}"
+               data-tip="Analytics">
+                <i class="bi bi-bar-chart-line ni"></i>
+                <span class="nav-label">Analytics</span>
+            </a>
+
+            <!-- CHANNELS -->
+            <p class="nav-section">Channels</p>
+
+            <!-- Inbound -->
+            <button class="nav-item" onclick="sbMenu('inbound')" data-tip="Inbound">
+                <i class="bi bi-telephone-inbound ni"></i>
+                <span class="nav-label">Inbound</span>
+                <i id="inbound-ch" class="bi bi-chevron-down chevron {% if request.endpoint in ['inbound_agents','create_inbound_agent','inbound_call_logs'] %}open{% endif %}"></i>
+            </button>
+            <div id="inbound-sub" class="submenu {% if request.endpoint in ['inbound_agents','create_inbound_agent','inbound_call_logs'] %}open{% endif %}">
+                <a href="{{ url_for('inbound.inbound_agents') }}" class="nav-sub {% if request.endpoint in ['inbound_agents','create_inbound_agent'] %}active{% endif %}">
+                    <i class="bi bi-person-badge ni" style="font-size:13px;"></i>
+                    <span>Agents</span>
+                </a>
+                <a href="{{ url_for('inbound.inbound_call_logs') }}" class="nav-sub {% if request.endpoint == 'inbound_call_logs' %}active{% endif %}">
+                    <i class="bi bi-list-ul ni" style="font-size:13px;"></i>
+                    <span>Calls</span>
+                </a>
+            </div>
+
+            <!-- Outbound -->
+            <button class="nav-item" onclick="sbMenu('outbound')" data-tip="Outbound">
+                <i class="bi bi-telephone-outbound ni"></i>
+                <span class="nav-label">Outbound</span>
+                <i id="outbound-ch" class="bi bi-chevron-down chevron {% if request.endpoint in ['campaigns','create_campaign','view_campaign'] %}open{% endif %}"></i>
+            </button>
+            <div id="outbound-sub" class="submenu {% if request.endpoint in ['campaigns','create_campaign','view_campaign'] %}open{% endif %}">
+                <a href="{{ url_for('campaigns.campaigns') }}" class="nav-sub {% if request.endpoint in ['campaigns','create_campaign','view_campaign'] %}active{% endif %}">
+                    <i class="bi bi-megaphone ni" style="font-size:13px;"></i>
+                    <span>Campaigns</span>
+                </a>
+            </div>
+
+            <!-- Socials -->
+            <button class="nav-item" onclick="sbMenu('socials')" data-tip="Socials">
+                <i class="bi bi-chat-dots ni"></i>
+                <span class="nav-label">Socials</span>
+                <i id="socials-ch" class="bi bi-chevron-down chevron"></i>
+            </button>
+            <div id="socials-sub" class="submenu">
+                <a href="{{ url_for('whatsapp.whatsapp_agents_list') }}" class="nav-sub">
+                    <i class="bi bi-whatsapp ni" style="font-size:13px; color:#25D366;"></i>
+                    <span>WhatsApp</span>
+                </a>
+            </div>
+
+            <!-- SETUP -->
+            <p class="nav-section">Setup</p>
+            <a href="{{ url_for('agents.create_agent') }}"
+               class="nav-item {% if request.endpoint == 'create_agent' %}active{% endif %}"
+               data-tip="Agents">
+                <i class="bi bi-robot ni"></i>
+                <span class="nav-label">Agents</span>
+            </a>
+            <a href="{{ url_for('core.call_logs') }}"
+               class="nav-item {% if request.endpoint == 'call_logs' %}active{% endif %}"
+               data-tip="Call Logs">
+                <i class="bi bi-clock-history ni"></i>
+                <span class="nav-label">Call Logs</span>
+            </a>
+            <a href="{{ url_for('core.tools_list') }}"
+               class="nav-item {% if request.endpoint in ['tools_list','create_tool','edit_tool','agent_tools'] %}active{% endif %}"
+               data-tip="Integrations">
+                <i class="bi bi-plug ni"></i>
+                <span class="nav-label">Integrations</span>
+            </a>
+            <a href="{{ url_for('workflows.workflows_page') }}"
+               class="nav-item"
+               data-tip="Workflows">
+                <i class="bi bi-diagram-2 ni"></i>
+                <span class="nav-label">Workflows</span>
+            </a>
+            <a href="{{ url_for('test_agent.test_agent_page') }}"
+               class="nav-item {% if request.endpoint == 'test_agent_page' %}active{% endif %}"
+               data-tip="Test Agent">
+                <i class="bi bi-headset ni"></i>
+                <span class="nav-label">Test Agent</span>
+            </a>
+
+            <!-- CLINIC START -->
+            <p class="nav-section">Clinic</p>
+            <a href="{{ url_for('clinic.clinic_hub') }}"
+               class="nav-item {% if request.endpoint == 'clinic_hub' %}active{% endif %}"
+               data-tip="Clinic Hub">
+                <i class="bi bi-hospital ni"></i>
+                <span class="nav-label">Clinic Hub</span>
+            </a>
+
+            <button class="nav-item" onclick="sbMenu('clinic')" data-tip="Appointments">
+                <i class="bi bi-calendar2-check ni"></i>
+                <span class="nav-label">Appointments</span>
+                <i id="clinic-ch" class="bi bi-chevron-down chevron {% if request.endpoint in ['appointment_booking','noshow_recovery','patient_reminders'] %}open{% endif %}"></i>
+            </button>
+            <div id="clinic-sub" class="submenu {% if request.endpoint in ['appointment_booking','noshow_recovery','patient_reminders'] %}open{% endif %}">
+                <a href="{{ url_for('clinic.appointment_booking') }}"
+                   class="nav-sub {% if request.endpoint == 'appointment_booking' %}active{% endif %}">
+                    <i class="bi bi-calendar-plus ni" style="font-size:13px;"></i>
+                    <span>Booking Config</span>
+                </a>
+                <a href="{{ url_for('clinic.noshow_recovery') }}"
+                   class="nav-sub {% if request.endpoint == 'noshow_recovery' %}active{% endif %}">
+                    <i class="bi bi-calendar-x ni" style="font-size:13px;"></i>
+                    <span>No-show Recovery</span>
+                </a>
+                <a href="{{ url_for('clinic.patient_reminders') }}"
+                   class="nav-sub {% if request.endpoint == 'patient_reminders' %}active{% endif %}">
+                    <i class="bi bi-bell ni" style="font-size:13px;"></i>
+                    <span>Reminders</span>
+                </a>
+            </div>
+
+            <button class="nav-item" onclick="sbMenu('clinicout')" data-tip="Outreach">
+                <i class="bi bi-megaphone ni"></i>
+                <span class="nav-label">Outreach</span>
+                <i id="clinicout-ch" class="bi bi-chevron-down chevron {% if request.endpoint in ['vaccination_campaign','new_patient_intake'] %}open{% endif %}"></i>
+            </button>
+            <div id="clinicout-sub" class="submenu {% if request.endpoint in ['vaccination_campaign','new_patient_intake'] %}open{% endif %}">
+                <a href="{{ url_for('clinic.vaccination_campaign') }}"
+                   class="nav-sub {% if request.endpoint == 'vaccination_campaign' %}active{% endif %}">
+                    <i class="bi bi-syringe ni" style="font-size:13px;"></i>
+                    <span>Vaccination Campaign</span>
+                </a>
+                <a href="{{ url_for('clinic.new_patient_intake') }}"
+                   class="nav-sub {% if request.endpoint == 'new_patient_intake' %}active{% endif %}">
+                    <i class="bi bi-person-plus ni" style="font-size:13px;"></i>
+                    <span>Patient Intake</span>
+                </a>
+            </div>
+            <!-- CLINIC END -->
+
+            <!-- ACCOUNT -->
+            <p class="nav-section">Account</p>
+            <a href="{{ url_for('core.subscription') }}"
+               class="nav-item {% if request.endpoint == 'subscription' %}active{% endif %}"
+               data-tip="Subscription">
+                <i class="bi bi-credit-card ni"></i>
+                <span class="nav-label">Subscription</span>
+            </a>
+            <a href="{{ url_for('api_v1.api_keys_page') }}"
+               class="nav-item {% if request.endpoint == 'api_keys_page' %}active{% endif %}"
+               data-tip="API Keys">
+                <i class="bi bi-key ni"></i>
+                <span class="nav-label">API Keys</span>
+            </a>
+
+            {% endif %}
+        </nav>
+
+        <!-- Footer -->
+        <div class="sb-footer">
+            <!-- Expand button shown only when collapsed -->
+            <div class="sb-footer-expand">
+                <button id="sb-expand" onclick="sbExpand()" title="Expand sidebar">
+                    <i class="bi bi-chevron-right" style="font-size:11px;"></i>
+                </button>
+            </div>
+
+            <div class="sb-user">
+                <div class="sb-avatar">{{ session.username[0]|upper }}</div>
+                <div class="sb-uinfo">
+                    <div class="sb-uname">{{ session.username }}</div>
+                    <div class="sb-urole">{% if session.is_admin %}Administrator{% else %}Member{% endif %}</div>
+                </div>
+            </div>
+            <a href="{{ url_for('core.logout') }}" class="sb-logout">
+                <i class="bi bi-box-arrow-right" style="font-size:13px;"></i>
+                <span class="sb-logout-label">Log Out</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Spacer that mirrors sidebar width -->
+    <div id="sb-spacer"></div>
+
+    <!-- Mobile overlay -->
+    <div id="sb-overlay" onclick="sbCloseMobile()"></div>
+
+    <!-- ────────────────────────────────────────
+         MAIN
+    ──────────────────────────────────────────── -->
+    <div id="main-wrap">
+
+        <!-- Mobile topbar -->
+        <div id="mobile-bar">
+            <button onclick="sbOpenMobile()" style="background:none;border:none;cursor:pointer;color:#374151;padding:4px;">
+                <i class="bi bi-list" style="font-size:20px;"></i>
+            </button>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <div style="width:26px;height:26px;background:#4F46E5;border-radius:6px;display:flex;align-items:center;justify-content:center;">
+                    <span style="color:#fff;font-weight:800;font-size:12px;">N</span>
+                </div>
+                <span style="font-size:14px;font-weight:700;color:#111827;">Nevox AI</span>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div id="main-content">
+
+            <!-- Flash messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}{% for category, message in messages %}
+                <div class="flash {% if category == 'success' %}flash-ok{% elif category == 'error' %}flash-err{% else %}flash-inf{% endif %}">
+                    <i class="bi {% if category == 'success' %}bi-check-circle-fill{% elif category == 'error' %}bi-exclamation-circle-fill{% else %}bi-info-circle-fill{% endif %}" style="flex-shrink:0;margin-top:1px;"></i>
+                    <span style="flex:1;">{{ message }}</span>
+                    <button class="flash-close" onclick="this.parentElement.remove()"><i class="bi bi-x-lg" style="font-size:11px;"></i></button>
+                </div>
+                {% endfor %}{% endif %}
+            {% endwith %}
+
+            <div class="page-enter">
+                {% block dashboard_content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ── Sidebar state ── */
+let sbState = localStorage.getItem('sb') || 'expanded'; // 'expanded' | 'collapsed'
+
+function applyState() {
+    const sb  = document.getElementById('sidebar');
+    const spc = document.getElementById('sb-spacer');
+    if (sbState === 'collapsed') {
+        sb.classList.add('collapsed');
+        spc.classList.add('collapsed');
+    } else {
+        sb.classList.remove('collapsed');
+        spc.classList.remove('collapsed');
+    }
+}
+
+function sbCollapse() {
+    sbState = 'collapsed';
+    localStorage.setItem('sb', sbState);
+    applyState();
+}
+function sbExpand() {
+    sbState = 'expanded';
+    localStorage.setItem('sb', sbState);
+    applyState();
+}
+
+/* Mobile */
+function sbOpenMobile() {
+    document.getElementById('sidebar').classList.add('mobile-open');
+    document.getElementById('sb-overlay').classList.add('on');
+}
+function sbCloseMobile() {
+    document.getElementById('sidebar').classList.remove('mobile-open');
+    document.getElementById('sb-overlay').classList.remove('on');
+}
+
+/* Submenus */
+function sbMenu(key) {
+    const sub = document.getElementById(key + '-sub');
+    const ch  = document.getElementById(key + '-ch');
+    const isOpen = sub.classList.contains('open');
+    // close all
+    ['inbound','outbound','socials','clinic','clinicout'].forEach(k => {
+        document.getElementById(k+'-sub')?.classList.remove('open');
+        document.getElementById(k+'-ch')?.classList.remove('open');
+    });
+    if (!isOpen) {
+        sub.classList.add('open');
+        ch.classList.add('open');
+    }
+}
+
+/* Init */
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.innerWidth >= 1024) applyState();
+    // Force open submenu if on a submenu page
+    const p = window.location.pathname;
+    if (p.includes('/inbound'))                             sbMenu('inbound');
+    if (p.includes('/outbound') || p.includes('/campaign')) sbMenu('outbound');
+    if (p.includes('/whatsapp'))                            sbMenu('socials');
+    if (p.includes('/clinic/appointment') || p.includes('/clinic/noshow') || p.includes('/clinic/reminder')) sbMenu('clinic');
+    if (p.includes('/clinic/vaccination') || p.includes('/clinic/intake')) sbMenu('clinicout');
+});
+window.addEventListener('resize', function() {
+    if (window.innerWidth >= 1024) {
+        document.getElementById('sidebar').classList.remove('mobile-open');
+        document.getElementById('sb-overlay').classList.remove('on');
+        applyState();
+    }
+});
+</script>
+
+{% else %}
+<!-- ══════════════════════════════════════════════
+     NON-AUTHENTICATED LAYOUT
+══════════════════════════════════════════════ -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div style="position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;max-width:400px;">
+        {% for category, message in messages %}
+        <div class="flash {% if category == 'success' %}flash-ok{% elif category == 'error' %}flash-err{% else %}flash-inf{% endif %}" style="box-shadow:0 4px 20px rgba(0,0,0,.1);">
+            <i class="bi {% if category == 'success' %}bi-check-circle-fill{% elif category == 'error' %}bi-exclamation-circle-fill{% else %}bi-info-circle-fill{% endif %}"></i>
+            <span style="flex:1;">{{ message }}</span>
+            <button class="flash-close" onclick="this.parentElement.remove()"><i class="bi bi-x-lg" style="font-size:11px;"></i></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+{% endwith %}
+
+{% block content %}{% endblock %}
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

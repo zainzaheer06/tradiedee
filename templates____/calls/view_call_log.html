@@ -1,0 +1,517 @@
+{% extends "base.html" %}
+
+{% block title %}Call Log #{{ log.id }}{% endblock %}
+{% block page_title %}{% endblock %}
+
+{% block dashboard_content %}
+<div class="mb-6">
+    <a href="{{ url_for('core.call_logs') }}" class="inline-flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg font-medium transition-colors">
+        <i class="bi bi-arrow-left"></i> Back to Call Logs
+    </a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Content -->
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Call Details Card -->
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-blue-50">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i class="bi bi-telephone-outbound text-indigo-600 text-lg"></i>
+                        <h2 class="text-lg font-bold text-gray-900">Call Details</h2>
+                    </div>
+                    <span class="text-xs font-mono text-gray-600 bg-white px-3 py-1 rounded-full border border-gray-200">#{{ log.id }}</span>
+                </div>
+            </div>
+
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Left Column -->
+                    <div class="space-y-4">
+                        <!-- Agent -->
+                        <div>
+                            <label class="text-xs font-semibold text-gray-600 uppercase tracking-wide block mb-2">Agent</label>
+                            {% if log.agent %}
+                            <a href="{{ url_for('agents.view_agent', agent_id=log.agent_id) }}" class="text-indigo-600 hover:text-indigo-700 font-semibold text-lg">
+                                {{ log.agent.name }}
+                            </a>
+                            {% else %}
+                            <p class="text-gray-500">N/A</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- From Number -->
+                        <div>
+                            <label class="text-xs font-semibold text-gray-600 uppercase tracking-wide block mb-2">From Number</label>
+                            <div class="flex items-center gap-2">
+                                <span class="px-3 py-2 bg-gray-100 rounded-lg font-mono text-gray-700 text-lg">{{ log.from_number }}</span>
+                                <button onclick="navigator.clipboard.writeText('{{ log.from_number }}')" class="px-2 py-2 text-gray-600 hover:text-indigo-600 transition-colors" title="Copy">
+                                    <i class="bi bi-clipboard text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- To Number -->
+                        <div>
+                            <label class="text-xs font-semibold text-gray-600 uppercase tracking-wide block mb-2">To Number</label>
+                            <div class="flex items-center gap-2">
+                                <span class="px-3 py-2 bg-gray-100 rounded-lg font-mono text-gray-700 text-lg">{{ log.to_number }}</span>
+                                <button onclick="navigator.clipboard.writeText('{{ log.to_number }}')" class="px-2 py-2 text-gray-600 hover:text-indigo-600 transition-colors" title="Copy">
+                                    <i class="bi bi-clipboard text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column -->
+                    <div class="space-y-4">
+                        <!-- Duration -->
+                        <div>
+                            <label class="text-xs font-semibold text-gray-600 uppercase tracking-wide block mb-2">Duration</label>
+                            <p class="text-lg font-semibold text-gray-900">{{ log.duration_seconds }} <span class="text-sm font-normal text-gray-500">seconds</span></p>
+                        </div>
+
+                        <!-- Minutes Used -->
+                        <div>
+                            <label class="text-xs font-semibold text-gray-600 uppercase tracking-wide block mb-2">Minutes Used</label>
+                            <span class="badge-primary text-base">{{ log.minutes_used }} minutes</span>
+                        </div>
+
+                        <!-- Status -->
+                        <div>
+                            <label class="text-xs font-semibold text-gray-600 uppercase tracking-wide block mb-2">Status</label>
+                            {% if log.status == 'completed' %}
+                            <span class="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded text-sm font-medium">
+                                <i class="bi bi-check-circle"></i> Completed
+                            </span>
+                            {% elif log.status == 'no_answer' %}
+                            <span class="inline-flex items-center gap-1 px-3 py-1 bg-orange-100 text-orange-700 rounded text-sm font-medium">
+                                <i class="bi bi-phone-x"></i> No Answer
+                            </span>
+                            {% elif log.status == 'failed' %}
+                            <span class="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 rounded text-sm font-medium">
+                                <i class="bi bi-x-circle"></i> Failed
+                            </span>
+                            {% else %}
+                            <span class="badge-primary text-base">{{ log.status }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Date Info -->
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <label class="text-xs font-semibold text-gray-600 uppercase tracking-wide block mb-2">Date & Time</label>
+                    <p class="text-gray-700">{{ log.created_at.strftime('%B %d, %Y at %I:%M:%S %p') }}</p>
+                </div>
+
+                <!-- Room Name -->
+                <div style="display: none;" class="mt-4">
+                    <label class="text-xs font-semibold text-gray-600 uppercase tracking-wide block mb-2">Room Name</label>
+                    <div class="flex items-center gap-2">
+                        <code class="flex-1 px-3 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm font-mono">{{ log.room_name }}</code>
+                        <button onclick="navigator.clipboard.writeText('{{ log.room_name }}')" class="px-2 py-2 text-gray-600 hover:text-indigo-600 transition-colors" title="Copy">
+                            <i class="bi bi-clipboard text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call Recording Card -->
+        {% if log.recording_url %}
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-blue-50">
+                <div class="flex items-center gap-3">
+                    <i class="bi bi-mic-fill text-indigo-600 text-lg"></i>
+                    <h3 class="font-bold text-gray-900">Call Recording</h3>
+                </div>
+            </div>
+
+            <div class="p-6">
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <audio controls class="w-full" preload="metadata" controlsList="nodownload">
+                        <source src="{{ log.recording_url }}" type="audio/mpeg">
+                        <source src="{{ log.recording_url }}" type="audio/mp3">
+                        <source src="{{ log.recording_url }}" type="audio/wav">
+                        <source src="{{ log.recording_url }}" type="audio/mp4">
+                        Your browser does not support the audio element.
+                    </audio>
+                    <div class="mt-3 flex items-center justify-between flex-wrap gap-2">
+                        <span class="text-xs text-gray-500">
+                            <i class="bi bi-clock-history"></i> Recorded: {{ log.created_at.strftime('%b %d, %Y') }}
+                        </span>
+                        <a href="{{ url_for('core.download_recording', call_id=log.id) }}" class="inline-flex items-center gap-1 px-4 py-2 text-sm bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-medium transition-colors shadow-sm">
+                            <i class="bi bi-download"></i> Download Recording
+                        </a>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 mt-3">
+                    <i class="bi bi-info-circle"></i> Recording is stored securely in Saudi Arabia following PDPL compliance.
+                </p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Transcription Card (Toggleable) -->
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-blue-50 cursor-pointer hover:bg-gradient-to-r hover:from-indigo-100 hover:to-blue-100 transition-colors" onclick="toggleTranscript()">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i class="bi bi-chat-dots text-indigo-600 text-lg"></i>
+                        <h3 class="font-bold text-gray-900">Conversation Transcript</h3>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        {% set trans_data = log.transcription_data|from_json if log.transcription_data and log.transcription_data != '{}' else {} %}
+                        {% if trans_data.get('message_count', 0) > 0 %}
+                        <span class="text-xs font-medium text-gray-600 bg-white px-3 py-1 rounded-full border border-gray-200">
+                            {{ trans_data.get('message_count', 0) }} messages
+                        </span>
+                        {% endif %}
+                        <i id="transcriptToggleIcon" class="bi bi-chevron-right text-gray-500 transition-transform duration-300"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div id="transcriptContent" class="p-6" style="display: none;">
+                {% set trans_data = log.transcription_data|from_json if log.transcription_data and log.transcription_data != '{}' else {} %}
+                {% set messages = trans_data.get('messages', []) %}
+
+                {% if messages and messages|length > 0 %}
+                <!-- Chat-style conversation -->
+                <div class="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+                    {% for msg in messages %}
+                    <div class="flex {% if msg.role == 'user' %}justify-end{% else %}justify-start{% endif %}">
+                        <div class="max-w-[75%]">
+                            <!-- Message Header -->
+                            <div class="flex items-center gap-2 mb-1 {% if msg.role == 'user' %}flex-row-reverse{% endif %}">
+                                {% if msg.role == 'user' %}
+                                <div class="w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center">
+                                    <i class="bi bi-person-fill text-white text-xs"></i>
+                                </div>
+                                <span class="text-xs font-semibold text-gray-700">User</span>
+                                {% else %}
+                                <div class="w-7 h-7 bg-indigo-500 rounded-full flex items-center justify-center">
+                                    <i class="bi bi-robot text-white text-xs"></i>
+                                </div>
+                                <span class="text-xs font-semibold text-gray-700">Agent</span>
+                                {% endif %}
+                                <span class="text-xs text-gray-400">
+                                    {{ msg.timestamp.split('T')[1].split('.')[0] if 'T' in msg.timestamp else '' }}
+                                </span>
+                            </div>
+
+                            <!-- Message Bubble -->
+                            <div class="{% if msg.role == 'user' %}bg-blue-100 text-blue-900{% else %}bg-gray-100 text-gray-900{% endif %} rounded-2xl px-4 py-3 shadow-sm">
+                                <p class="text-sm leading-relaxed">{{ msg.text }}</p>
+                            </div>
+
+                            <!-- Source indicator (debug info) -->
+                            {% if msg.get('source') %}
+                            <div class="{% if msg.role == 'user' %}text-right{% endif %} mt-1">
+                                <span class="text-xs text-gray-400 italic">{{ msg.source }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Download transcript button -->
+                <div class="mt-6 pt-4 border-t border-gray-200 flex justify-between items-center">
+                    <div class="text-sm text-gray-600">
+                        <i class="bi bi-clock-history"></i>
+                        Call started: {{ trans_data.get('start_time', '').split('T')[1].split('.')[0] if trans_data.get('start_time') and 'T' in trans_data.get('start_time', '') else 'N/A' }}
+                    </div>
+                    <button onclick="copyTranscript(event)" class="inline-flex items-center gap-2 px-4 py-2 text-sm bg-indigo-100 text-indigo-600 hover:bg-indigo-200 rounded-lg font-medium transition-colors">
+                        <i class="bi bi-clipboard"></i> Copy Transcript
+                    </button>
+                </div>
+
+                {% elif log.transcription %}
+                <!-- Fallback to plain text transcription -->
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <p class="text-gray-700 whitespace-pre-wrap">{{ log.transcription }}</p>
+                </div>
+                {% else %}
+                <!-- No transcription available -->
+                <div class="text-center py-12">
+                    <div class="flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mx-auto mb-4">
+                        <i class="bi bi-file-earmark-text text-gray-400 text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">No Transcription Available</h3>
+                    <p class="text-gray-600">The conversation transcript will appear here once the call is processed</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Interest Analysis Card -->
+        {% set interest_data = log.sentiment_summary|from_json if log.sentiment_summary and log.sentiment_summary != '{}' else {} %}
+        {% if interest_data and interest_data.get('interest') %}
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+                <div class="flex items-center gap-3">
+                    <i class="bi bi-graph-up-arrow text-blue-600 text-lg"></i>
+                    <h3 class="font-bold text-gray-900">Interest Analysis</h3>
+                </div>
+            </div>
+
+            <div class="p-6">
+                <!-- Interest Status -->
+                <div class="text-center py-8">
+                    {% set interest = interest_data.get('interest', 'Not Interested') %}
+                    {% set confidence = interest_data.get('confidence', 'Low') %}
+
+                    {% if interest == 'Interested' %}
+                    <div class="inline-flex flex-col items-center gap-3">
+                        <span class="text-6xl">🎯</span>
+                        <span class="px-6 py-3 bg-green-100 text-green-700 rounded-full text-lg font-semibold">
+                            ✓ Interested
+                        </span>
+                        <span class="text-xs px-3 py-1 bg-blue-50 text-blue-700 rounded-full">
+                            Confidence: {{ confidence }}
+                        </span>
+                    </div>
+                    {% else %}
+                    <div class="inline-flex flex-col items-center gap-3">
+                        <span class="text-6xl">❌</span>
+                        <span class="px-6 py-3 bg-red-100 text-red-700 rounded-full text-lg font-semibold">
+                            ✗ Not Interested
+                        </span>
+                        <span class="text-xs px-3 py-1 bg-blue-50 text-blue-700 rounded-full">
+                            Confidence: {{ confidence }}
+                        </span>
+                    </div>
+                    {% endif %}
+                    <p class="mt-4 text-sm text-gray-600">Customer interest assessment</p>
+                </div>
+
+                <!-- Analysis Reason -->
+                {% set reason = interest_data.get('reason') %}
+                {% set quality = interest_data.get('conversation_quality') %}
+                {% if reason %}
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <!--<h4 class="font-semibold text-gray-900 mb-2 text-sm">Analysis Summary:</h4>
+                    <p class="text-sm text-gray-700 bg-blue-50 p-3 rounded-lg border border-blue-100">{{ reason }}</p>
+                -->
+                    {% if quality %}
+                    <div class="mt-3 flex items-center gap-2">
+                        <span class="text-xs font-semibold text-gray-600">Conversation Quality:</span>
+                        {% if quality == 'engaging' %}
+                        <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                            <i class="bi bi-star-fill"></i> Engaging
+                        </span>
+                        {% elif quality == 'neutral' %}
+                        <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
+                            <i class="bi bi-dash-circle"></i> Neutral
+                        </span>
+                        {% else %}
+                        <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                            <i class="bi bi-x-circle"></i> Dismissive
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Key Indicators -->
+                {% set indicators = interest_data.get('key_indicators', {}) %}
+                {% if indicators %}
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <h4 class="font-semibold text-gray-900 mb-4 text-sm">Engagement Indicators:</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="flex items-center gap-2 p-3 rounded-lg {{ 'bg-green-50' if indicators.get('asked_questions') else 'bg-gray-50' }}">
+                            <i class="bi {{ 'bi-check-circle-fill text-green-600' if indicators.get('asked_questions') else 'bi-circle text-gray-400' }}"></i>
+                            <span class="text-sm {{ 'text-green-700 font-medium' if indicators.get('asked_questions') else 'text-gray-600' }}">
+                                Asked Questions
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2 p-3 rounded-lg {{ 'bg-green-50' if indicators.get('requested_callback') else 'bg-gray-50' }}">
+                            <i class="bi {{ 'bi-check-circle-fill text-green-600' if indicators.get('requested_callback') else 'bi-circle text-gray-400' }}"></i>
+                            <span class="text-sm {{ 'text-green-700 font-medium' if indicators.get('requested_callback') else 'text-gray-600' }}">
+                                Requested Callback
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2 p-3 rounded-lg {{ 'bg-green-50' if indicators.get('shared_needs') else 'bg-gray-50' }}">
+                            <i class="bi {{ 'bi-check-circle-fill text-green-600' if indicators.get('shared_needs') else 'bi-circle text-gray-400' }}"></i>
+                            <span class="text-sm {{ 'text-green-700 font-medium' if indicators.get('shared_needs') else 'text-gray-600' }}">
+                                Shared Needs
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2 p-3 rounded-lg {{ 'bg-green-50' if indicators.get('agreed_next_steps') else 'bg-gray-50' }}">
+                            <i class="bi {{ 'bi-check-circle-fill text-green-600' if indicators.get('agreed_next_steps') else 'bi-circle text-gray-400' }}"></i>
+                            <span class="text-sm {{ 'text-green-700 font-medium' if indicators.get('agreed_next_steps') else 'text-gray-600' }}">
+                                Agreed Next Steps
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2 p-3 rounded-lg {{ 'bg-green-50' if indicators.get('provided_details') else 'bg-gray-50' }}">
+                            <i class="bi {{ 'bi-check-circle-fill text-green-600' if indicators.get('provided_details') else 'bi-circle text-gray-400' }}"></i>
+                            <span class="text-sm {{ 'text-green-700 font-medium' if indicators.get('provided_details') else 'text-gray-600' }}">
+                                Provided Details
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2 p-3 rounded-lg {{ 'bg-red-50' if indicators.get('explicit_rejection') else 'bg-gray-50' }}">
+                            <i class="bi {{ 'bi-x-circle-fill text-red-600' if indicators.get('explicit_rejection') else 'bi-circle text-gray-400' }}"></i>
+                            <span class="text-sm {{ 'text-red-700 font-medium' if indicators.get('explicit_rejection') else 'text-gray-600' }}">
+                                Explicit Rejection
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Message Statistics 
+                {% set msg_counts = interest_data.get('message_counts', {}) %}
+                {% if msg_counts %}
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <h4 class="font-semibold text-gray-900 mb-3 text-sm">Message Statistics:</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-indigo-50 p-3 rounded-lg text-center">
+                            <div class="text-2xl font-bold text-indigo-600">{{ msg_counts.get('agent_messages', 0) }}</div>
+                            <div class="text-xs text-gray-600 mt-1">Agent Messages</div>
+                        </div>
+                        <div class="bg-blue-50 p-3 rounded-lg text-center">
+                            <div class="text-2xl font-bold text-blue-600">{{ msg_counts.get('user_messages', 0) }}</div>
+                            <div class="text-xs text-gray-600 mt-1">User Messages</div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}-->
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar - Quick Actions -->
+    <div class="lg:col-span-1">
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden sticky top-20 space-y-4">
+            <!-- Summary Card -->
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="font-bold text-gray-900 mb-4">Call Summary</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Total Duration:</span>
+                        <span class="font-semibold text-gray-900">{{ log.duration_seconds }}s</span>
+                    </div>
+                    {% set trans_data = log.transcription_data|from_json if log.transcription_data and log.transcription_data != '{}' else {} %}
+                    {% if trans_data.get('message_count', 0) > 0 %}
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Messages:</span>
+                        <span class="font-semibold text-blue-600">{{ trans_data.get('message_count', 0) }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Cost (Minutes):</span>
+                        <span class="font-semibold text-indigo-600">{{ log.minutes_used }} min</span>
+                    </div>
+                    <div class="flex items-center justify-between pt-3 border-t border-gray-200">
+                        <span class="text-sm font-medium text-gray-700">Status:</span>
+                        {% if log.status == 'completed' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
+                            <i class="bi bi-check-circle"></i> Completed
+                        </span>
+                        {% elif log.status == 'no_answer' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs font-medium">
+                            <i class="bi bi-phone-x"></i> No Answer
+                        </span>
+                        {% elif log.status == 'failed' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
+                            <i class="bi bi-x-circle"></i> Failed
+                        </span>
+                        {% else %}
+                        <span class="badge-primary">{{ log.status }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Call Quality -->
+            <div style="display:none;" class="p-6">
+                <h4 class="font-semibold text-gray-900 mb-3">Call Quality</h4>
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span class="text-sm text-gray-700">Connected</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span class="text-sm text-gray-700">Audio Clear</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span class="text-sm text-gray-700">Completed</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="p-6  border-gray-200 space-y-2">
+                <a href="{{ url_for('agents.view_agent', agent_id=log.agent_id) if log.agent else '#' }}" class="block w-full px-4 py-2 text-center bg-indigo-100 text-indigo-600 hover:bg-indigo-200 rounded-lg font-medium transition-colors text-sm">
+                    <i class="bi bi-robot"></i> View Agent
+                </a>
+                <a href="{{ url_for('core.call_logs') }}" class="block w-full px-4 py-2 text-center bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg font-medium transition-colors text-sm">
+                    <i class="bi bi-list"></i> All Logs
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Toggle transcript visibility
+function toggleTranscript() {
+    const content = document.getElementById('transcriptContent');
+    const icon = document.getElementById('transcriptToggleIcon');
+
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        icon.classList.remove('bi-chevron-right');
+        icon.classList.add('bi-chevron-down');
+        icon.style.transform = 'rotate(0deg)';
+    } else {
+        content.style.display = 'none';
+        icon.classList.remove('bi-chevron-down');
+        icon.classList.add('bi-chevron-right');
+        icon.style.transform = 'rotate(-90deg)';
+    }
+}
+
+function copyTranscript(event) {
+    // Get transcript data
+    {% set trans_data = log.transcription_data|from_json if log.transcription_data and log.transcription_data != '{}' else {} %}
+    {% set messages = trans_data.get('messages', []) %}
+
+    {% if messages and messages|length > 0 %}
+    let transcript = '';
+    {% for msg in messages %}
+    transcript += {{ (msg.role.upper() ~ ': ' ~ msg.text ~ '\n')|tojson }};
+    {% endfor %}
+
+    navigator.clipboard.writeText(transcript).then(() => {
+        // Show success feedback
+        const btn = event.target.closest('button');
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check-circle"></i> Copied!';
+        btn.classList.remove('bg-indigo-100', 'text-indigo-600', 'hover:bg-indigo-200');
+        btn.classList.add('bg-green-100', 'text-green-600');
+
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.classList.remove('bg-green-100', 'text-green-600');
+            btn.classList.add('bg-indigo-100', 'text-indigo-600', 'hover:bg-indigo-200');
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        alert('Failed to copy transcript to clipboard');
+    });
+    {% else %}
+    alert('No transcript available to copy');
+    {% endif %}
+}
+</script>
+{% endblock %}

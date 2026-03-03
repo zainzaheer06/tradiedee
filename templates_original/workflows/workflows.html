@@ -1,0 +1,510 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Workflows{% endblock %}
+
+{% block page_title %}Manage Workflows{% endblock %}
+
+{% block dashboard_content %}
+<!-- Header -->
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-xl font-semibold text-gray-900">Workflows</h1>
+        <p class="text-sm text-gray-500 mt-0.5">Connect your voice agents to automation workflows</p>
+    </div>
+    <button onclick="openCreateModal()" class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+        <i class="bi bi-plus-lg" style="font-size: 0.75rem;"></i> New Workflow
+    </button>
+</div>
+
+<!-- Workflows Grid -->
+<div id="workflowsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+</div>
+
+<!-- Empty State -->
+<div id="emptyState" class="hidden">
+    <div class="bg-white rounded-lg border border-dashed border-gray-300 p-12 text-center">
+        <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+            <i class="bi bi-diagram-3 text-gray-400" style="font-size: 1.25rem;"></i>
+        </div>
+        <h3 class="text-sm font-semibold text-gray-900 mb-1">No workflows yet</h3>
+        <p class="text-sm text-gray-500 mb-5">Create your first workflow to connect agents to automations</p>
+        <button onclick="openCreateModal()" class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+            <i class="bi bi-plus-lg" style="font-size: 0.75rem;"></i> Create Workflow
+        </button>
+    </div>
+</div>
+
+<!-- Loading State -->
+<div id="loadingState" class="text-center py-16">
+    <div class="inline-block animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-indigo-600"></div>
+    <p class="text-sm text-gray-500 mt-3">Loading workflows...</p>
+</div>
+
+<!-- Create/Edit Modal -->
+<div id="workflowModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50" onclick="closeModalOnBackdrop(event)">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4" onclick="event.stopPropagation()">
+        <div class="border-b border-gray-100 px-5 py-3.5 flex items-center justify-between">
+            <h3 id="modalTitle" class="text-sm font-semibold text-gray-900">Create Workflow</h3>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600"><i class="bi bi-x-lg" style="font-size: 0.875rem;"></i></button>
+        </div>
+        <div class="p-5">
+            <form id="workflowForm" onsubmit="saveWorkflow(event)">
+                <input type="hidden" id="workflowId" value="">
+
+                <div class="mb-4">
+                    <label for="workflowName" class="block text-xs font-medium text-gray-700 mb-1.5">Name <span class="text-red-500">*</span></label>
+                    <input type="text" id="workflowName" required
+                           class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                           placeholder="e.g., Lead Management">
+                </div>
+
+                <div class="mb-4">
+                    <label for="workflowDescription" class="block text-xs font-medium text-gray-700 mb-1.5">Description</label>
+                    <textarea id="workflowDescription" rows="2"
+                              class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                              placeholder="What does this workflow do?"></textarea>
+                </div>
+
+                <div class="mb-4">
+                    <label for="workflowUrl" class="block text-xs font-medium text-gray-700 mb-1.5">Webhook URL <span class="text-red-500">*</span></label>
+                    <input type="url" id="workflowUrl" required
+                           class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                           placeholder="https://workflows.nevoxai.com/webhook/..."
+                           pattern="https://(workflows\.)?nevoxai\.com/.*">
+                    <div class="mt-1.5 flex items-center gap-1.5 text-xs text-gray-400">
+                        <i class="bi bi-shield-lock" style="font-size: 0.625rem;"></i>
+                        Only nevoxai.com domains accepted
+                    </div>
+                </div>
+
+                <div id="apiKeySection" class="mb-4 hidden">
+                    <label class="block text-xs font-medium text-gray-700 mb-1.5">API Key</label>
+                    <div class="flex gap-1.5">
+                        <input type="text" id="workflowApiKey" readonly
+                               class="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 font-mono">
+                        <button type="button" onclick="copyApiKey()" class="px-3 py-2 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Copy</button>
+                        <button type="button" onclick="regenerateApiKey()" class="px-3 py-2 text-xs font-medium text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100">Regenerate</button>
+                    </div>
+                </div>
+
+                <div id="activeSection" class="mb-5 hidden">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="workflowActive" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500">
+                        <span class="text-sm text-gray-700">Active</span>
+                    </label>
+                </div>
+
+                <div class="flex gap-2 justify-end border-t border-gray-100 pt-4">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">Cancel</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors">
+                        <span id="saveButtonText">Create Workflow</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Logs Modal -->
+<div id="logsModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50" onclick="closeLogsModalOnBackdrop(event)">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-3xl mx-4 max-h-[85vh] overflow-hidden" onclick="event.stopPropagation()">
+        <div class="border-b border-gray-100 px-5 py-3.5 flex items-center justify-between">
+            <h3 id="logsModalTitle" class="text-sm font-semibold text-gray-900">Webhook Logs</h3>
+            <button onclick="closeLogsModal()" class="text-gray-400 hover:text-gray-600"><i class="bi bi-x-lg" style="font-size: 0.875rem;"></i></button>
+        </div>
+        <div class="p-5 overflow-y-auto max-h-[calc(85vh-60px)]">
+            <div id="logsContainer"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+let workflows = [];
+let currentWorkflowId = null;
+
+// Load workflows on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadWorkflows();
+});
+
+// Load workflows from API
+async function loadWorkflows() {
+    try {
+        const response = await fetch('/api/workflows');
+        if (!response.ok) throw new Error('Failed to load workflows');
+
+        workflows = await response.json();
+        renderWorkflows();
+    } catch (error) {
+        console.error('Error loading workflows:', error);
+        showToast('Failed to load workflows', 'error');
+    }
+}
+
+// Render workflows
+function renderWorkflows() {
+    const container = document.getElementById('workflowsContainer');
+    const emptyState = document.getElementById('emptyState');
+    const loadingState = document.getElementById('loadingState');
+
+    loadingState.classList.add('hidden');
+
+    if (workflows.length === 0) {
+        container.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        return;
+    }
+
+    emptyState.classList.add('hidden');
+    container.classList.remove('hidden');
+
+    container.innerHTML = workflows.map(workflow => `
+        <div class="bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all">
+            <!-- Card Top -->
+            <div class="p-4 pb-3">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
+                            <i class="bi bi-diagram-3 text-purple-600" style="font-size: 1rem;"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <h3 class="text-sm font-semibold text-gray-900 truncate">${escapeHtml(workflow.name)}</h3>
+                            <div class="flex items-center gap-1.5 mt-0.5">
+                                ${workflow.is_active ?
+                                    '<span class="inline-flex items-center gap-1 text-xs text-emerald-600"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active</span>' :
+                                    '<span class="inline-flex items-center gap-1 text-xs text-gray-400"><span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span> Inactive</span>'
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                ${workflow.description ? `<p class="text-xs text-gray-500 leading-relaxed line-clamp-2 mb-3">${escapeHtml(workflow.description)}</p>` : ''}
+
+                <!-- Stats -->
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <div class="bg-gray-50 rounded-md px-3 py-2">
+                        <p class="text-xs text-gray-400">Calls</p>
+                        <p class="text-sm font-semibold text-gray-900">${workflow.stats.total_calls}</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-md px-3 py-2">
+                        <p class="text-xs text-gray-400">Success</p>
+                        <p class="text-sm font-semibold text-gray-900">${workflow.stats.success_rate}%</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 text-xs text-gray-400">
+                    <i class="bi bi-robot" style="font-size: 0.625rem;"></i>
+                    <span>${workflow.agents_using} agent${workflow.agents_using !== 1 ? 's' : ''} connected</span>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="px-4 py-3 border-t border-gray-100 flex items-center gap-1.5">
+                <button onclick="openEditModal(${workflow.id})" class="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors">
+                    <i class="bi bi-pencil" style="font-size: 0.65rem;"></i> Edit
+                </button>
+                <button onclick="viewLogs(${workflow.id})" class="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors">
+                    <i class="bi bi-list-ul" style="font-size: 0.65rem;"></i> Logs
+                </button>
+                <button onclick="testWorkflow(${workflow.id})" class="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-md hover:bg-emerald-100 transition-colors">
+                    <i class="bi bi-play-circle" style="font-size: 0.65rem;"></i> Test
+                </button>
+                <button onclick="deleteWorkflow(${workflow.id})" class="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100 transition-colors">
+                    <i class="bi bi-trash" style="font-size: 0.65rem;"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Open create modal
+function openCreateModal() {
+    currentWorkflowId = null;
+    document.getElementById('modalTitle').textContent = 'Create Workflow';
+    document.getElementById('saveButtonText').textContent = 'Create Workflow';
+    document.getElementById('workflowForm').reset();
+    document.getElementById('workflowId').value = '';
+    document.getElementById('apiKeySection').classList.add('hidden');
+    document.getElementById('activeSection').classList.add('hidden');
+    document.getElementById('workflowModal').classList.remove('hidden');
+    document.getElementById('workflowModal').classList.add('flex');
+}
+
+// Open edit modal
+function openEditModal(workflowId) {
+    const workflow = workflows.find(w => w.id === workflowId);
+    if (!workflow) return;
+
+    currentWorkflowId = workflowId;
+    document.getElementById('modalTitle').textContent = 'Edit Workflow';
+    document.getElementById('saveButtonText').textContent = 'Save Changes';
+    document.getElementById('workflowId').value = workflowId;
+    document.getElementById('workflowName').value = workflow.name;
+    document.getElementById('workflowDescription').value = workflow.description || '';
+    document.getElementById('workflowUrl').value = workflow.webhook_url;
+    document.getElementById('workflowApiKey').value = workflow.api_key;
+    document.getElementById('workflowActive').checked = workflow.is_active;
+    document.getElementById('apiKeySection').classList.remove('hidden');
+    document.getElementById('activeSection').classList.remove('hidden');
+    document.getElementById('workflowModal').classList.remove('hidden');
+    document.getElementById('workflowModal').classList.add('flex');
+}
+
+// Close modal
+function closeModal() {
+    document.getElementById('workflowModal').classList.add('hidden');
+    document.getElementById('workflowModal').classList.remove('flex');
+}
+
+function closeModalOnBackdrop(event) {
+    if (event.target === event.currentTarget) {
+        closeModal();
+    }
+}
+
+// =============================================================================
+// URL SECURITY VALIDATION
+// =============================================================================
+// Validates webhook URL before sending to server
+// Must match backend validation in routes/workflows.py
+function isValidWebhookUrl(url) {
+    try {
+        const parsed = new URL(url);
+        const hostname = parsed.hostname.toLowerCase();
+
+        // Must be HTTPS
+        if (parsed.protocol !== 'https:') {
+            return { valid: false, error: 'URL must use HTTPS' };
+        }
+
+        // Must be from allowed domains
+        const allowedDomains = ['workflows.nevoxai.com', 'nevoxai.com'];
+        const isAllowed = allowedDomains.some(domain =>
+            hostname === domain || hostname.endsWith('.' + domain)
+        );
+
+        if (!isAllowed) {
+            return { valid: false, error: 'Only workflows.nevoxai.com and nevoxai.com domains are allowed' };
+        }
+
+        return { valid: true, error: null };
+    } catch (e) {
+        return { valid: false, error: 'Invalid URL format' };
+    }
+}
+
+// Save workflow (create or update)
+async function saveWorkflow(event) {
+    event.preventDefault();
+
+    const webhookUrl = document.getElementById('workflowUrl').value;
+
+    // Validate URL before sending
+    const urlValidation = isValidWebhookUrl(webhookUrl);
+    if (!urlValidation.valid) {
+        showToast(urlValidation.error, 'error');
+        document.getElementById('workflowUrl').focus();
+        return;
+    }
+
+    const workflowId = document.getElementById('workflowId').value;
+    const data = {
+        name: document.getElementById('workflowName').value,
+        description: document.getElementById('workflowDescription').value,
+        webhook_url: webhookUrl
+    };
+
+    if (workflowId) {
+        data.is_active = document.getElementById('workflowActive').checked;
+    }
+
+    try {
+        const url = workflowId ? `/api/workflows/${workflowId}` : '/api/workflows';
+        const method = workflowId ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to save workflow');
+        }
+
+        const result = await response.json();
+        showToast(result.message || 'Workflow saved successfully', 'success');
+        closeModal();
+        loadWorkflows();
+    } catch (error) {
+        console.error('Error saving workflow:', error);
+        showToast(error.message, 'error');
+    }
+}
+
+// Delete workflow
+async function deleteWorkflow(workflowId) {
+    const workflow = workflows.find(w => w.id === workflowId);
+    if (!confirm(`Are you sure you want to delete "${workflow.name}"?`)) return;
+
+    try {
+        const response = await fetch(`/api/workflows/${workflowId}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to delete workflow');
+        }
+
+        const result = await response.json();
+        showToast(result.message, 'success');
+        loadWorkflows();
+    } catch (error) {
+        console.error('Error deleting workflow:', error);
+        showToast(error.message, 'error');
+    }
+}
+
+// Copy API key
+function copyApiKey() {
+    const apiKey = document.getElementById('workflowApiKey').value;
+    navigator.clipboard.writeText(apiKey);
+    showToast('API key copied to clipboard', 'success');
+}
+
+// Regenerate API key
+async function regenerateApiKey() {
+    const workflowId = currentWorkflowId;
+    if (!confirm('Are you sure? This will invalidate the current API key and you\'ll need to update your Nevox workflow.')) return;
+
+    try {
+        const response = await fetch(`/api/workflows/${workflowId}/regenerate-key`, {
+            method: 'POST'
+        });
+
+        if (!response.ok) throw new Error('Failed to regenerate API key');
+
+        const result = await response.json();
+        document.getElementById('workflowApiKey').value = result.api_key;
+        showToast(result.message, 'success');
+        loadWorkflows();
+    } catch (error) {
+        console.error('Error regenerating API key:', error);
+        showToast(error.message, 'error');
+    }
+}
+
+// Test workflow
+async function testWorkflow(workflowId) {
+    const workflow = workflows.find(w => w.id === workflowId);
+    showToast(`Testing workflow "${workflow.name}"...`, 'info');
+
+    try {
+        const response = await fetch(`/api/workflows/${workflowId}/test`, {
+            method: 'POST'
+        });
+
+        if (!response.ok) throw new Error('Failed to test workflow');
+
+        const result = await response.json();
+        if (result.success) {
+            showToast('Test webhook sent successfully! Check your Nevox workflow.', 'success');
+        } else {
+            showToast(`Test failed: ${result.error || result.message}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error testing workflow:', error);
+        showToast(error.message, 'error');
+    }
+}
+
+// View logs
+async function viewLogs(workflowId) {
+    currentWorkflowId = workflowId;
+    const workflow = workflows.find(w => w.id === workflowId);
+    document.getElementById('logsModalTitle').textContent = `Logs: ${workflow.name}`;
+    document.getElementById('logsModal').classList.remove('hidden');
+    document.getElementById('logsModal').classList.add('flex');
+
+    document.getElementById('logsContainer').innerHTML = '<div class="text-center py-8"><div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>';
+
+    try {
+        const response = await fetch(`/api/workflows/${workflowId}/logs`);
+        if (!response.ok) throw new Error('Failed to load logs');
+
+        const result = await response.json();
+        renderLogs(result.logs);
+    } catch (error) {
+        console.error('Error loading logs:', error);
+        document.getElementById('logsContainer').innerHTML = '<div class="text-center py-8 text-red-600">Failed to load logs</div>';
+    }
+}
+
+// Render logs
+function renderLogs(logs) {
+    const container = document.getElementById('logsContainer');
+
+    if (logs.length === 0) {
+        container.innerHTML = '<div class="text-center py-8 text-gray-500">No logs yet</div>';
+        return;
+    }
+
+    container.innerHTML = logs.map(log => `
+        <div class="mb-3 p-3 border border-gray-200 rounded-lg ${log.status === 'success' ? 'bg-emerald-50/50' : log.status === 'retrying' ? 'bg-amber-50/50' : 'bg-red-50/50'}">
+            <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center gap-2">
+                    ${log.status === 'success' ?
+                        '<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs font-medium"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Success</span>' :
+                        log.status === 'retrying' ?
+                        '<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-xs font-medium"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Retrying</span>' :
+                        '<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs font-medium"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Failed</span>'
+                    }
+                    ${log.http_status ? `<span class="text-xs text-gray-500">HTTP ${log.http_status}</span>` : ''}
+                    ${log.retry_count > 0 ? `<span class="text-xs text-gray-500">Retry ${log.retry_count}</span>` : ''}
+                </div>
+                <span class="text-xs text-gray-400">${new Date(log.created_at).toLocaleString()}</span>
+            </div>
+            ${log.error_message ? `<p class="text-xs text-red-600 mt-1.5">${escapeHtml(log.error_message)}</p>` : ''}
+            ${log.call_log_id ? `<p class="text-xs text-gray-400 mt-1">Call ID: ${log.call_log_id}</p>` : ''}
+        </div>
+    `).join('');
+}
+
+// Close logs modal
+function closeLogsModal() {
+    document.getElementById('logsModal').classList.add('hidden');
+    document.getElementById('logsModal').classList.remove('flex');
+}
+
+function closeLogsModalOnBackdrop(event) {
+    if (event.target === event.currentTarget) {
+        closeLogsModal();
+    }
+}
+
+// Utility: Escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Utility: Show toast notification
+function showToast(message, type = 'info') {
+    const colors = {
+        success: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+        error: 'bg-red-50 border-red-200 text-red-800',
+        info: 'bg-blue-50 border-blue-200 text-blue-800'
+    };
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 z-[60] px-4 py-3 rounded-lg border text-sm font-medium shadow-lg ${colors[type] || colors.info}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(() => toast.remove(), 300); }, 3000);
+}
+</script>
+
+{% endblock %}

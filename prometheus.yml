@@ -1,0 +1,12 @@
+
+global:
+  scrape_interval: 15s  # Scrape metrics every 15 seconds
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Your voice agent metrics
+  - job_name: 'nevox-voice-agents'
+    static_configs:
+      - targets: ['host.docker.internal:8009']  # IMPORTANT: Use host.docker.internal on Windows!
+        labels:
+          service: 'voice-agent'

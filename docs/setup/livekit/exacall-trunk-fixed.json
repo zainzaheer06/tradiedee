@@ -1,0 +1,11 @@
+{
+    "trunk": {
+        "name": "ExaCall Saudi Arabia FIXED",
+        "address": "2912.sip.exacall.com:5760",
+        "numbers": [
+            "966115205388"
+        ],
+        "auth_username": "2912919101",
+        "auth_password": "m5m+OSk0EKS7syTjqn8N"
+    }
+}

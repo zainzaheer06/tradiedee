@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Integrations{% endblock %}
+
+{% block page_title %}Manage Integrations{% endblock %}
+
+{% block dashboard_content %}
+<!-- Header -->
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-xl font-semibold text-gray-900">Integrations</h1>
+        <p class="text-sm text-gray-500 mt-0.5">{{ tools|length }} custom integration{{ 's' if tools|length != 1 else '' }} configured</p>
+    </div>
+    <a href="{{ url_for('core.create_tool') }}" class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+        <i class="bi bi-plus-lg" style="font-size: 0.75rem;"></i> New Integration
+    </a>
+</div>
+
+<!-- Tools Grid -->
+{% if tools %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for tool in tools %}
+    <div class="bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all">
+        <!-- Card Top -->
+        <div class="p-4 pb-3">
+            <div class="flex items-start justify-between mb-3">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0
+                        {% if tool.tool_type == 'api_call' %}bg-blue-50{% elif tool.tool_type == 'webhook' %}bg-emerald-50{% else %}bg-purple-50{% endif %}">
+                        {% if tool.tool_type == 'api_call' %}
+                            <i class="bi bi-cloud-arrow-up text-blue-600" style="font-size: 1rem;"></i>
+                        {% elif tool.tool_type == 'webhook' %}
+                            <i class="bi bi-webhook text-emerald-600" style="font-size: 1rem;"></i>
+                        {% else %}
+                            <i class="bi bi-lightning-charge text-purple-600" style="font-size: 1rem;"></i>
+                        {% endif %}
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="text-sm font-semibold text-gray-900 truncate">{{ tool.name }}</h3>
+                        <div class="flex items-center gap-2 mt-0.5">
+                            <span class="text-xs text-gray-400">
+                                {% if tool.tool_type == 'api_call' %}API Call{% elif tool.tool_type == 'webhook' %}Webhook{% else %}RPC{% endif %}
+                            </span>
+                            <span class="text-gray-200">&middot;</span>
+                            {% if tool.is_active %}
+                            <span class="inline-flex items-center gap-1 text-xs text-emerald-600">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1 text-xs text-gray-400">
+                                <span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span> Inactive
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Description -->
+            <p class="text-xs text-gray-500 leading-relaxed line-clamp-2">{{ tool.description }}</p>
+        </div>
+
+        <!-- Actions -->
+        <div class="px-4 py-3 border-t border-gray-100 flex items-center gap-1.5">
+            <a href="{{ url_for('core.edit_tool', tool_id=tool.id) }}"
+               class="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors">
+                <i class="bi bi-pencil" style="font-size: 0.65rem;"></i> Edit
+            </a>
+
+            <form method="POST" action="{{ url_for('core.toggle_tool', tool_id=tool.id) }}" class="flex-1">
+                <button type="submit"
+                        class="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors
+                        {% if tool.is_active %}text-amber-700 bg-amber-50 hover:bg-amber-100{% else %}text-emerald-700 bg-emerald-50 hover:bg-emerald-100{% endif %}">
+                    {% if tool.is_active %}
+                        <i class="bi bi-pause" style="font-size: 0.65rem;"></i> Pause
+                    {% else %}
+                        <i class="bi bi-play" style="font-size: 0.65rem;"></i> Activate
+                    {% endif %}
+                </button>
+            </form>
+
+            <form method="POST" action="{{ url_for('core.delete_tool', tool_id=tool.id) }}"
+                  onsubmit="return confirm('Delete this integration?')" class="flex-shrink-0">
+                <button type="submit"
+                        class="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100 transition-colors">
+                    <i class="bi bi-trash" style="font-size: 0.65rem;"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<!-- Empty State -->
+<div class="bg-white rounded-lg border border-dashed border-gray-300 p-12 text-center">
+    <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+        <i class="bi bi-puzzle text-gray-400" style="font-size: 1.25rem;"></i>
+    </div>
+    <h3 class="text-sm font-semibold text-gray-900 mb-1">No integrations yet</h3>
+    <p class="text-sm text-gray-500 mb-5">Create custom tools to extend your agents' capabilities</p>
+    <a href="{{ url_for('core.create_tool') }}" class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+        <i class="bi bi-plus-lg" style="font-size: 0.75rem;"></i> Create Integration
+    </a>
+</div>
+{% endif %}
+
+<!-- Info -->
+<div class="mt-6 bg-white rounded-lg border border-gray-200 p-5">
+    <div class="flex items-start gap-3">
+        <div class="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <i class="bi bi-info-circle text-gray-400" style="font-size: 0.875rem;"></i>
+        </div>
+        <div>
+            <h3 class="text-sm font-medium text-gray-900 mb-1.5">About Integrations</h3>
+            <p class="text-xs text-gray-500 leading-relaxed mb-2">Integrations extend your agent with external actions beyond conversation:</p>
+            <div class="flex flex-wrap gap-3 text-xs text-gray-500">
+                <span class="flex items-center gap-1"><i class="bi bi-cloud-arrow-up text-blue-500" style="font-size: 0.625rem;"></i> <strong>API Call</strong> &mdash; HTTP requests</span>
+                <span class="flex items-center gap-1"><i class="bi bi-webhook text-emerald-500" style="font-size: 0.625rem;"></i> <strong>Webhook</strong> &mdash; POST to endpoints</span>
+            </div>
+            <p class="text-xs text-gray-400 mt-2">Assign integrations to agents from the agent edit page.</p>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

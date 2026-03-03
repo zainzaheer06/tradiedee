@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+
+{% block title %}Campaigns - Nevox AI{% endblock %}
+
+{% block page_title %}Outbound{% endblock %}
+
+{% block dashboard_content %}
+<!-- Header -->
+<div class="mb-8">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Campaigns</h1>
+            <p class="text-gray-600">Manage your outbound calling campaigns - {{ pagination.total if pagination else campaigns|length }} total</p>
+        </div>
+        <a href="{{ url_for('campaigns.create_campaign') }}" class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors">
+            <i class="bi bi-plus-circle"></i>
+            Create Campaign
+        </a>
+    </div>
+
+    <!-- Search and Filter Bar -->
+    <div class="bg-white rounded-lg border border-gray-200 p-4">
+        <form method="GET" action="{{ url_for('campaigns.campaigns') }}" class="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+            <!-- Search Input -->
+            <div class="flex-1 relative">
+                <i class="bi bi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <input type="text" name="search" value="{{ search_query or '' }}"
+                       placeholder="Search campaigns by name or description..."
+                       class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+            </div>
+
+            <!-- Status Filter -->
+            <div class="relative">
+                <select name="status" class="pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none appearance-none bg-white">
+                    <option value="">All Statuses</option>
+                    <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Draft</option>
+                    <option value="running" {% if status_filter == 'running' %}selected{% endif %}>Running</option>
+                    <option value="paused" {% if status_filter == 'paused' %}selected{% endif %}>Paused</option>
+                    <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="stopped" {% if status_filter == 'stopped' %}selected{% endif %}>Stopped</option>
+                </select>
+                <i class="bi bi-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+            </div>
+
+            <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors whitespace-nowrap">
+                <i class="bi bi-funnel"></i> Filter
+            </button>
+            {% if search_query or status_filter %}
+            <a href="{{ url_for('campaigns.campaigns') }}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-colors text-center">
+                Clear
+            </a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+{% if campaigns %}
+<!-- Campaigns Table -->
+<div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                    <th class="text-left py-4 px-6 text-sm font-semibold text-gray-700 uppercase tracking-wider">Campaign</th>
+                    <th class="text-left py-4 px-4 text-sm font-semibold text-gray-700 uppercase tracking-wider">Agent</th>
+                    <th class="text-center py-4 px-4 text-sm font-semibold text-gray-700 uppercase tracking-wider">Status</th>
+                    <th class="text-center py-4 px-4 text-sm font-semibold text-gray-700 uppercase tracking-wider">Progress</th>
+                    <th class="text-center py-4 px-4 text-sm font-semibold text-gray-700 uppercase tracking-wider">Contacts</th>
+                    <th class="text-center py-4 px-4 text-sm font-semibold text-gray-700 uppercase tracking-wider">Interest</th>
+                    <th class="text-center py-4 px-4 text-sm font-semibold text-gray-700 uppercase tracking-wider">Created</th>
+                    <th class="text-right py-4 px-6 text-sm font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for campaign in campaigns %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <!-- Campaign Name & Description -->
+                    <td class="py-5 px-6">
+                        <div class="max-w-xs">
+                            <div class="text-lg font-bold text-gray-900 mb-1">{{ campaign.name }}</div>
+                            {% if campaign.description %}
+                            <p class="text-sm text-gray-600 line-clamp-2">{{ campaign.description[:80] }}{% if campaign.description|length > 80 %}...{% endif %}</p>
+                            {% else %}
+                            <p class="text-sm text-gray-400 italic">No description</p>
+                            {% endif %}
+                        </div>
+                    </td>
+                    
+                    <!-- Agent -->
+                    <td class="py-5 px-4">
+                        <div class="flex items-center gap-2">
+                            <i class="bi bi-robot text-indigo-600"></i>
+                            <div>
+                                <div class="text-sm font-medium text-gray-900">{{ campaign.agent.name }}</div>
+                                <div class="text-xs text-gray-500">{{ campaign.agent.voice_name or 'Default Voice' }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    
+                    <!-- Status -->
+                    <td class="py-5 px-4 text-center">
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap
+                            {% if campaign.status == 'running' %}bg-green-100 text-green-700
+                            {% elif campaign.status == 'paused' %}bg-amber-100 text-amber-700
+                            {% elif campaign.status == 'completed' %}bg-blue-100 text-blue-700
+                            {% elif campaign.status == 'stopped' %}bg-red-100 text-red-700
+                            {% else %}bg-gray-100 text-gray-700{% endif %}">
+                            {{ campaign.status.upper() }}
+                        </span>
+                    </td>
+                    
+                    <!-- Progress -->
+                    <td class="py-5 px-4 text-center">
+                        <div class="w-full max-w-[120px] mx-auto">
+                            <div class="flex items-center justify-between text-xs mb-1">
+                                <span class="text-gray-600 font-medium">{{ campaign.stats.progress }}%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                                <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 h-2 rounded-full transition-all duration-300" style="width: {{ campaign.stats.progress }}%"></div>
+                            </div>
+                        </div>
+                    </td>
+                    
+                    <!-- Contacts -->
+                    <td class="py-5 px-4 text-center">
+                        <div class="text-lg font-bold text-gray-900">{{ campaign.stats.processed }}/{{ campaign.stats.total }}</div>
+                        <div class="text-xs text-gray-500">
+                            {% if campaign.stats.pending > 0 %}{{ campaign.stats.pending }} pending{% endif %}
+                            {% if campaign.stats.failed > 0 or campaign.stats.no_answer > 0 %}{% if campaign.stats.pending > 0 %}, {% endif %}{{ campaign.stats.failed + campaign.stats.no_answer }} failed/no answer{% endif %}
+                        </div>
+                    </td>
+                    
+                    <!-- Interest -->
+                    <td class="py-5 px-4 text-center">
+                        {% if campaign.stats.interested > 0 or campaign.stats.not_interested > 0 %}
+                        <div class="flex items-center justify-center gap-3">
+                            <div class="text-center">
+                                <div class="text-sm font-bold text-green-600">{{ campaign.stats.interested }}</div>
+                                <div class="text-xs text-gray-500">Int.</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-sm font-bold text-gray-600">{{ campaign.stats.not_interested }}</div>
+                                <div class="text-xs text-gray-500">Not</div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <span class="text-sm text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                    
+                    <!-- Created Date -->
+                    <td class="py-5 px-4 text-center">
+                        <div class="text-sm text-gray-600">{{ campaign.created_at.strftime('%m/%d/%Y') }}</div>
+                        <div class="text-xs text-gray-500">{{ campaign.created_at.strftime('%H:%M') }}</div>
+                    </td>
+                    
+                    <!-- Actions -->
+                    <td class="py-5 px-6 text-right">
+                        <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-600 rounded-lg hover:bg-indigo-200 transition-colors font-medium text-sm">
+                            <i class="bi bi-eye"></i>
+                            View
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination Controls -->
+{% if pagination.pages > 1 %}
+<div class="flex items-center justify-center mt-8">
+    <div class="flex items-center gap-2">
+        {% if pagination.has_prev %}
+        <a href="{{ url_for('campaigns.campaigns', page=pagination.prev_num) }}" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
+            <i class="bi bi-chevron-left"></i> Previous
+        </a>
+        {% endif %}
+        
+        <span class="px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md">
+            Page {{ pagination.page }} of {{ pagination.pages }}
+        </span>
+        
+        {% if pagination.has_next %}
+        <a href="{{ url_for('campaigns.campaigns', page=pagination.next_num) }}" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
+            Next <i class="bi bi-chevron-right"></i>
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<!-- Empty State -->
+<div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="p-12 text-center">
+        <div class="flex items-center justify-center w-20 h-20 bg-indigo-100 rounded-full mx-auto mb-4">
+            <i class="bi bi-megaphone text-indigo-600 text-3xl"></i>
+        </div>
+        <h3 class="text-xl font-bold text-gray-900 mb-2">No Campaigns Yet</h3>
+        <p class="text-gray-600 mb-6">Create your first outbound campaign to start calling customers</p>
+        <a href="{{ url_for('campaigns.create_campaign') }}" class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors">
+            <i class="bi bi-plus-circle"></i>
+            Create First Campaign
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

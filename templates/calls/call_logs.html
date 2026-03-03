@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block title %}Call Logs — Tradiedee{% endblock %}
+
+{% block dashboard_content %}
+
+<!-- Page header -->
+<div class="ph">
+    <div>
+        <h1 class="ph-title">Call Logs</h1>
+        <p class="ph-sub">
+            {% if pagination %}{{ pagination.total }} total records{% else %}All call records{% endif %}
+        </p>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px;">
+        <button onclick="toggleFilters()" class="btn btn-secondary" id="filterBtn">
+            <i class="bi bi-funnel" style="font-size:12px;"></i> Filters
+            {% if filters.status or filters.call_type or filters.interest or filters.agent or filters.phone or filters.date_from or filters.date_to %}
+            <span class="badge badge-indigo" style="margin-left:4px; padding:1px 6px; font-size:10.5px;">Active</span>
+            {% endif %}
+        </button>
+        <button onclick="exportExcel()" class="btn btn-secondary">
+            <i class="bi bi-file-earmark-excel" style="font-size:12px; color:#059669;"></i> Export
+        </button>
+    </div>
+</div>
+
+<!-- Filters panel -->
+<div id="filtersPanel" class="card" style="margin-bottom:20px; {% if not (filters.status or filters.call_type or filters.interest or filters.agent or filters.phone or filters.date_from or filters.date_to) %}display:none;{% endif %}">
+    <form id="filterForm" method="GET" action="{{ url_for('core.call_logs') }}">
+        <input type="hidden" name="per_page" value="{{ per_page }}">
+        <div style="padding:16px 20px; border-bottom:1px solid var(--card-border);">
+            <p style="font-size:12px; font-weight:600; color:var(--t3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:12px;">Filter by</p>
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:12px;">
+                <div>
+                    <label style="display:block; font-size:12px; font-weight:500; color:var(--t3); margin-bottom:5px;">Status</label>
+                    <select name="status" class="inp inp-sm">
+                        <option value="">All Statuses</option>
+                        <option value="completed"  {% if filters.status == 'completed'  %}selected{% endif %}>Completed</option>
+                        <option value="no_answer"  {% if filters.status == 'no_answer'  %}selected{% endif %}>No Answer</option>
+                        <option value="failed"     {% if filters.status == 'failed'     %}selected{% endif %}>Failed</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-size:12px; font-weight:500; color:var(--t3); margin-bottom:5px;">Call Type</label>
+                    <select name="call_type" class="inp inp-sm">
+                        <option value="">All Types</option>
+                        <option value="inbound"  {% if filters.call_type == 'inbound'  %}selected{% endif %}>Inbound</option>
+                        <option value="outbound" {% if filters.call_type == 'outbound' %}selected{% endif %}>Outbound</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-size:12px; font-weight:500; color:var(--t3); margin-bottom:5px;">Interest</label>
+                    <select name="interest" class="inp inp-sm">
+                        <option value="">All</option>
+                        <option value="interested"     {% if filters.interest == 'interested'     %}selected{% endif %}>Interested</option>
+                        <option value="not_interested" {% if filters.interest == 'not_interested' %}selected{% endif %}>Not Interested</option>
+                        <option value="na"             {% if filters.interest == 'na'             %}selected{% endif %}>N/A</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-size:12px; font-weight:500; color:var(--t3); margin-bottom:5px;">Agent</label>
+                    <select name="agent" class="inp inp-sm">
+                        <option value="">All Agents</option>
+                        {% for agent in agents %}
+                        <option value="{{ agent.id }}" {% if filters.agent == agent.id|string %}selected{% endif %}>{{ agent.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-size:12px; font-weight:500; color:var(--t3); margin-bottom:5px;">Phone</label>
+                    <input type="text" name="phone" value="{{ filters.phone }}" placeholder="Search phone…" class="inp inp-sm">
+                </div>
+                <div>
+                    <label style="display:block; font-size:12px; font-weight:500; color:var(--t3); margin-bottom:5px;">From Date</label>
+                    <input type="date" name="date_from" value="{{ filters.date_from }}" class="inp inp-sm">
+                </div>
+                <div>
+                    <label style="display:block; font-size:12px; font-weight:500; color:var(--t3); margin-bottom:5px;">To Date</label>
+                    <input type="date" name="date_to" value="{{ filters.date_to }}" class="inp inp-sm">
+                </div>
+                <div>
+                    <label style="display:block; font-size:12px; font-weight:500; color:var(--t3); margin-bottom:5px;">Show</label>
+                    <select id="perPage" name="per_page" class="inp inp-sm" onchange="this.form.submit()">
+                        <option value="10"  {% if per_page == 10  %}selected{% endif %}>10 / page</option>
+                        <option value="25"  {% if per_page == 25  %}selected{% endif %}>25 / page</option>
+                        <option value="50"  {% if per_page == 50  %}selected{% endif %}>50 / page</option>
+                        <option value="100" {% if per_page == 100 %}selected{% endif %}>100 / page</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div style="padding:12px 20px; display:flex; align-items:center; gap:8px;">
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="bi bi-search" style="font-size:11px;"></i> Apply Filters
+            </button>
+            <a href="{{ url_for('core.call_logs', per_page=per_page) }}" class="btn btn-ghost btn-sm">
+                <i class="bi bi-x-circle" style="font-size:11px;"></i> Clear
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Table card -->
+{% if call_logs %}
+<div class="card" style="overflow:hidden;">
+    <div style="overflow-x:auto;">
+        <table class="tbl">
+            <thead>
+                <tr>
+                    <th>Agent</th>
+                    <th>To Number</th>
+                    <th>From Number</th>
+                    <th>Duration</th>
+                    <th>Interest</th>
+                    <th>Type</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th style="text-align:right;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in call_logs %}
+                <tr>
+                    <!-- Agent -->
+                    <td>
+                        {% if log.agent %}
+                        <a href="{{ url_for('agents.view_agent', agent_id=log.agent_id) }}" class="link" style="font-size:13.5px;">
+                            {{ log.agent.name }}
+                        </a>
+                        {% else %}
+                        <span style="color:var(--t4);">—</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- To number -->
+                    <td style="font-weight:500; color:var(--t1); font-family:monospace; font-size:13px;">{{ log.to_number }}</td>
+
+                    <!-- From number -->
+                    <td style="color:var(--t3); font-family:monospace; font-size:13px;">{{ log.from_number or '—' }}</td>
+
+                    <!-- Duration + messages -->
+                    <td>
+                        {% set msg_count = (log.transcription_data|from_json).get('message_count', 0) if log.transcription_data and log.transcription_data != '{}' else 0 %}
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            {% if log.status == 'completed' %}
+                            <span style="color:var(--t2);">
+                                <i class="bi bi-clock" style="font-size:11px; color:var(--t4);"></i> {{ (log.duration_seconds / 60) | round(1) }}m
+                            </span>
+                            {% else %}
+                            <span style="color:var(--t4);">—</span>
+                            {% endif %}
+                            {% if msg_count > 0 %}
+                            <span style="color:#2563EB; font-size:12.5px;">
+                                <i class="bi bi-chat-dots" style="font-size:11px;"></i> {{ msg_count }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <!-- Interest -->
+                    <td>
+                        {% if log.status in ['no_answer', 'failed'] %}
+                            <span style="color:var(--t4);">—</span>
+                        {% else %}
+                            {% set idata = log.sentiment_summary|from_json if log.sentiment_summary and log.sentiment_summary != '{}' else {} %}
+                            {% if idata and 'interest' in idata %}
+                                {% if idata.get('interest') == 'Interested' %}
+                                    <span class="badge badge-green"><i class="bi bi-hand-thumbs-up" style="font-size:10px;"></i> </span>
+                                {% else %}
+                                    <span class="badge badge-red"><i class="bi bi-hand-thumbs-down" style="font-size:10px;"></i> </span>
+                                {% endif %}
+                            {% else %}
+                                <span style="color:var(--t4);">—</span>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+
+                    <!-- Call type -->
+                    <td>
+                        {% if log.call_type == 'inbound' %}
+                            <span class="badge badge-blue">Inbound</span>
+                        {% else %}
+                            <span class="badge badge-indigo">Outbound</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Date -->
+                    <td style="color:var(--t3); white-space:nowrap; font-size:13px;">
+                        {{ log.created_at.strftime('%b %d, %Y  %H:%M') }}
+                    </td>
+
+                    <!-- Status -->
+                    <td>
+                        {% if log.status == 'completed' %}
+                            <span class="badge badge-green"><i class="bi bi-check-circle" style="font-size:10px;"></i> Completed</span>
+                        {% elif log.status == 'no_answer' %}
+                            <span class="badge badge-amber">No Answer</span>
+                        {% elif log.status == 'failed' %}
+                            <span class="badge badge-red">Failed</span>
+                        {% else %}
+                            <span class="badge badge-gray">{{ log.status }}</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Action -->
+                    <td style="text-align:right;">
+                        <a href="{{ url_for('core.view_call_log', log_id=log.id) }}" class="btn btn-ghost btn-sm">
+                            View <i class="bi bi-arrow-right" style="font-size:10px;"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if pagination and pagination.pages > 1 %}
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-top:1px solid var(--card-border); background:#FAFAFA;">
+        <p style="font-size:12.5px; color:var(--t3);">
+            Showing <strong style="color:var(--t1);">{{ pagination.per_page * (pagination.page - 1) + 1 }}</strong>–<strong style="color:var(--t1);">{{ [pagination.per_page * pagination.page, pagination.total]|min }}</strong>
+            of <strong style="color:var(--t1);">{{ pagination.total }}</strong>
+        </p>
+        <div class="pag">
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('core.call_logs', page=1, per_page=per_page, status=filters.status, call_type=filters.call_type, interest=filters.interest, agent=filters.agent, phone=filters.phone, date_from=filters.date_from, date_to=filters.date_to) }}">
+                <i class="bi bi-chevron-bar-left"></i>
+            </a>
+            <a href="{{ url_for('core.call_logs', page=pagination.prev_num, per_page=per_page, status=filters.status, call_type=filters.call_type, interest=filters.interest, agent=filters.agent, phone=filters.phone, date_from=filters.date_from, date_to=filters.date_to) }}">
+                <i class="bi bi-chevron-left"></i> Prev
+            </a>
+            {% else %}
+            <span class="dis"><i class="bi bi-chevron-bar-left"></i></span>
+            <span class="dis"><i class="bi bi-chevron-left"></i> Prev</span>
+            {% endif %}
+
+            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if page_num %}
+                    {% if page_num == pagination.page %}
+                    <span class="cur">{{ page_num }}</span>
+                    {% else %}
+                    <a href="{{ url_for('core.call_logs', page=page_num, per_page=per_page, status=filters.status, call_type=filters.call_type, interest=filters.interest, agent=filters.agent, phone=filters.phone, date_from=filters.date_from, date_to=filters.date_to) }}">{{ page_num }}</a>
+                    {% endif %}
+                {% else %}
+                <span class="dis" style="border:none;background:none;">…</span>
+                {% endif %}
+            {% endfor %}
+
+            {% if pagination.has_next %}
+            <a href="{{ url_for('core.call_logs', page=pagination.next_num, per_page=per_page, status=filters.status, call_type=filters.call_type, interest=filters.interest, agent=filters.agent, phone=filters.phone, date_from=filters.date_from, date_to=filters.date_to) }}">
+                Next <i class="bi bi-chevron-right"></i>
+            </a>
+            <a href="{{ url_for('core.call_logs', page=pagination.pages, per_page=per_page, status=filters.status, call_type=filters.call_type, interest=filters.interest, agent=filters.agent, phone=filters.phone, date_from=filters.date_from, date_to=filters.date_to) }}">
+                <i class="bi bi-chevron-bar-right"></i>
+            </a>
+            {% else %}
+            <span class="dis">Next <i class="bi bi-chevron-right"></i></span>
+            <span class="dis"><i class="bi bi-chevron-bar-right"></i></span>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% else %}
+<div class="card">
+    <div class="empty">
+        <div class="empty-icon">
+            <i class="bi bi-telephone-x" style="font-size:22px; color:#9CA3AF;"></i>
+        </div>
+        <p style="font-size:14px; font-weight:600; color:var(--t1); margin-bottom:4px;">No call logs found</p>
+        <p style="font-size:13px; color:var(--t3); margin-bottom:20px;">
+            {% if filters.status or filters.call_type or filters.interest or filters.agent or filters.phone or filters.date_from or filters.date_to %}
+            No records match your filters. Try adjusting them.
+            {% else %}
+            Your call history will appear here once you make calls with your agents.
+            {% endif %}
+        </p>
+        <a href="{{ url_for('core.dashboard') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left" style="font-size:11px;"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleFilters() {
+    const p = document.getElementById('filtersPanel');
+    p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+function exportExcel() {
+    const form = document.getElementById('filterForm');
+    if (!form) { window.location.href = "{{ url_for('core.export_call_logs') }}"; return; }
+    const params = new URLSearchParams(new FormData(form));
+    params.delete('per_page');
+    window.location.href = "{{ url_for('core.export_call_logs') }}?" + params.toString();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics{% endblock %}
+{% block breadcrumb_parent %}Overview{% endblock %}
+{% block breadcrumb_current %}Analytics{% endblock %}
+
+{% block extra_css %}
+<style>
+    .metric-card { position: relative; overflow: hidden; }
+    .metric-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 12px 12px 0 0; }
+    .metric-card.purple::before { background: linear-gradient(90deg, #4F46E5, #a78bfa); }
+    .metric-card.green::before { background: linear-gradient(90deg, #059669, #34d399); }
+    .metric-card.blue::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .metric-card.amber::before { background: linear-gradient(90deg, #d97706, #fbbf24); }
+    .progress-track { height: 6px; border-radius: 3px; background: #f3f4f6; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<!-- Header -->
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-xl font-bold text-gray-900">Analytics</h1>
+        <p class="text-sm text-gray-500 mt-0.5">Track performance across your voice agents</p>
+    </div>
+    <div class="flex items-center gap-2">
+        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Period</span>
+        <select id="dateRange" onchange="changeDateRange(this.value)"
+                class="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-nevox-500/20 focus:border-nevox-400 outline-none bg-white font-medium text-gray-700 cursor-pointer">
+            <option value="12" {% if selected_range == '12' %}selected{% endif %}>Last 12 Hours</option>
+            <option value="24" {% if selected_range == '24' %}selected{% endif %}>Last 24 Hours</option>
+            <option value="7" {% if selected_range == '7' %}selected{% endif %}>Last 7 Days</option>
+            <option value="30" {% if selected_range == '30' %}selected{% endif %}>Last 30 Days</option>
+            <option value="90" {% if selected_range == '90' %}selected{% endif %}>Last 90 Days</option>
+            <option value="all" {% if selected_range == 'all' %}selected{% endif %}>All Time</option>
+        </select>
+    </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="metric-card purple bg-white rounded-xl border border-gray-200/80 p-5 card-hover">
+        <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-xl bg-nevox-50 flex items-center justify-center">
+                <i class="bi bi-telephone text-nevox-600" style="font-size: 1.125rem;"></i>
+            </div>
+            <span class="text-[0.6rem] font-bold uppercase tracking-wider text-gray-400 bg-gray-100 px-2 py-0.5 rounded">{{ range_label }}</span>
+        </div>
+        <p class="text-2xl font-bold text-gray-900">{{ total_calls }}</p>
+        <p class="text-xs text-gray-500 mt-1">Total Calls</p>
+    </div>
+
+    <div class="metric-card green bg-white rounded-xl border border-gray-200/80 p-5 card-hover">
+        <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                <i class="bi bi-check-circle text-emerald-600" style="font-size: 1.125rem;"></i>
+            </div>
+            <span class="text-[0.6rem] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">Good</span>
+        </div>
+        <p class="text-2xl font-bold text-gray-900">{{ success_rate }}%</p>
+        <p class="text-xs text-gray-500 mt-1">Success Rate</p>
+    </div>
+
+    <div class="metric-card blue bg-white rounded-xl border border-gray-200/80 p-5 card-hover">
+        <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                <i class="bi bi-clock-history text-blue-600" style="font-size: 1.125rem;"></i>
+            </div>
+        </div>
+        <p class="text-2xl font-bold text-gray-900">{{ avg_duration }}s</p>
+        <p class="text-xs text-gray-500 mt-1">Avg Call Duration</p>
+    </div>
+
+    <div class="metric-card amber bg-white rounded-xl border border-gray-200/80 p-5 card-hover">
+        <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+                <i class="bi bi-star text-amber-600" style="font-size: 1.125rem;"></i>
+            </div>
+            <span class="text-[0.6rem] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded">Conversion</span>
+        </div>
+        <p class="text-2xl font-bold text-gray-900">{{ interest_rate }}%</p>
+        <p class="text-xs text-gray-500 mt-1">Interest Rate</p>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+    <!-- Trend -->
+    <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200/80 p-5">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-nevox-50 flex items-center justify-center">
+                    <i class="bi bi-graph-up text-nevox-600" style="font-size: 0.8rem;"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-gray-900">Calls Trend</h3>
+                    <p class="text-[0.65rem] text-gray-400">Daily volume over {{ range_label.lower() }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="h-56">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Status Doughnut -->
+    <div class="bg-white rounded-xl border border-gray-200/80 p-5">
+        <div class="flex items-center gap-2.5 mb-4">
+            <div class="w-8 h-8 rounded-lg bg-nevox-50 flex items-center justify-center">
+                <i class="bi bi-pie-chart text-nevox-600" style="font-size: 0.8rem;"></i>
+            </div>
+            <div>
+                <h3 class="text-sm font-bold text-gray-900">Call Status</h3>
+                <p class="text-[0.65rem] text-gray-400">Breakdown by outcome</p>
+            </div>
+        </div>
+        <div class="h-56 flex items-center justify-center">
+            <canvas id="statusChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Call Type & Interest -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+    <!-- Call Type -->
+    <div class="bg-white rounded-xl border border-gray-200/80 p-5">
+        <div class="flex items-center gap-2.5 mb-5">
+            <div class="w-8 h-8 rounded-lg bg-nevox-50 flex items-center justify-center">
+                <i class="bi bi-arrow-left-right text-nevox-600" style="font-size: 0.8rem;"></i>
+            </div>
+            <h3 class="text-sm font-bold text-gray-900">Call Type Distribution</h3>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-xs font-semibold text-gray-600">Inbound</span>
+                    <span class="text-xs font-bold text-nevox-600">{{ inbound_calls }}</span>
+                </div>
+                <div class="progress-track">
+                    {% set inbound_pct = (inbound_calls / total_calls * 100) if total_calls > 0 else 0 %}
+                    <div class="progress-fill bg-gradient-to-r from-nevox-600 to-nevox-400" style="width: {{ inbound_pct }}%"></div>
+                </div>
+            </div>
+            <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-xs font-semibold text-gray-600">Outbound</span>
+                    <span class="text-xs font-bold text-blue-600">{{ outbound_calls }}</span>
+                </div>
+                <div class="progress-track">
+                    {% set outbound_pct = (outbound_calls / total_calls * 100) if total_calls > 0 else 0 %}
+                    <div class="progress-fill bg-gradient-to-r from-blue-500 to-blue-400" style="width: {{ outbound_pct }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interest -->
+    <div class="bg-white rounded-xl border border-gray-200/80 p-5">
+        <div class="flex items-center gap-2.5 mb-5">
+            <div class="w-8 h-8 rounded-lg bg-nevox-50 flex items-center justify-center">
+                <i class="bi bi-hand-thumbs-up text-nevox-600" style="font-size: 0.8rem;"></i>
+            </div>
+            <h3 class="text-sm font-bold text-gray-900">Customer Interest</h3>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-xs font-semibold text-gray-600">Interested</span>
+                    <span class="text-xs font-bold text-emerald-600">{{ interested_count }}</span>
+                </div>
+                <div class="progress-track">
+                    {% set interested_pct = (interested_count / (interested_count + not_interested_count) * 100) if (interested_count + not_interested_count) > 0 else 0 %}
+                    <div class="progress-fill bg-gradient-to-r from-emerald-500 to-emerald-400" style="width: {{ interested_pct }}%"></div>
+                </div>
+            </div>
+            <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-xs font-semibold text-gray-600">Not Interested</span>
+                    <span class="text-xs font-bold text-gray-500">{{ not_interested_count }}</span>
+                </div>
+                <div class="progress-track">
+                    {% set not_interested_pct = (not_interested_count / (interested_count + not_interested_count) * 100) if (interested_count + not_interested_count) > 0 else 0 %}
+                    <div class="progress-fill bg-gray-400" style="width: {{ not_interested_pct }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Agent Performance -->
+{% if agent_performance %}
+<div class="bg-white rounded-xl border border-gray-200/80 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-nevox-50 flex items-center justify-center">
+            <i class="bi bi-robot text-nevox-600" style="font-size: 0.8rem;"></i>
+        </div>
+        <div>
+            <h3 class="text-sm font-bold text-gray-900">Agent Performance</h3>
+            <p class="text-[0.65rem] text-gray-400">Per-agent breakdown</p>
+        </div>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b border-gray-100 bg-gray-50/60">
+                    <th class="text-left py-3 px-5 text-[0.65rem] font-bold text-gray-400 uppercase tracking-wider">Agent</th>
+                    <th class="text-center py-3 px-5 text-[0.65rem] font-bold text-gray-400 uppercase tracking-wider">Calls</th>
+                    <th class="text-center py-3 px-5 text-[0.65rem] font-bold text-gray-400 uppercase tracking-wider">Success</th>
+                    <th class="text-center py-3 px-5 text-[0.65rem] font-bold text-gray-400 uppercase tracking-wider">Interest</th>
+                    <th class="text-center py-3 px-5 text-[0.65rem] font-bold text-gray-400 uppercase tracking-wider">Avg Duration</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for perf in agent_performance %}
+                <tr class="border-b border-gray-50 hover:bg-gray-50/70 transition-colors">
+                    <td class="py-3 px-5">
+                        <a href="{{ url_for('agents.view_agent', agent_id=perf.agent.id) }}" class="inline-flex items-center gap-2 group">
+                            <div class="w-6 h-6 rounded-md bg-nevox-50 flex items-center justify-center flex-shrink-0">
+                                <i class="bi bi-robot text-nevox-500" style="font-size: 0.6rem;"></i>
+                            </div>
+                            <span class="text-sm font-semibold text-nevox-600 group-hover:text-nevox-700 transition-colors">{{ perf.agent.name }}</span>
+                        </a>
+                    </td>
+                    <td class="py-3 px-5 text-center">
+                        <span class="text-sm font-bold text-gray-900">{{ perf.total_calls }}</span>
+                    </td>
+                    <td class="py-3 px-5 text-center">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[0.65rem] font-bold
+                            {% if perf.success_rate >= 70 %}bg-emerald-50 text-emerald-600 border border-emerald-100
+                            {% elif perf.success_rate >= 50 %}bg-amber-50 text-amber-600 border border-amber-100
+                            {% else %}bg-red-50 text-red-500 border border-red-100{% endif %}">
+                            {{ perf.success_rate }}%
+                        </span>
+                    </td>
+                    <td class="py-3 px-5 text-center">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[0.65rem] font-bold
+                            {% if perf.interest_rate >= 30 %}bg-emerald-50 text-emerald-600 border border-emerald-100
+                            {% elif perf.interest_rate >= 15 %}bg-amber-50 text-amber-600 border border-amber-100
+                            {% else %}bg-gray-100 text-gray-500{% endif %}">
+                            {{ perf.interest_rate }}%
+                        </span>
+                    </td>
+                    <td class="py-3 px-5 text-center">
+                        <span class="text-sm text-gray-600 font-medium">{{ perf.avg_duration }}s</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+function changeDateRange(range) {
+    window.location.href = '{{ url_for("core.analytics") }}?range=' + range;
+}
+
+// Trend Chart
+new Chart(document.getElementById('trendChart').getContext('2d'), {
+    type: 'line',
+    data: {
+        labels: {{ trend_labels|safe }},
+        datasets: [{
+            label: 'Calls',
+            data: {{ trend_data|safe }},
+            borderColor: '#4F46E5',
+            backgroundColor: 'rgba(79, 70, 229, 0.06)',
+            tension: 0.4,
+            fill: true,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            pointBackgroundColor: '#4F46E5',
+            borderWidth: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: { backgroundColor: '#0B0F1E', padding: 10, titleFont: { size: 12, weight: '600' }, bodyFont: { size: 11 }, cornerRadius: 8 }
+        },
+        scales: {
+            y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.04)' } },
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+        }
+    }
+});
+
+// Status Doughnut
+const statusData = {{ status_data|safe }};
+new Chart(document.getElementById('statusChart').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Completed', 'No Answer', 'Failed'],
+        datasets: [{
+            data: [statusData.completed, statusData.no_answer, statusData.failed],
+            backgroundColor: ['#059669', '#f59e0b', '#ef4444'],
+            borderWidth: 2,
+            borderColor: '#fff',
+            borderRadius: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: {
+            legend: { position: 'bottom', labels: { padding: 12, font: { size: 11, weight: '600' }, usePointStyle: true, pointStyle: 'circle' } },
+            tooltip: {
+                backgroundColor: '#0B0F1E', padding: 10, cornerRadius: 8,
+                callbacks: { label: ctx => { const v = ctx.parsed; const t = ctx.dataset.data.reduce((a,b) => a+b, 0); return `${ctx.label}: ${v} (${t > 0 ? ((v/t)*100).toFixed(1) : 0}%)`; } }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

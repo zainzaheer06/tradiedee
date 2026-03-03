@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Tradiedee{% endblock %}
+
+{% block dashboard_content %}
+
+<!-- Page header -->
+<div class="ph">
+    <div>
+        <h1 class="ph-title">Dashboard</h1>
+        <p class="ph-sub">
+            {% if business %}
+                {{ business.business_name }} — Today's overview
+            {% else %}
+                Welcome to Tradiedee
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<!-- Stats row -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:28px;">
+
+    <!-- Total Calls Today -->
+    <a href="{{ url_for('core.call_logs') }}" style="text-decoration:none; display:block;">
+        <div class="stat card-hover" style="height:100%; border-left:4px solid #2563EB;">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between;">
+                <div style="flex:1;">
+                    <p class="stat-label">Calls Today</p>
+                    <p class="stat-val">{{ stats.total_calls_today }}</p>
+                    <p class="stat-note">View call logs <i class="bi bi-arrow-right" style="font-size:10px;"></i></p>
+                </div>
+                <div class="stat-icon" style="background:linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);">
+                    <i class="bi bi-telephone-fill" style="color:#2563EB; font-size:20px;"></i>
+                </div>
+            </div>
+        </div>
+    </a>
+
+    <!-- Jobs Booked Today -->
+    <a href="{{ url_for('jobs.job_dashboard') }}" style="text-decoration:none; display:block;">
+        <div class="stat card-hover" style="height:100%; border-left:4px solid #059669;">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between;">
+                <div style="flex:1;">
+                    <p class="stat-label">Jobs Booked</p>
+                    <p class="stat-val">{{ stats.jobs_today }}</p>
+                    <p class="stat-note">View all jobs <i class="bi bi-arrow-right" style="font-size:10px;"></i></p>
+                </div>
+                <div class="stat-icon" style="background:linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);">
+                    <i class="bi bi-briefcase-fill" style="color:#059669; font-size:20px;"></i>
+                </div>
+            </div>
+        </div>
+    </a>
+
+    <!-- Emergency Jobs -->
+    <div class="stat" style="border-left:4px solid #DC2626;">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between;">
+            <div style="flex:1;">
+                <p class="stat-label">Emergencies</p>
+                <p class="stat-val" style="{% if stats.emergencies > 0 %}color:#DC2626;{% endif %}">{{ stats.emergencies }}</p>
+                <p class="stat-note">
+                    {% if stats.emergencies > 0 %}
+                        <span style="color:#DC2626; font-weight:600;">Needs attention</span>
+                    {% else %}
+                        No emergencies today
+                    {% endif %}
+                </p>
+            </div>
+            <div class="stat-icon" style="background:linear-gradient(135deg, #FEF2F2 0%, #FECACA 100%);">
+                <i class="bi bi-exclamation-triangle-fill" style="color:#DC2626; font-size:20px;"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Missed Calls Saved -->
+    <div class="stat" style="border-left:4px solid #D97706;">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between;">
+            <div style="flex:1;">
+                <p class="stat-label">Calls Saved</p>
+                <p class="stat-val">{{ stats.missed_calls_saved }}</p>
+                <p class="stat-note">Answered by AI, no booking</p>
+            </div>
+            <div class="stat-icon" style="background:linear-gradient(135deg, #FFFBEB 0%, #FDE68A 100%);">
+                <i class="bi bi-shield-check" style="color:#D97706; font-size:20px;"></i>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Recent Jobs -->
+<div class="card" style="margin-bottom:24px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:18px 24px; border-bottom:1px solid var(--card-border);">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <i class="bi bi-briefcase" style="font-size:16px; color:#059669;"></i>
+            <span style="font-size:15px; font-weight:700; color:var(--t1);">Recent Jobs</span>
+        </div>
+        {% if recent_jobs %}
+        <a href="{{ url_for('jobs.job_dashboard') }}" class="btn btn-ghost btn-sm" style="font-size:12px;">
+            View all <i class="bi bi-arrow-right" style="font-size:10px; margin-left:4px;"></i>
+        </a>
+        {% endif %}
+    </div>
+
+    {% if recent_jobs %}
+    <div style="overflow-x:auto;">
+        <table class="tbl">
+            <thead>
+                <tr>
+                    <th>Customer</th>
+                    <th>Service</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Created</th>
+                    <th style="text-align:right;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in recent_jobs %}
+                <tr>
+                    <td>
+                        <div style="font-weight:600; color:var(--t1);">{{ job.customer_name or 'Unknown' }}</div>
+                        <div style="font-size:12px; color:var(--t3);">{{ job.customer_phone or '' }}</div>
+                    </td>
+                    <td>
+                        <span class="badge badge-gray">{{ job.job_type or 'General' }}</span>
+                    </td>
+                    <td>
+                        {% if job.status == 'completed' %}
+                            <span class="badge badge-green">Completed</span>
+                        {% elif job.status == 'in_progress' %}
+                            <span class="badge badge-blue">In Progress</span>
+                        {% elif job.status == 'scheduled' %}
+                            <span class="badge badge-indigo">Scheduled</span>
+                        {% elif job.status == 'new' %}
+                            <span class="badge badge-amber">New</span>
+                        {% else %}
+                            <span class="badge badge-gray">{{ job.status.replace('_', ' ').title() }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if job.is_emergency %}
+                            <span class="badge badge-red">Emergency</span>
+                        {% else %}
+                            <span style="color:var(--t3); font-size:12px;">Normal</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:12px; color:var(--t3);">
+                        {{ job.created_at.strftime('%b %d, %H:%M') }}
+                    </td>
+                    <td style="text-align:right;">
+                        <a href="{{ url_for('jobs.view_job', job_id=job.id) }}" class="btn btn-ghost btn-sm" style="padding:6px 10px;">
+                            <i class="bi bi-arrow-right" style="font-size:12px;"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty" style="padding:48px 24px;">
+        <div class="empty-icon" style="margin-bottom:16px;">
+            <i class="bi bi-briefcase" style="font-size:22px; color:var(--t4);"></i>
+        </div>
+        <p style="font-size:14px; font-weight:600; color:var(--t1); margin-bottom:6px;">No jobs yet</p>
+        <p style="font-size:13px; color:var(--t3); margin-bottom:20px;">Incoming calls will automatically create jobs here.</p>
+        <a href="{{ url_for('test_agent.test_agent_page') }}" class="btn btn-primary btn-sm">
+            <i class="bi bi-headset" style="font-size:12px;"></i> Test Your Agent
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Quick Links -->
+<div style="display:flex; gap:12px; flex-wrap:wrap;">
+    <a href="{{ url_for('jobs.job_dashboard') }}" class="btn btn-secondary">
+        <i class="bi bi-briefcase" style="font-size:13px;"></i> All Jobs
+    </a>
+    <a href="{{ url_for('core.call_logs') }}" class="btn btn-secondary">
+        <i class="bi bi-telephone" style="font-size:13px;"></i> Call Logs
+    </a>
+    <a href="{{ url_for('test_agent.test_agent_page') }}" class="btn btn-secondary">
+        <i class="bi bi-headset" style="font-size:13px;"></i> Test Agent
+    </a>
+    {% if business %}
+    <a href="{{ url_for('business_setup.edit_business') }}" class="btn btn-secondary">
+        <i class="bi bi-gear" style="font-size:13px;"></i> Business Settings
+    </a>
+    {% else %}
+    <a href="{{ url_for('business_setup.setup') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg" style="font-size:12px;"></i> Setup Business
+    </a>
+    {% endif %}
+</div>
+
+{% endblock %}

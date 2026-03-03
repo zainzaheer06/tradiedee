@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block dashboard_content %}
+
+<!-- Header -->
+<div class="mb-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-xl font-semibold text-gray-900">Dashboard</h1>
+            <p class="text-sm text-gray-500 mt-0.5">Overview of your account activity</p>
+        </div>
+        <a href="{{ url_for('agents.new_agent_form') }}" class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+            <i class="bi bi-plus-lg" style="font-size: 0.75rem;"></i> New Agent
+        </a>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <!-- Minutes Balance -->
+    <div class="bg-white rounded-lg border border-gray-200 p-5">
+        <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Minutes Balance</span>
+            <div class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                <i class="bi bi-clock text-indigo-600" style="font-size: 0.875rem;"></i>
+            </div>
+        </div>
+        <p class="text-2xl font-semibold text-gray-900">{{ user.minutes_balance }}</p>
+        <p class="text-xs mt-2 {% if user.minutes_balance < 100 %}text-amber-600{% else %}text-gray-400{% endif %}">
+            {% if user.minutes_balance < 100 %}<i class="bi bi-exclamation-circle"></i> Low balance{% else %}Available minutes{% endif %}
+        </p>
+    </div>
+
+    <!-- Agents -->
+    <a href="{{ url_for('agents.create_agent') }}" class="bg-white rounded-lg border border-gray-200 p-5 hover:border-gray-300 transition-colors group block">
+        <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Agents</span>
+            <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                <i class="bi bi-robot text-blue-600" style="font-size: 0.875rem;"></i>
+            </div>
+        </div>
+        <p class="text-2xl font-semibold text-gray-900">{{ agents|length }}</p>
+        <p class="text-xs text-indigo-600 mt-2 flex items-center gap-1 group-hover:gap-1.5 transition-all">
+            Manage agents <i class="bi bi-arrow-right" style="font-size: 0.625rem;"></i>
+        </p>
+    </a>
+
+    <!-- Total Calls -->
+    <a href="{{ url_for('core.call_logs') }}" class="bg-white rounded-lg border border-gray-200 p-5 hover:border-gray-300 transition-colors group block">
+        <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Calls</span>
+            <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                <i class="bi bi-telephone text-emerald-600" style="font-size: 0.875rem;"></i>
+            </div>
+        </div>
+        <p class="text-2xl font-semibold text-gray-900">{{ total_calls }}</p>
+        <p class="text-xs text-indigo-600 mt-2 flex items-center gap-1 group-hover:gap-1.5 transition-all">
+            View all logs <i class="bi bi-arrow-right" style="font-size: 0.625rem;"></i>
+        </p>
+    </a>
+</div>
+
+<!-- Recent Calls -->
+<div class="bg-white rounded-lg border border-gray-200">
+    <div class="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-gray-900">Recent Calls</h2>
+        {% if recent_calls %}
+        <a href="{{ url_for('core.call_logs') }}" class="text-xs text-indigo-600 hover:text-indigo-700 font-medium">View all &rarr;</a>
+        {% endif %}
+    </div>
+
+    {% if recent_calls %}
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b border-gray-100 bg-gray-50/50">
+                    <th class="text-left py-2.5 px-5 text-xs font-medium text-gray-500">To Number</th>
+                    <th class="text-left py-2.5 px-5 text-xs font-medium text-gray-500">Duration</th>
+                    <th class="text-left py-2.5 px-5 text-xs font-medium text-gray-500">Minutes</th>
+                    <th class="text-left py-2.5 px-5 text-xs font-medium text-gray-500">Date</th>
+                    <th class="text-left py-2.5 px-5 text-xs font-medium text-gray-500">Status</th>
+                    <th class="text-right py-2.5 px-5 text-xs font-medium text-gray-500"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+                {% for call in recent_calls[:10] %}
+                <tr class="hover:bg-gray-50/50 transition-colors">
+                    <td class="py-2.5 px-5">
+                        <span class="text-sm font-medium text-gray-900">{{ call.to_number }}</span>
+                    </td>
+                    <td class="py-2.5 px-5">
+                        <span class="text-sm text-gray-600">{{ call.duration_seconds }}s</span>
+                    </td>
+                    <td class="py-2.5 px-5">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">{{ call.minutes_used }} min</span>
+                    </td>
+                    <td class="py-2.5 px-5">
+                        <span class="text-sm text-gray-500">{{ call.created_at.strftime('%b %d, %Y %H:%M') }}</span>
+                    </td>
+                    <td class="py-2.5 px-5">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            {{ call.status }}
+                        </span>
+                    </td>
+                    <td class="py-2.5 px-5 text-right">
+                        <a href="{{ url_for('core.view_call_log', log_id=call.id) }}" class="text-gray-400 hover:text-indigo-600 transition-colors">
+                            <i class="bi bi-arrow-right" style="font-size: 0.875rem;"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-14 px-6">
+        <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+            <i class="bi bi-telephone text-gray-400" style="font-size: 1.25rem;"></i>
+        </div>
+        <h3 class="text-sm font-semibold text-gray-900 mb-1">No calls yet</h3>
+        <p class="text-sm text-gray-500 mb-5">Create an agent and make your first call to get started</p>
+        <a href="{{ url_for('agents.new_agent_form') }}" class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+            <i class="bi bi-plus-lg" style="font-size: 0.75rem;"></i> Create Agent
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

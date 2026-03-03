@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+{% block title %}Edit Integration — Nevox AI{% endblock %}
+
+{% block dashboard_content %}
+
+<style>
+.param-builder-row { display:grid; grid-template-columns:160px 100px 1fr 64px 32px; gap:8px; align-items:center; }
+</style>
+
+<div style="margin-bottom:20px;">
+    <a href="{{ url_for('core.tools_list') }}" class="btn btn-ghost btn-sm" style="padding-left:0;">
+        <i class="bi bi-arrow-left" style="font-size:12px;"></i> Back to Integrations
+    </a>
+</div>
+
+<div style="max-width:700px; margin:0 auto;">
+    <div class="ph" style="margin-bottom:20px;">
+        <div>
+            <h1 class="ph-title">Edit Integration</h1>
+            <p class="ph-sub">Modify <strong>{{ tool.name }}</strong></p>
+        </div>
+    </div>
+
+    <form method="POST" id="toolForm" style="display:flex; flex-direction:column; gap:16px;">
+
+        <!-- Basic Information -->
+        <div class="card">
+            <div style="padding:14px 20px; border-bottom:1px solid var(--card-border);">
+                <p style="font-size:14px; font-weight:600; color:var(--t1);">Basic Information</p>
+            </div>
+            <div style="padding:20px 24px; display:flex; flex-direction:column; gap:16px;">
+                <div>
+                    <label for="name" style="display:block; font-size:12.5px; font-weight:600; color:var(--t2); margin-bottom:6px;">
+                        Tool Name <span style="color:var(--red);">*</span>
+                    </label>
+                    <input type="text" id="name" name="name" value="{{ tool.name }}" required class="inp">
+                </div>
+                <div>
+                    <label for="description" style="display:block; font-size:12.5px; font-weight:600; color:var(--t2); margin-bottom:6px;">
+                        Description <span style="color:var(--red);">*</span>
+                    </label>
+                    <textarea id="description" name="description" rows="3" required class="inp">{{ tool.description }}</textarea>
+                </div>
+                <div>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                        <input type="checkbox" id="is_active" name="is_active" {% if tool.is_active %}checked{% endif %}
+                               style="width:15px; height:15px; accent-color:#4F46E5;">
+                        <span style="font-size:13px; color:var(--t2);">Tool is active</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tool Type (read-only) -->
+        <div class="card">
+            <div style="padding:14px 20px; border-bottom:1px solid var(--card-border);">
+                <p style="font-size:14px; font-weight:600; color:var(--t1);">Tool Type</p>
+            </div>
+            <div style="padding:14px 20px;">
+                <div style="display:inline-flex; align-items:center; gap:10px; padding:10px 16px; background:#F9FAFB; border:1px solid var(--card-border); border-radius:8px;">
+                    {% if tool.tool_type == 'api_call' %}
+                        <div style="width:32px; height:32px; background:#EFF6FF; border-radius:7px; display:flex; align-items:center; justify-content:center;">
+                            <i class="bi bi-cloud-arrow-up" style="color:#2563EB; font-size:14px;"></i>
+                        </div>
+                        <span style="font-size:13.5px; font-weight:600; color:var(--t1);">API Call</span>
+                    {% elif tool.tool_type == 'webhook' %}
+                        <div style="width:32px; height:32px; background:#ECFDF5; border-radius:7px; display:flex; align-items:center; justify-content:center;">
+                            <i class="bi bi-webhook" style="color:#059669; font-size:14px;"></i>
+                        </div>
+                        <span style="font-size:13.5px; font-weight:600; color:var(--t1);">Webhook</span>
+                    {% else %}
+                        <div style="width:32px; height:32px; background:#EEF2FF; border-radius:7px; display:flex; align-items:center; justify-content:center;">
+                            <i class="bi bi-lightning-charge" style="color:#4F46E5; font-size:14px;"></i>
+                        </div>
+                        <span style="font-size:13.5px; font-weight:600; color:var(--t1);">RPC</span>
+                    {% endif %}
+                </div>
+                <p style="font-size:11.5px; color:var(--t4); margin-top:8px;">Tool type cannot be changed after creation</p>
+            </div>
+        </div>
+
+        <!-- Parameters (visual builder) -->
+        <div class="card">
+            <div style="padding:14px 20px; border-bottom:1px solid var(--card-border); display:flex; align-items:center; justify-content:space-between;">
+                <div>
+                    <p style="font-size:14px; font-weight:600; color:var(--t1);">Parameters <span style="font-size:12px; font-weight:400; color:var(--t4);">(Optional)</span></p>
+                    <p style="font-size:12px; color:var(--t4); margin-top:2px;">What data should the AI extract and pass to your tool?</p>
+                </div>
+                <button type="button" onclick="addParam()" class="btn btn-ghost btn-sm">
+                    <i class="bi bi-plus-lg" style="font-size:11px;"></i> Add Parameter
+                </button>
+            </div>
+            <div style="padding:16px 20px;">
+
+                <!-- Column headers -->
+                <div id="params-header" style="display:none; margin-bottom:8px; padding:0 4px;">
+                    <div class="param-builder-row">
+                        <p style="font-size:11px; font-weight:600; color:var(--t4); text-transform:uppercase; letter-spacing:.04em;">Name</p>
+                        <p style="font-size:11px; font-weight:600; color:var(--t4); text-transform:uppercase; letter-spacing:.04em;">Type</p>
+                        <p style="font-size:11px; font-weight:600; color:var(--t4); text-transform:uppercase; letter-spacing:.04em;">Description</p>
+                        <p style="font-size:11px; font-weight:600; color:var(--t4); text-transform:uppercase; letter-spacing:.04em; text-align:center;">Req.</p>
+                        <span></span>
+                    </div>
+                </div>
+
+                <!-- Rows -->
+                <div id="params-list" style="display:flex; flex-direction:column; gap:6px;">
+                    <div id="params-empty" style="padding:24px 16px; background:#F9FAFB; border:1px dashed var(--card-border); border-radius:8px; text-align:center;">
+                        <i class="bi bi-sliders" style="font-size:20px; color:var(--t4); display:block; margin-bottom:8px;"></i>
+                        <p style="font-size:13px; font-weight:500; color:var(--t3); margin-bottom:3px;">No parameters yet</p>
+                        <p style="font-size:12px; color:var(--t4);">Click "Add Parameter" to define one</p>
+                    </div>
+                </div>
+
+                <!-- Hidden JSON field -->
+                <input type="hidden" id="parameters" name="parameters">
+
+                <div style="margin-top:14px; padding:10px 14px; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:8px; display:flex; align-items:flex-start; gap:8px;">
+                    <i class="bi bi-info-circle" style="font-size:13px; color:#2563EB; margin-top:1px; flex-shrink:0;"></i>
+                    <p style="font-size:12px; color:#1D4ED8; line-height:1.65;">When a user says "What's the weather in Paris?", the AI will automatically call your tool with city="Paris".</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Call Config -->
+        {% if tool.tool_type == 'api_call' %}
+        <div class="card">
+            <div style="padding:14px 20px; border-bottom:1px solid var(--card-border); display:flex; align-items:center; gap:8px;">
+                <i class="bi bi-cloud-arrow-up" style="color:#2563EB;"></i>
+                <p style="font-size:14px; font-weight:600; color:var(--t1);">API Configuration</p>
+            </div>
+            <div style="padding:20px 24px; display:flex; flex-direction:column; gap:14px;">
+                <div>
+                    <label for="api_url" style="display:block; font-size:12.5px; font-weight:600; color:var(--t2); margin-bottom:6px;">API URL</label>
+                    <input type="url" id="api_url" name="api_url" value="{{ config.url }}" class="inp">
+                </div>
+                <div>
+                    <label for="api_method" style="display:block; font-size:12.5px; font-weight:600; color:var(--t2); margin-bottom:6px;">HTTP Method</label>
+                    <select id="api_method" name="api_method" class="inp" style="width:auto;">
+                        <option value="GET" {% if config.method == 'GET' %}selected{% endif %}>GET</option>
+                        <option value="POST" {% if config.method == 'POST' %}selected{% endif %}>POST</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="api_headers" style="display:block; font-size:12.5px; font-weight:600; color:var(--t2); margin-bottom:6px;">Headers (JSON)</label>
+                    <textarea id="api_headers" name="api_headers" rows="3" class="inp" style="font-family:monospace; font-size:12.5px;">{{ config.headers|tojson if config.headers else '{}' }}</textarea>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Webhook Config -->
+        {% if tool.tool_type == 'webhook' %}
+        <div class="card">
+            <div style="padding:14px 20px; border-bottom:1px solid var(--card-border); display:flex; align-items:center; gap:8px;">
+                <i class="bi bi-webhook" style="color:#059669;"></i>
+                <p style="font-size:14px; font-weight:600; color:var(--t1);">Webhook Configuration</p>
+            </div>
+            <div style="padding:20px 24px; display:flex; flex-direction:column; gap:14px;">
+                <div>
+                    <label for="webhook_url" style="display:block; font-size:12.5px; font-weight:600; color:var(--t2); margin-bottom:6px;">Webhook URL</label>
+                    <input type="url" id="webhook_url" name="webhook_url" value="{{ config.url }}" class="inp">
+                </div>
+                <div>
+                    <label for="webhook_headers" style="display:block; font-size:12.5px; font-weight:600; color:var(--t2); margin-bottom:6px;">Headers (JSON)</label>
+                    <textarea id="webhook_headers" name="webhook_headers" rows="3" class="inp" style="font-family:monospace; font-size:12.5px;">{{ config.headers|tojson if config.headers else '{}' }}</textarea>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- RPC Config -->
+        {% if tool.tool_type == 'rpc' %}
+        <div class="card">
+            <div style="padding:14px 20px; border-bottom:1px solid var(--card-border);">
+                <p style="font-size:14px; font-weight:600; color:var(--t1);">RPC Configuration</p>
+            </div>
+            <div style="padding:20px 24px; display:flex; flex-direction:column; gap:14px;">
+                <div>
+                    <label for="rpc_method" style="display:block; font-size:12.5px; font-weight:600; color:var(--t2); margin-bottom:6px;">RPC Method Name</label>
+                    <input type="text" id="rpc_method" name="rpc_method" value="{{ config.method }}" class="inp">
+                    <p style="font-size:11.5px; color:var(--t4); margin-top:5px;">Leave blank to use the tool name</p>
+                </div>
+                <div>
+                    <label for="rpc_timeout" style="display:block; font-size:12.5px; font-weight:600; color:var(--t2); margin-bottom:6px;">Timeout (seconds)</label>
+                    <input type="number" id="rpc_timeout" name="rpc_timeout" value="{{ config.timeout }}" step="0.5" min="1" max="30" class="inp" style="width:120px;">
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Buttons -->
+        <div style="display:flex; gap:10px;">
+            <button type="submit" class="btn btn-primary" style="flex:1; justify-content:center; padding:10px;">
+                <i class="bi bi-check-circle" style="font-size:13px;"></i> Save Changes
+            </button>
+            <a href="{{ url_for('core.tools_list') }}" class="btn btn-ghost" style="padding:10px 20px;">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+// ── Parameter builder ──────────────────────────
+let paramIdx = 0;
+
+function addParam(prefill) {
+    const emptyEl = document.getElementById('params-empty');
+    if (emptyEl) emptyEl.remove();
+    const header = document.getElementById('params-header');
+    if (header) header.style.display = 'block';
+
+    paramIdx++;
+    const id = paramIdx;
+    const row = document.createElement('div');
+    row.id = `pr-${id}`;
+    row.className = 'param-builder-row';
+    row.style.cssText = 'background:#F9FAFB; border:1px solid var(--card-border); border-radius:8px; padding:8px 10px;';
+    row.innerHTML = `
+        <input type="text" placeholder="param_name" class="inp inp-sm" id="pn-${id}" oninput="syncParams()" style="font-family:monospace;">
+        <select class="inp inp-sm" id="pt-${id}" onchange="syncParams()">
+            <option value="string">string</option>
+            <option value="number">number</option>
+            <option value="boolean">boolean</option>
+        </select>
+        <input type="text" placeholder="What this parameter represents" class="inp inp-sm" id="pd-${id}" oninput="syncParams()">
+        <div style="display:flex; justify-content:center; align-items:center;">
+            <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:var(--t3); cursor:pointer;">
+                <input type="checkbox" id="pq-${id}" onchange="syncParams()" style="width:14px; height:14px; accent-color:#4F46E5; cursor:pointer;">
+                Req
+            </label>
+        </div>
+        <button type="button" onclick="removeParam(${id})"
+                style="background:none; border:none; cursor:pointer; color:var(--t4); padding:0; width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:5px; transition:background 0.1s;"
+                onmouseover="this.style.background='#FEF2F2'; this.style.color='#DC2626';"
+                onmouseout="this.style.background='none'; this.style.color='var(--t4)';">
+            <i class="bi bi-trash" style="font-size:12px;"></i>
+        </button>
+    `;
+    document.getElementById('params-list').appendChild(row);
+
+    if (prefill) {
+        document.getElementById(`pn-${id}`).value = prefill.name || '';
+        document.getElementById(`pt-${id}`).value = prefill.type || 'string';
+        document.getElementById(`pd-${id}`).value = prefill.description || '';
+        document.getElementById(`pq-${id}`).checked = prefill.required || false;
+    } else {
+        document.getElementById(`pn-${id}`).focus();
+    }
+    syncParams();
+}
+
+function removeParam(id) {
+    document.getElementById(`pr-${id}`).remove();
+    if (document.querySelectorAll('[id^="pr-"]').length === 0) {
+        document.getElementById('params-header').style.display = 'none';
+        const empty = document.createElement('div');
+        empty.id = 'params-empty';
+        empty.style.cssText = 'padding:24px 16px; background:#F9FAFB; border:1px dashed var(--card-border); border-radius:8px; text-align:center;';
+        empty.innerHTML = '<i class="bi bi-sliders" style="font-size:20px; color:var(--t4); display:block; margin-bottom:8px;"></i><p style="font-size:13px; font-weight:500; color:var(--t3); margin-bottom:3px;">No parameters yet</p><p style="font-size:12px; color:var(--t4);">Click "Add Parameter" to define one</p>';
+        document.getElementById('params-list').appendChild(empty);
+    }
+    syncParams();
+}
+
+function syncParams() {
+    const params = {};
+    document.querySelectorAll('[id^="pr-"]').forEach(row => {
+        const id = row.id.replace('pr-', '');
+        const name = document.getElementById(`pn-${id}`).value.trim();
+        if (name) {
+            params[name] = {
+                type: document.getElementById(`pt-${id}`).value,
+                description: document.getElementById(`pd-${id}`).value.trim(),
+                required: document.getElementById(`pq-${id}`).checked
+            };
+        }
+    });
+    document.getElementById('parameters').value =
+        Object.keys(params).length > 0 ? JSON.stringify(params) : '';
+}
+
+// ── Load existing parameters on page init ──────
+document.addEventListener('DOMContentLoaded', function() {
+    const existing = {{ config.parameters|tojson if config.parameters else '{}' }};
+    if (existing && typeof existing === 'object' && Object.keys(existing).length > 0) {
+        Object.entries(existing).forEach(([name, def]) => {
+            addParam({
+                name: name,
+                type: def.type || 'string',
+                description: def.description || '',
+                required: def.required || false
+            });
+        });
+        syncParams();
+    }
+});
+</script>
+
+{% endblock %}

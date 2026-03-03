@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}No-show Recovery Config — Nevox AI{% endblock %}
+
+{% block dashboard_content %}
+
+<a href="{{ url_for('clinic.clinic_hub') }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 mb-6" style="text-decoration:none;">
+    <i class="bi bi-arrow-left" style="font-size:14px;"></i> Back to Clinic Hub
+</a>
+
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-xl font-semibold text-gray-900">No-show Recovery</h1>
+        <p class="text-sm text-gray-500 mt-0.5">Automatically follow up with patients who miss appointments</p>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg border border-gray-200 p-4 mb-6 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+        <i class="bi bi-info-circle" style="font-size:16px; color:var(--t3);"></i>
+        <span class="text-sm text-gray-700">Status:</span>
+        <span class="badge badge-gray">Not Configured</span>
+    </div>
+    <button class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors" onclick="enableFeature()">Enable Feature</button>
+</div>
+
+<!-- Trigger Settings -->
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-5">
+    <div class="flex items-center gap-2 mb-4">
+        <i class="bi bi-calendar-x" style="font-size:16px; color:#DC2626;"></i>
+        <h2 class="text-sm font-semibold text-gray-900">Trigger Conditions</h2>
+    </div>
+
+    <div class="mb-4">
+        <label for="triggerDelay" class="block text-xs font-medium text-gray-700 mb-2">Trigger recovery call after <span class="text-red-500">*</span></label>
+        <select id="triggerDelay" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC;">
+            <option value="">15 min after missed appointment</option>
+            <option value="30" selected>30 minutes</option>
+            <option value="60">1 hour</option>
+            <option value="120">2 hours</option>
+            <option value="evening">Same day evening</option>
+            <option value="morning">Next morning</option>
+        </select>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <label for="maxAttempts" class="block text-xs font-medium text-gray-700 mb-2">Maximum recovery attempts</label>
+            <input type="number" id="maxAttempts" value="2" min="1" max="5" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+        </div>
+        <div>
+            <label for="attemptInterval" class="block text-xs font-medium text-gray-700 mb-2">Time between attempts</label>
+            <select id="attemptInterval" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC;">
+                <option value="2">2 hours</option>
+                <option value="4">4 hours</option>
+                <option value="6" selected>6 hours</option>
+                <option value="24">24 hours</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Recovery Script -->
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-5">
+    <div class="flex items-center gap-2 mb-4">
+        <i class="bi bi-chat-text" style="font-size:16px; color:#059669;"></i>
+        <h2 class="text-sm font-semibold text-gray-900">Recovery Call Script</h2>
+    </div>
+
+    <div class="mb-3">
+        <label for="recoveryScript" class="block text-xs font-medium text-gray-700 mb-2">Recovery call opening message <span class="text-red-500">*</span></label>
+        <textarea id="recoveryScript" rows="3" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC; font-family:system-ui;">Hello, this is the AI assistant from [Clinic Name]. We noticed you missed your appointment today. We'd love to help you reschedule. Is now a good time to find a new slot?</textarea>
+    </div>
+
+    <div class="flex items-start gap-2.5 p-3 bg-gray-50 rounded-md mb-3">
+        <input type="checkbox" id="offerReschedule" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500 mt-0.5" checked>
+        <label for="offerReschedule" class="text-sm text-gray-700">Offer rescheduling during recovery call</label>
+    </div>
+
+    <div class="flex items-start gap-2.5 p-3 bg-gray-50 rounded-md">
+        <input type="checkbox" id="captureReason" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500 mt-0.5">
+        <label for="captureReason" class="text-sm text-gray-700">Capture reason for no-show</label>
+    </div>
+</div>
+
+<!-- Agent Assignment -->
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-5">
+    <div class="flex items-center gap-2 mb-4">
+        <i class="bi bi-robot" style="font-size:16px; color:#4F46E5;"></i>
+        <h2 class="text-sm font-semibold text-gray-900">AI Agent Assignment</h2>
+    </div>
+    <label for="agentSelect2" class="block text-xs font-medium text-gray-700 mb-2">Select Agent <span class="text-red-500">*</span></label>
+    <select id="agentSelect2" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" style="background-color:#FAFBFC;">
+        <option value="">-- Select an agent --</option>
+        {% if agents %}
+            {% for agent in agents %}
+                <option value="{{ agent.id }}" {% if config.get('agent_id') == agent.id %}selected{% endif %}>{{ agent.name }}</option>
+            {% endfor %}
+        {% else %}
+            <option value="" disabled>No agents configured yet</option>
+        {% endif %}
+    </select>
+    <p class="text-xs text-gray-500 mt-1.5">Can be same agent handling booking or a separate recovery specialist.</p>
+</div>
+
+<!-- Escalation -->
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-5">
+    <div class="flex items-center gap-2 mb-4">
+        <i class="bi bi-arrow-up-right" style="font-size:16px; color:#7C3AED;"></i>
+        <h2 class="text-sm font-semibold text-gray-900">Escalation Rules</h2>
+    </div>
+
+    <div class="flex items-start gap-2.5 p-3 bg-gray-50 rounded-md mb-3">
+        <input type="checkbox" id="escalateToStaff" class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500 mt-0.5">
+        <label for="escalateToStaff" class="text-sm text-gray-700">Escalate to human staff after all attempts fail</label>
+    </div>
+
+    <div id="escalationEmail" style="display:none;">
+        <label for="escalationEmailInput" class="block text-xs font-medium text-gray-700 mb-2">Notification email for escalations</label>
+        <input type="email" id="escalationEmailInput" placeholder="clinic@example.com" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+    </div>
+</div>
+
+<!-- n8n Integration -->
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-5">
+    <div class="flex items-center gap-2 mb-4">
+        <i class="bi bi-link-45deg" style="font-size:16px; color:#7C3AED;"></i>
+        <h2 class="text-sm font-semibold text-gray-900">n8n Webhook Integration</h2>
+    </div>
+
+    <div class="mb-3">
+        <label for="preCallUrlNoshow" class="block text-xs font-medium text-gray-700 mb-2">Pre-call Webhook (Patient Lookup)</label>
+        <input type="url" id="preCallUrlNoshow" placeholder="https://n8n.yourdomain.com/webhook/clinic/pre-recovery" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none font-mono" style="background-color:#FAFBFC; font-size:11px;">
+        <p class="text-xs text-gray-500 mt-1">Fetch patient appointment history from HMS</p>
+    </div>
+
+    <div>
+        <label for="postCallUrlNoshow" class="block text-xs font-medium text-gray-700 mb-2">Post-call Webhook (Update Appointment)</label>
+        <input type="url" id="postCallUrlNoshow" placeholder="https://n8n.yourdomain.com/webhook/clinic/post-recovery" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none font-mono" style="background-color:#FAFBFC; font-size:11px;">
+        <p class="text-xs text-gray-500 mt-1">Write rescheduled/cancelled status back to HMS</p>
+    </div>
+</div>
+
+<div style="padding:12px 14px; background:#ECFDF5; border:1px solid #86EFAC; border-radius:8px; margin-bottom:24px; font-size:12px; color:#15803D;">
+    <i class="bi bi-check-circle" style="margin-right:6px;"></i>
+    Your configuration will be saved and ready to use. The AI agent will handle no-show recovery automatically.
+</div>
+
+<div class="flex gap-3 justify-end">
+    <a href="{{ url_for('clinic.clinic_hub') }}" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors" style="text-decoration:none;">Cancel</a>
+    <button onclick="saveConfiguration()" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors">Save Configuration</button>
+</div>
+
+<script>
+document.getElementById('escalateToStaff').addEventListener('change', function() {
+    document.getElementById('escalationEmail').style.display = this.checked ? 'block' : 'none';
+});
+
+async function saveConfiguration() {
+    const agent = document.getElementById('agentSelect2').value;
+    if (!agent) {
+        showToast('Please select an agent', 'error');
+        return;
+    }
+
+    const data = {
+        agent_id: parseInt(agent),
+        trigger_delay: document.getElementById('triggerDelay').value,
+        max_attempts: parseInt(document.getElementById('maxAttempts').value),
+        attempt_interval: document.getElementById('attemptInterval').value,
+        recovery_script: document.getElementById('recoveryScript').value,
+        offer_reschedule: document.getElementById('offerReschedule').checked,
+        capture_reason: document.getElementById('captureReason').checked,
+        escalate_to_staff: document.getElementById('escalateToStaff').checked,
+        escalation_email: document.getElementById('escalationEmailInput').value,
+        pre_call_webhook_url: document.getElementById('preCallUrlNoshow').value,
+        post_call_webhook_url: document.getElementById('postCallUrlNoshow').value,
+    };
+
+    try {
+        const response = await fetch('/clinic/api/noshow-recovery', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            showToast(result.error || 'Failed to save', 'error');
+            return;
+        }
+
+        showToast('No-show recovery configured successfully!', 'success');
+        setTimeout(() => { window.location.href = '{{ url_for('clinic.clinic_hub') }}'; }, 1500);
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Failed to save configuration', 'error');
+    }
+}
+
+function enableFeature() {
+    showToast('Coming in next update', 'info');
+}
+
+function showToast(message, type = 'info') {
+    const colors = {
+        success: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+        error: 'bg-red-50 border-red-200 text-red-800',
+        info: 'bg-blue-50 border-blue-200 text-blue-800'
+    };
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 z-[60] px-4 py-3 rounded-lg border text-sm font-medium shadow-lg ${colors[type] || colors.info}`;
+    toast.innerHTML = `<i class="bi bi-check-circle-fill" style="margin-right:8px;"></i>${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+</script>
+
+{% endblock %}

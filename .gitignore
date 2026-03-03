@@ -1,0 +1,49 @@
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment variables
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Flask
+instance/
+.webassets-cache
+
+# Logs
+*.log
+call_requests.log
+subscribed_emails.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database
+*.db
+*.sqlite3
+
+# Secrets / credentials
+config/google/*.json
+knowledge_bases/agent_43/docs/OSS-DETAILS.MD
+
+# Claude Code
+.claude/# Also ignore docs with secrets
+docs/setup/OSS-DETAILS.MD
+docs/setup/RECORDING_SETUP.md

@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}{{ customer.name or 'Customer' }} — Tradiedee{% endblock %}
+
+{% block dashboard_content %}
+
+<!-- Page header -->
+<div class="ph">
+    <div style="display:flex; align-items:center; gap:12px;">
+        <a href="{{ url_for('customers.customer_list') }}" class="btn btn-ghost btn-sm" style="padding:6px 10px;">
+            <i class="bi bi-arrow-left" style="font-size:14px;"></i>
+        </a>
+        <div>
+            <h1 class="ph-title">{{ customer.name or 'Unknown Customer' }}</h1>
+            <p class="ph-sub">Customer since {{ customer.created_at.strftime('%b %d, %Y') }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- Customer info card -->
+<div class="card" style="margin-bottom:24px;">
+    <div style="padding:24px;">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:20px;">
+            <!-- Phone -->
+            <div>
+                <p style="font-size:12px; font-weight:600; color:var(--t3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Phone</p>
+                {% if customer.phone %}
+                <a href="tel:{{ customer.phone }}" style="font-size:15px; font-weight:600; color:#2563EB; text-decoration:none;">
+                    <i class="bi bi-telephone" style="font-size:12px; margin-right:4px;"></i>{{ customer.phone }}
+                </a>
+                {% else %}
+                <p style="font-size:15px; color:var(--t4);">Not provided</p>
+                {% endif %}
+            </div>
+
+            <!-- Email -->
+            <div>
+                <p style="font-size:12px; font-weight:600; color:var(--t3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Email</p>
+                {% if customer.email %}
+                <a href="mailto:{{ customer.email }}" style="font-size:15px; color:#2563EB; text-decoration:none;">
+                    <i class="bi bi-envelope" style="font-size:12px; margin-right:4px;"></i>{{ customer.email }}
+                </a>
+                {% else %}
+                <p style="font-size:15px; color:var(--t4);">Not provided</p>
+                {% endif %}
+            </div>
+
+            <!-- Suburb -->
+            <div>
+                <p style="font-size:12px; font-weight:600; color:var(--t3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Suburb</p>
+                <p style="font-size:15px; color:var(--t1);">{{ customer.suburb or 'Not provided' }}</p>
+            </div>
+
+            <!-- Address -->
+            <div>
+                <p style="font-size:12px; font-weight:600; color:var(--t3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Address</p>
+                <p style="font-size:15px; color:var(--t1);">
+                    {{ customer.address or 'Not provided' }}
+                    {% if customer.postcode %} {{ customer.postcode }}{% endif %}
+                </p>
+            </div>
+        </div>
+
+        {% if customer.notes %}
+        <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--card-border);">
+            <p style="font-size:12px; font-weight:600; color:var(--t3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Notes</p>
+            <p style="font-size:14px; color:var(--t2); line-height:1.6;">{{ customer.notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Job history -->
+<div class="card">
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:18px 24px; border-bottom:1px solid var(--card-border);">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <i class="bi bi-briefcase" style="font-size:16px; color:#059669;"></i>
+            <span style="font-size:15px; font-weight:700; color:var(--t1);">Job History</span>
+            <span class="badge badge-gray">{{ jobs|length }}</span>
+        </div>
+    </div>
+
+    {% if jobs %}
+    <div style="overflow-x:auto;">
+        <table class="tbl">
+            <thead>
+                <tr>
+                    <th>Service</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Address</th>
+                    <th>Created</th>
+                    <th style="text-align:right;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in jobs %}
+                <tr>
+                    <td>
+                        <span class="badge badge-gray">{{ job.job_type or 'General' }}</span>
+                    </td>
+                    <td>
+                        {% if job.status == 'completed' %}
+                            <span class="badge badge-green">Completed</span>
+                        {% elif job.status == 'in_progress' %}
+                            <span class="badge badge-blue">In Progress</span>
+                        {% elif job.status == 'scheduled' %}
+                            <span class="badge badge-indigo">Scheduled</span>
+                        {% elif job.status == 'new' %}
+                            <span class="badge badge-amber">New</span>
+                        {% elif job.status == 'invoiced' %}
+                            <span class="badge badge-green">Invoiced</span>
+                        {% else %}
+                            <span class="badge badge-gray">{{ job.status.replace('_', ' ').title() }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if job.is_emergency %}
+                            <span class="badge badge-red">Emergency</span>
+                        {% else %}
+                            <span style="color:var(--t3); font-size:12px;">Normal</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:13px; color:var(--t3);">
+                        {{ job.customer_address or '—' }}
+                    </td>
+                    <td style="font-size:12px; color:var(--t3);">
+                        {{ job.created_at.strftime('%b %d, %Y %H:%M') }}
+                    </td>
+                    <td style="text-align:right;">
+                        <a href="{{ url_for('jobs.view_job', job_id=job.id) }}" class="btn btn-ghost btn-sm" style="padding:6px 10px;">
+                            <i class="bi bi-arrow-right" style="font-size:12px;"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty" style="padding:48px 24px;">
+        <div class="empty-icon" style="margin-bottom:16px;">
+            <i class="bi bi-briefcase" style="font-size:22px; color:var(--t4);"></i>
+        </div>
+        <p style="font-size:14px; font-weight:600; color:var(--t1); margin-bottom:6px;">No jobs yet</p>
+        <p style="font-size:13px; color:var(--t3);">This customer has no recorded jobs.</p>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

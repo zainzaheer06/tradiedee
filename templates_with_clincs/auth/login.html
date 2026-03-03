@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Sign In — Nevox AI{% endblock %}
+
+{% block content %}
+<div style="min-height:100vh; display:flex; background:#F3F4F6;">
+
+    <!-- Left brand panel (dark, desktop only) -->
+    <div id="brand-panel" style="display:none; flex-direction:column; justify-content:space-between; padding:48px; background:#111827; flex:0 0 45%; border-right:1px solid #1F2937;">
+
+        <!-- Logo -->
+        <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Nevox AI" style="height:30px; border-radius:6px;">
+
+        <!-- Center content -->
+        <div>
+            <div style="display:inline-flex; align-items:center; gap:8px; background:#1F2937; border:1px solid #374151; border-radius:8px; padding:8px 14px; margin-bottom:32px;">
+                <span style="width:8px; height:8px; border-radius:50%; background:#10B981; display:inline-block;"></span>
+                <span style="font-size:12.5px; font-weight:500; color:#9CA3AF;">Enterprise AI Voice Platform</span>
+            </div>
+
+            <h1 style="font-size:2.25rem; font-weight:700; color:#F9FAFB; line-height:1.25; margin-bottom:16px;">
+                AI Voice Agents<br>Built for Scale
+            </h1>
+            <p style="font-size:15px; color:#6B7280; line-height:1.7; max-width:400px; margin-bottom:40px;">
+                Deploy intelligent voice agents that handle real conversations, qualify leads, and manage customer interactions — 24/7, at enterprise scale.
+            </p>
+
+            <!-- Feature list -->
+            <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:40px;">
+                {% for item in [
+                    ('bi-telephone-fill', 'Outbound & inbound call automation'),
+                    ('bi-bar-chart-line', 'Real-time analytics and call insights'),
+                    ('bi-shield-lock', 'Enterprise-grade security and compliance'),
+                    ('bi-plug', 'Native CRM and workflow integrations')
+                ] %}
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:28px; height:28px; border-radius:7px; background:#1F2937; border:1px solid #374151; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <i class="bi {{ item[0] }}" style="font-size:12px; color:#818CF8;"></i>
+                    </div>
+                    <span style="font-size:13.5px; color:#9CA3AF;">{{ item[1] }}</span>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Stats -->
+            <div style="display:flex; align-items:center; gap:0; border:1px solid #1F2937; border-radius:10px; overflow:hidden;">
+                {% for stat in [('99.9%', 'Uptime SLA'), ('<500ms', 'Latency'), ('50+', 'Voice models')] %}
+                <div style="flex:1; padding:16px; text-align:center; {% if not loop.last %}border-right:1px solid #1F2937;{% endif %}">
+                    <p style="font-size:18px; font-weight:700; color:#F9FAFB;">{{ stat[0] }}</p>
+                    <p style="font-size:11px; color:#4B5563; margin-top:3px;">{{ stat[1] }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Testimonial -->
+        <div style="padding:16px; background:#1F2937; border:1px solid #374151; border-radius:10px;">
+            <p style="font-size:13.5px; color:#D1D5DB; font-style:italic; margin-bottom:10px;">
+                "Nevox AI reduced our outbound call costs by 60% while increasing qualified leads by 3×."
+            </p>
+            <p style="font-size:12px; color:#6B7280;">— Head of Sales, Global Enterprise</p>
+        </div>
+    </div>
+
+    <!-- Right form panel -->
+    <div style="flex:1; display:flex; align-items:center; justify-content:center; padding:40px 24px; background:#fff;">
+        <div style="width:100%; max-width:380px;">
+
+            <!-- Logo always visible on mobile -->
+            <div style="margin-bottom:40px;">
+                <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Nevox AI" style="height:32px; border-radius:6px;">
+            </div>
+
+            <h2 style="font-size:22px; font-weight:700; color:#111827; margin-bottom:6px;">Sign in to your account</h2>
+            <p style="font-size:13.5px; color:#6B7280; margin-bottom:32px;">Enter your credentials to access the platform</p>
+
+            <form method="POST" style="display:flex; flex-direction:column; gap:16px;">
+                <div>
+                    <label for="username" style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">Username</label>
+                    <input type="text" id="username" name="username" required
+                           placeholder="Enter your username"
+                           value="{{ request.form.get('username', '') }}"
+                           class="inp">
+                </div>
+                <div>
+                    <label for="password" style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">Password</label>
+                    <div style="position:relative;">
+                        <input type="password" id="password" name="password" required
+                               placeholder="Enter your password"
+                               class="inp" style="padding-right:44px;">
+                        <button type="button" onclick="togglePwd()"
+                                style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:#9CA3AF;"
+                                onmouseover="this.style.color='#6B7280'"
+                                onmouseout="this.style.color='#9CA3AF'">
+                            <i id="pwd-eye" class="bi bi-eye" style="font-size:14px;"></i>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:10px; font-size:14px; margin-top:4px; border-radius:8px;">
+                    Sign In <i class="bi bi-arrow-right" style="font-size:12px;"></i>
+                </button>
+            </form>
+
+            <div style="display:flex; align-items:center; gap:12px; margin:24px 0;">
+                <div style="flex:1; height:1px; background:#E5E7EB;"></div>
+                <span style="font-size:12px; color:#9CA3AF;">or</span>
+                <div style="flex:1; height:1px; background:#E5E7EB;"></div>
+            </div>
+
+            <p style="text-align:center; font-size:13.5px; color:#6B7280;">
+                Don't have an account?
+                <a href="{{ url_for('core.signup') }}" style="color:#4F46E5; font-weight:600; text-decoration:none; margin-left:4px;"
+                   onmouseover="this.style.textDecoration='underline'"
+                   onmouseout="this.style.textDecoration='none'">
+                    Request access
+                </a>
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+    @media (min-width: 1024px) { #brand-panel { display: flex !important; } }
+</style>
+<script>
+function togglePwd() {
+    const i = document.getElementById('password');
+    const e = document.getElementById('pwd-eye');
+    if (i.type === 'password') { i.type = 'text'; e.className = 'bi bi-eye-slash'; }
+    else { i.type = 'password'; e.className = 'bi bi-eye'; }
+}
+</script>
+{% endblock %}

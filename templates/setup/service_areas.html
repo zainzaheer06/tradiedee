@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Configure Service Areas{% endblock %}
+
+{% block dashboard_content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <h2 class="mb-4">🗺️ Service Areas Configuration</h2>
+
+            <div class="alert alert-info">
+                <strong>What Are Service Areas?</strong><br>
+                Define the suburbs/postcodes you service. If a customer calls from outside your service area, the AI can politely decline or refer them elsewhere.
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <form id="serviceAreasForm">
+                        <div class="mb-4">
+                            <label for="areasInput" class="form-label">Service Areas (one per line)</label>
+                            <textarea id="areasInput" name="areas" class="form-control form-control-lg" rows="8" placeholder="Alexandria&#10;Parramatta&#10;Baulkham Hills&#10;Penrith">{% for area in current_areas %}{{ area }}
+{% endfor %}</textarea>
+                            <small class="text-muted">
+                                Enter suburb names or postcodes. Example: "Alexandria" or "2015" or "Parramatta"
+                            </small>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <strong>Note:</strong> Service areas are optional. If you leave this blank, the AI won't filter by location.
+                        </div>
+
+                        <button type="submit" class="btn btn-success btn-lg w-100 mb-2">Save Service Areas</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Skip Option -->
+            <div class="mt-4">
+                <a href="{{ url_for('jobs.job_dashboard') }}" class="btn btn-secondary btn-lg w-100">
+                    Skip for Now (Go to Dashboard)
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('serviceAreasForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const areasText = document.getElementById('areasInput').value;
+        const areas = areasText
+            .split('\n')
+            .map(a => a.trim())
+            .filter(a => a.length > 0);
+
+        const data = {
+            areas: areas
+        };
+
+        fetch('{{ url_for("business_setup.configure_service_areas") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                window.location.href = data.redirect;
+            } else {
+                alert('Error: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error);
+        });
+    });
+</script>
+
+<style>
+    .form-control-lg {
+        font-size: 1rem;
+    }
+
+    .btn-lg {
+        font-size: 1.1rem;
+        padding: 0.75rem 1rem;
+    }
+</style>
+{% endblock %}

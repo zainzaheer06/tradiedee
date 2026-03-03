@@ -1,0 +1,477 @@
+{% extends "base.html" %}
+
+{% block title %}Web Call{% endblock %}
+
+{% block page_title %}Talk to Agent via Web{% endblock %}
+
+{% block extra_head %}
+<!-- LiveKit Client SDK -->
+<script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+<style>
+    .voice-circle {
+        position: relative;
+        width: 220px;
+        height: 220px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .voice-circle:hover {
+        transform: scale(1.05);
+    }
+
+    .pulse-ring {
+        position: absolute;
+        border: 3px solid rgba(102, 126, 234, 0.5);
+        border-radius: 50%;
+        animation: pulse 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+
+    .pulse-ring:nth-child(1) {
+        width: 100%;
+        height: 100%;
+    }
+
+    .pulse-ring:nth-child(2) {
+        width: 120%;
+        height: 120%;
+        top: -10%;
+        left: -10%;
+        animation-delay: 0.3s;
+    }
+
+    .pulse-ring:nth-child(3) {
+        width: 140%;
+        height: 140%;
+        top: -20%;
+        left: -20%;
+        animation-delay: 0.6s;
+    }
+
+    @keyframes pulse {
+        0% {
+            transform: scale(0.8);
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.5;
+        }
+        100% {
+            transform: scale(1.2);
+            opacity: 0;
+        }
+    }
+
+    .listening-animation {
+        animation: listening 1.5s ease-in-out infinite;
+    }
+
+    @keyframes listening {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+
+    .wave-bars {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        height: 40px;
+    }
+
+    .wave-bar {
+        width: 4px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 4px;
+        animation: wave 1s ease-in-out infinite;
+    }
+
+    .wave-bar:nth-child(1) { animation-delay: 0s; }
+    .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+    .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+    .wave-bar:nth-child(4) { animation-delay: 0.3s; }
+    .wave-bar:nth-child(5) { animation-delay: 0.4s; }
+
+    @keyframes wave {
+        0%, 100% { height: 10px; }
+        50% { height: 40px; }
+    }
+
+    .spinner {
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top: 4px solid white;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .gradient-bg {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+
+<!-- Web Call Interface -->
+<div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6 shadow-sm">
+        <div class="flex items-center gap-4">
+            <div class="flex items-center justify-center w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+                <i class="bi bi-mic-fill text-white text-2xl"></i>
+            </div>
+            <div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-1">Web Voice Call</h2>
+                <p class="text-gray-600">Test your voice agent directly from your browser</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voice Agent Interface -->
+    <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-10 border border-indigo-100 shadow-xl">
+        <!-- Status Display -->
+        <div id="statusDisplay" class="text-center mb-8">
+            <p class="text-xl font-semibold text-gray-700">Ready to talk</p>
+            <p class="text-sm text-gray-500 mt-2">Click the button below to start your conversation</p>
+        </div>
+
+        <!-- Voice Circle Button -->
+        <div class="flex items-center justify-center mb-8">
+            <div id="voiceButton" class="voice-circle flex items-center justify-center">
+                <div class="pulse-ring"></div>
+                <div class="pulse-ring"></div>
+                <div class="pulse-ring"></div>
+
+                <div id="buttonContent" class="relative z-10 w-full h-full rounded-full gradient-bg flex flex-col items-center justify-center shadow-2xl">
+                    <i class="bi bi-mic-fill text-white text-6xl mb-3"></i>
+                    <span class="text-white font-bold text-lg">Start Talking</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wave Animation (Hidden by default) -->
+        <div id="waveAnimation" class="hidden justify-center mb-8">
+            <div class="wave-bars">
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+            </div>
+        </div>
+
+        <!-- Transcript Display 
+        <div id="transcriptBox" class="hidden bg-white rounded-xl p-6 shadow-inner border border-gray-200 max-h-80 overflow-y-auto">
+            <h3 class="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                <i class="bi bi-chat-dots text-indigo-600"></i> Live Conversation
+            </h3>
+            <div id="transcriptContent" class="space-y-3 text-sm">
+                
+            </div>
+        </div>-->
+
+        <!-- Info Box -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-start gap-3">
+                <i class="bi bi-info-circle text-blue-600 text-xl flex-shrink-0 mt-0.5"></i>
+                <div class="text-sm text-blue-900">
+                    <p class="font-semibold mb-1">How it works:</p>
+                    <ul class="list-disc list-inside space-y-1 text-blue-800">
+                        <li>Click the microphone button to start</li>
+                        <li>Allow browser access to your microphone</li>
+                        <li>Speak naturally - the AI will respond in real-time</li>
+                        <li>The session will automatically end after 50 seconds of inactivity</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Check if LiveKit is loaded
+    console.log('LiveKit SDK loaded:', typeof LivekitClient !== 'undefined' ? 'Yes' : 'No');
+    if (typeof LivekitClient === 'undefined') {
+        console.error('LiveKit SDK failed to load. Check CDN connection.');
+    }
+
+    let isActive = false;
+    let isInitializing = false;
+    let livekitRoom = null;
+    let roomName = null;
+    let inactivityTimer = null;
+    let lastActivityTime = Date.now();
+
+    const voiceButton = document.getElementById('voiceButton');
+    const buttonContent = document.getElementById('buttonContent');
+    const statusDisplay = document.getElementById('statusDisplay');
+    const waveAnimation = document.getElementById('waveAnimation');
+    const transcriptBox = document.getElementById('transcriptBox');
+    const transcriptContent = document.getElementById('transcriptContent');
+
+    voiceButton.addEventListener('click', async function() {
+        if (isInitializing) return;
+
+        if (!isActive) {
+            await startVoiceAgent();
+        } else {
+            await stopVoiceAgent();
+        }
+    });
+
+    // Function to check inactivity and close session
+    function startInactivityMonitor() {
+        // Clear any existing timer
+        if (inactivityTimer) {
+            clearInterval(inactivityTimer);
+        }
+
+        // Check every second
+        inactivityTimer = setInterval(() => {
+            const inactiveTime = (Date.now() - lastActivityTime) / 1000;
+
+            if (inactiveTime >= 50 && isActive) {
+                console.log('⏰ 50 seconds of inactivity detected. Closing session...');
+                addTranscriptMessage('System', 'Session closed due to 50 seconds of inactivity');
+                stopVoiceAgent();
+            }
+        }, 1000);
+    }
+
+    function resetInactivityTimer() {
+        lastActivityTime = Date.now();
+    }
+
+    async function startVoiceAgent() {
+        isInitializing = true;
+        isActive = true;
+        resetInactivityTimer();
+
+        // Show initializing state
+        buttonContent.innerHTML = `
+            <div class="spinner mx-auto mb-3"></div>
+            <span class="text-white font-bold text-lg">Initializing...</span>
+        `;
+        statusDisplay.innerHTML = `
+            <p class="text-xl font-semibold text-indigo-600">Starting agent...</p>
+            <p class="text-sm text-gray-500 mt-2">Requesting microphone access...</p>
+        `;
+
+        try {
+            // Check if LiveKit is available
+            if (typeof LivekitClient === 'undefined') {
+                throw new Error('LiveKit SDK not loaded. Please refresh the page.');
+            }
+
+            // Step 1: Get LiveKit token
+            const tokenResponse = await fetch('/api/demo-token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (!tokenResponse.ok) {
+                throw new Error('Failed to get access token');
+            }
+
+            const tokenData = await tokenResponse.json();
+            roomName = tokenData.room_name;
+
+            statusDisplay.innerHTML = `
+                <p class="text-xl font-semibold text-indigo-600">Connecting to agent...</p>
+                <p class="text-sm text-gray-500 mt-2">Please wait</p>
+            `;
+
+            // Step 2: Connect to LiveKit room
+            livekitRoom = new LivekitClient.Room();
+
+            // Set up event listeners for activity tracking
+            livekitRoom.on('trackSubscribed', (track, publication, participant) => {
+                resetInactivityTimer();
+                if (track.kind === 'audio' && participant.identity !== tokenData.participant_identity) {
+                    // Agent audio track - attach to audio element
+                    const audioElement = track.attach();
+                    document.body.appendChild(audioElement);
+                    console.log('🔊 Agent audio track attached');
+                }
+            });
+
+            livekitRoom.on('trackPublished', (publication, participant) => {
+                resetInactivityTimer();
+                console.log('📢 Track published:', publication.kind, participant.identity);
+            });
+
+            livekitRoom.on('participantConnected', (participant) => {
+                resetInactivityTimer();
+                console.log('👤 Participant connected:', participant.identity);
+                if (participant.identity !== tokenData.participant_identity) {
+                    addTranscriptMessage('System', 'Agent joined the conversation');
+                }
+            });
+
+            livekitRoom.on('audioPlaybackStatusChanged', () => {
+                resetInactivityTimer();
+            });
+
+            // Connect to room
+            await livekitRoom.connect(tokenData.url, tokenData.token);
+            console.log('✅ Connected to LiveKit room:', roomName);
+
+            // Enable local audio (microphone)
+            await livekitRoom.localParticipant.setMicrophoneEnabled(true);
+            console.log('🎤 Microphone enabled');
+
+            statusDisplay.innerHTML = `
+                <p class="text-xl font-semibold text-indigo-600">Starting voice agent...</p>
+                <p class="text-sm text-gray-500 mt-2">Agent initializing, please wait...</p>
+            `;
+
+            // Step 3: Start the agent
+            const agentResponse = await fetch('/api/start-demo-agent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ room_name: roomName })
+            });
+
+            if (!agentResponse.ok) {
+                throw new Error('Failed to start agent');
+            }
+
+            console.log('🤖 Agent dispatch created');
+
+            // Wait for agent to initialize (reduced from 10s to 5s)
+            await new Promise(resolve => setTimeout(resolve, 5000));
+
+            isInitializing = false;
+
+            // Show active state
+            buttonContent.innerHTML = `
+                <i class="bi bi-mic-mute-fill text-white text-6xl mb-3 listening-animation"></i>
+                <span class="text-white font-bold text-lg">End Call</span>
+            `;
+            buttonContent.classList.add('listening-animation');
+
+            statusDisplay.innerHTML = `
+                <p class="text-xl font-semibold text-green-600"><i class="bi bi-mic-fill"></i> Agent is listening</p>
+                <p class="text-sm text-gray-500 mt-2">Start speaking now! Session will end after 50s of inactivity.</p>
+            `;
+
+            waveAnimation.classList.remove('hidden');
+            waveAnimation.classList.add('flex');
+            transcriptBox.classList.remove('hidden');
+
+            addTranscriptMessage('System', 'Connected! The voice agent is ready. Start talking...');
+
+            // Start inactivity monitor
+            startInactivityMonitor();
+
+        } catch (error) {
+            console.error('❌ Error:', error);
+            isInitializing = false;
+            isActive = false;
+
+            buttonContent.innerHTML = `
+                <i class="bi bi-exclamation-triangle text-white text-6xl mb-3"></i>
+                <span class="text-white font-bold text-lg">Error</span>
+            `;
+
+            statusDisplay.innerHTML = `
+                <p class="text-xl font-semibold text-red-600">Connection failed</p>
+                <p class="text-sm text-gray-500 mt-2">${error.message}</p>
+            `;
+
+            if (livekitRoom) {
+                await livekitRoom.disconnect();
+                livekitRoom = null;
+            }
+
+            // Reset after 3 seconds
+            setTimeout(() => {
+                buttonContent.classList.remove('listening-animation');
+                buttonContent.innerHTML = `
+                    <i class="bi bi-mic-fill text-white text-6xl mb-3"></i>
+                    <span class="text-white font-bold text-lg">Start Talking</span>
+                `;
+                statusDisplay.innerHTML = `
+                    <p class="text-xl font-semibold text-gray-700">Ready to talk</p>
+                    <p class="text-sm text-gray-500 mt-2">Click the button to start</p>
+                `;
+            }, 3000);
+        }
+    }
+
+    async function stopVoiceAgent() {
+        isActive = false;
+
+        // Clear inactivity timer
+        if (inactivityTimer) {
+            clearInterval(inactivityTimer);
+            inactivityTimer = null;
+        }
+
+        if (livekitRoom) {
+            await livekitRoom.disconnect();
+            livekitRoom = null;
+            console.log('🔌 Disconnected from LiveKit room');
+        }
+
+        buttonContent.classList.remove('listening-animation');
+        buttonContent.innerHTML = `
+            <i class="bi bi-mic-fill text-white text-6xl mb-3"></i>
+            <span class="text-white font-bold text-lg">Start Talking</span>
+        `;
+
+        statusDisplay.innerHTML = `
+            <p class="text-xl font-semibold text-gray-700">Session ended</p>
+            <p class="text-sm text-gray-500 mt-2">Click to start again</p>
+        `;
+
+        waveAnimation.classList.add('hidden');
+        waveAnimation.classList.remove('flex');
+
+        addTranscriptMessage('System', 'Session ended. Click the button to start a new conversation.');
+    }
+
+    function addTranscriptMessage(speaker, message) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = speaker === 'You' ? 'text-right' : 'text-left';
+
+        let bgColor = 'bg-gray-100 text-gray-900';
+        if (speaker === 'You') bgColor = 'bg-indigo-100 text-indigo-900';
+        if (speaker === 'System') bgColor = 'bg-blue-50 text-blue-900';
+
+        const timestamp = new Date().toLocaleTimeString();
+
+        messageDiv.innerHTML = `
+            <div class="inline-block ${bgColor} rounded-lg px-4 py-3 max-w-lg shadow-sm">
+                <p class="font-semibold text-xs mb-1 flex items-center gap-2">
+                    ${speaker}
+                    <span class="text-gray-500 font-normal">${timestamp}</span>
+                </p>
+                <p class="text-sm">${message}</p>
+            </div>
+        `;
+        transcriptContent.appendChild(messageDiv);
+        transcriptContent.scrollTop = transcriptContent.scrollHeight;
+    }
+
+    // Clean up on page unload
+    window.addEventListener('beforeunload', async () => {
+        if (inactivityTimer) {
+            clearInterval(inactivityTimer);
+        }
+        if (livekitRoom) {
+            await livekitRoom.disconnect();
+        }
+    });
+</script>
+{% endblock %}

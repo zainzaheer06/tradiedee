@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Inbound SIP Trunk Management - Admin{% endblock %}
+
+{% block page_title %}Inbound Trunk Management{% endblock %}
+
+{% block dashboard_content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">Inbound SIP Trunk Management</h1>
+    <p class="text-gray-600 mt-2">Configure inbound SIP trunks for inbound call agents</p>
+</div>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <!-- Total Configs -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6 card-hover">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg">
+                <i class="bi bi-telephone-inbound text-blue-600 text-lg"></i>
+            </div>
+            <span class="text-xs font-medium text-gray-500">Total</span>
+        </div>
+        <p class="text-gray-600 text-sm mb-1">Inbound Configurations</p>
+        <p class="text-3xl font-bold text-gray-900">{{ configs|length }}</p>
+    </div>
+
+    <!-- Configured -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6 card-hover">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-center w-12 h-12 bg-green-100 rounded-lg">
+                <i class="bi bi-check-circle text-green-600 text-lg"></i>
+            </div>
+            <span class="text-xs font-medium text-gray-500">Configured</span>
+        </div>
+        <p class="text-gray-600 text-sm mb-1">With Inbound Trunk</p>
+        <p class="text-3xl font-bold text-gray-900">{{ configs|selectattr('trunk_id')|list|length }}</p>
+    </div>
+
+    <!-- Not Configured -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6 card-hover">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-center w-12 h-12 bg-amber-100 rounded-lg">
+                <i class="bi bi-exclamation-circle text-amber-600 text-lg"></i>
+            </div>
+            <span class="text-xs font-medium text-gray-500">Not Configured</span>
+        </div>
+        <p class="text-gray-600 text-sm mb-1">Without Trunk</p>
+        <p class="text-3xl font-bold text-gray-900">{{ configs|rejectattr('trunk_id')|list|length }}</p>
+    </div>
+</div>
+
+<!-- Configurations Table -->
+{% if configs %}
+<div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <!-- Header -->
+    <div class="px-6 py-4 border-b border-gray-200">
+        <div class="flex items-center gap-3">
+            <i class="bi bi-telephone-inbound text-indigo-600 text-lg"></i>
+            <h2 class="text-lg font-bold text-gray-900">Inbound Agent Trunk Configuration</h2>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b border-gray-200 bg-gray-50">
+                    <th class="text-left py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Configuration</th>
+                    <th class="text-left py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Linked Agent</th>
+                    <th class="text-left py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Owner</th>
+                    <th class="text-left py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Phone Number</th>
+                    <th class="text-center py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                    <th class="text-left py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Inbound Trunk ID</th>
+                    <th class="text-right py-3 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for config in configs %}
+                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <!-- Configuration -->
+                    <td class="py-4 px-6">
+                        <div class="font-medium text-gray-900">{{ config.name }}</div>
+                    </td>
+
+                    <!-- Linked Agent -->
+                    <td class="py-4 px-6">
+                        <div>
+                            <div class="text-sm text-gray-900">{{ config.agent.name }}</div>
+                            <div class="text-xs text-gray-500 flex items-center gap-2 mt-1">
+                                <i class="bi bi-mic-fill"></i>
+                                {{ config.agent.voice_name or 'Default Voice' }}
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- Owner -->
+                    <td class="py-4 px-6">
+                        <div class="text-sm text-gray-900">{{ config.user.username }}</div>
+                        <div class="text-xs text-gray-500">{{ config.user.email }}</div>
+                    </td>
+
+                    <!-- Phone Number -->
+                    <td class="py-4 px-6">
+                        {% if config.phone_number %}
+                        <span class="text-sm text-gray-900 font-mono">{{ config.phone_number }}</span>
+                        {% else %}
+                        <span class="text-sm text-gray-400 italic">Not set</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Status -->
+                    <td class="py-4 px-6 text-center">
+                        {% if config.trunk_id %}
+                        <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                            <i class="bi bi-check-circle"></i> Configured
+                        </span>
+                        {% else %}
+                        <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                            <i class="bi bi-x-circle"></i> Not Configured
+                        </span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Trunk ID -->
+                    <td class="py-4 px-6">
+                        {% if config.trunk_id %}
+                        <code class="text-xs bg-gray-100 px-2 py-1 rounded font-mono text-gray-800">{{ config.trunk_id }}</code>
+                        {% else %}
+                        <span class="text-sm text-gray-400 italic">None</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Actions -->
+                    <td class="py-4 px-6 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <a href="{{ url_for('core.configure_inbound_trunk', config_id=config.id) }}"
+                               class="inline-flex items-center gap-1 px-3 py-2 bg-indigo-100 text-indigo-600 rounded-lg hover:bg-indigo-200 transition-colors font-medium text-sm">
+                                <i class="bi bi-pencil"></i>
+                                Configure
+                            </a>
+                            {% if config.trunk_id %}
+                            <form method="POST" action="{{ url_for('core.remove_inbound_trunk', config_id=config.id) }}"
+                                  onsubmit="return confirm('Remove inbound trunk from {{ config.name }}?')" class="inline">
+                                <button type="submit"
+                                        class="inline-flex items-center gap-1 px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors font-medium text-sm">
+                                    <i class="bi bi-trash"></i>
+                                    Remove
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<!-- Empty State -->
+<div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="p-12 text-center">
+        <div class="flex items-center justify-center w-20 h-20 bg-indigo-100 rounded-full mx-auto mb-4">
+            <i class="bi bi-telephone-inbound text-indigo-600 text-3xl"></i>
+        </div>
+        <h3 class="text-xl font-bold text-gray-900 mb-2">No Inbound Agents</h3>
+        <p class="text-gray-600">Users haven't created any inbound call agents yet</p>
+    </div>
+</div>
+{% endif %}
+
+<!-- Info Banner -->
+<div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+    <div class="flex items-start gap-4">
+        <div class="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg flex-shrink-0">
+            <i class="bi bi-info-circle text-blue-600 text-lg"></i>
+        </div>
+        <div>
+            <h3 class="text-lg font-bold text-gray-900 mb-2">About Inbound Trunk Configuration</h3>
+            <ul class="space-y-2 text-sm text-gray-700">
+                <li><i class="bi bi-dot"></i> Each inbound agent can have a dedicated inbound SIP trunk</li>
+                <li><i class="bi bi-dot"></i> The trunk ID should be obtained from your LiveKit SIP configuration</li>
+                <li><i class="bi bi-dot"></i> Inbound trunks handle incoming phone calls to specific phone numbers</li>
+                <li><i class="bi bi-dot"></i> Without a trunk configured, the agent won't be able to receive calls</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

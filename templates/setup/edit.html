@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Business Settings - Tradiedee{% endblock %}
+
+{% block dashboard_content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Header -->
+            <div class="mb-4">
+                <h2 class="mb-2">⚙️ Business Settings</h2>
+                <p class="text-muted">Update your Tradiedee business configuration</p>
+            </div>
+
+            <!-- Edit Form -->
+            <div class="card">
+                <div class="card-body p-4">
+                    <form id="editForm">
+                        <!-- Basic Information -->
+                        <h5 class="mb-4">Basic Information</h5>
+
+                        <div class="mb-3">
+                            <label for="businessName" class="form-label">Business Name *</label>
+                            <input type="text" class="form-control form-control-lg" id="businessName" name="business_name" value="{{ business.business_name }}" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="businessType" class="form-label">Business Type *</label>
+                            <select class="form-select form-select-lg" id="businessType" name="business_type" required>
+                                <option value="">Select a type...</option>
+                                <option value="Plumbing" {% if business.business_type == 'Plumbing' %}selected{% endif %}>Plumbing</option>
+                                <option value="Electrical" {% if business.business_type == 'Electrical' %}selected{% endif %}>Electrical</option>
+                                <option value="HVAC" {% if business.business_type == 'HVAC' %}selected{% endif %}>HVAC/Heating</option>
+                                <option value="General" {% if business.business_type == 'General' %}selected{% endif %}>General Trades</option>
+                                <option value="Other" {% if business.business_type == 'Other' %}selected{% endif %}>Other</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="businessPhone" class="form-label">Business Phone Number</label>
+                            <input type="tel" class="form-control form-control-lg" id="businessPhone" name="phone_number" value="{{ business.phone_number or '' }}" placeholder="+61412345678">
+                        </div>
+
+                        <!-- Greeting & Tone -->
+                        <hr class="my-4">
+                        <h5 class="mb-4">Voice & Greeting</h5>
+
+                        <div class="mb-3">
+                            <label for="greetingMessage" class="form-label">Custom Greeting Message</label>
+                            <textarea class="form-control" id="greetingMessage" name="greeting_message" rows="2" placeholder="Leave blank for default greeting">{{ business.greeting_message or '' }}</textarea>
+                            <small class="text-muted">e.g., "G'day! Thanks for calling John's Plumbing. How can I help?"</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="tone" class="form-label">Voice Tone</label>
+                            <select class="form-select form-select-lg" id="tone" name="tone">
+                                <option value="friendly" {% if business.tone == 'friendly' %}selected{% endif %}>Friendly & Casual</option>
+                                <option value="professional" {% if business.tone == 'professional' %}selected{% endif %}>Professional & Formal</option>
+                            </select>
+                        </div>
+
+                        <!-- Working Hours -->
+                        <hr class="my-4">
+                        <h5 class="mb-4">Operating Hours</h5>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="workingHoursStart" class="form-label">Start Time</label>
+                                <input type="time" class="form-control form-control-lg" id="workingHoursStart" name="working_hours_start" value="{{ business.working_hours_start or '08:00' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="workingHoursEnd" class="form-label">End Time</label>
+                                <input type="time" class="form-control form-control-lg" id="workingHoursEnd" name="working_hours_end" value="{{ business.working_hours_end or '17:00' }}">
+                            </div>
+                        </div>
+
+                        <!-- API Keys -->
+                        <hr class="my-4">
+                        <h5 class="mb-4">Integrations (Optional)</h5>
+
+                        <div class="mb-3">
+                            <label for="googleApiKey" class="form-label">Google Maps API Key</label>
+                            <input type="password" class="form-control form-control-lg" id="googleApiKey" name="google_api_key" placeholder="Paste your API key">
+                            <small class="text-muted">For address validation and mapping</small>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <strong>ℹ️ ServiceM8 & Other Integrations</strong><br>
+                            Configure additional integrations in the emergency contacts and service areas pages.
+                        </div>
+
+                        <!-- Feature Toggles -->
+                        <hr class="my-4">
+                        <h5 class="mb-4">Features</h5>
+
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="serviceM8Enabled" name="serviceM8_enabled" {% if business.serviceM8_enabled %}checked{% endif %}>
+                            <label class="form-check-label" for="serviceM8Enabled">
+                                Enable ServiceM8 Integration
+                            </label>
+                        </div>
+
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="availabilityCheckEnabled" name="availability_check_enabled" {% if business.availability_check_enabled %}checked{% endif %}>
+                            <label class="form-check-label" for="availabilityCheckEnabled">
+                                Enable Availability Checking
+                            </label>
+                        </div>
+
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="emergencyEscalationEnabled" name="emergency_escalation_enabled" {% if business.emergency_escalation_enabled %}checked{% endif %}>
+                            <label class="form-check-label" for="emergencyEscalationEnabled">
+                                Enable Emergency Escalation
+                            </label>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <hr class="my-4">
+                        <div class="d-flex gap-2">
+                            <a href="{{ url_for('jobs.job_dashboard') }}" class="btn btn-outline-secondary btn-lg flex-grow-1">Cancel</a>
+                            <button type="submit" class="btn btn-primary btn-lg flex-grow-1">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Additional Links -->
+            <div class="mt-4 text-center">
+                <p class="text-muted mb-2">Need to configure more settings?</p>
+                <a href="{{ url_for('business_setup.configure_emergency') }}" class="btn btn-outline-primary btn-sm">Emergency Contacts</a>
+                <a href="{{ url_for('business_setup.configure_service_areas') }}" class="btn btn-outline-primary btn-sm">Service Areas</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('editForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData);
+
+    // Convert checkbox values from 'on' to boolean
+    data.serviceM8_enabled = document.getElementById('serviceM8Enabled').checked;
+    data.availability_check_enabled = document.getElementById('availabilityCheckEnabled').checked;
+    data.emergency_escalation_enabled = document.getElementById('emergencyEscalationEnabled').checked;
+
+    try {
+        const response = await fetch('{{ url_for("business_setup.edit_business") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            alert('✓ Settings saved successfully!');
+            window.location.href = '{{ url_for("jobs.job_dashboard") }}';
+        } else {
+            alert('✗ Error: ' + (result.error || 'Failed to save settings'));
+        }
+    } catch (error) {
+        alert('✗ Error: ' + error.message);
+    }
+});
+</script>
+{% endblock %}

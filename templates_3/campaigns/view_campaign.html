@@ -1,0 +1,491 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ campaign.name }} - Nevox AI{% endblock %}
+
+{% block page_title %}Campaign: {{ campaign.name }}{% endblock %}
+
+{% block dashboard_content %}
+<!-- Header -->
+<div class="flex items-start justify-between mb-8">
+    <div class="flex-1">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ campaign.name }}</h1>
+        <p class="text-gray-600">{{ campaign.description or 'No description' }}</p>
+    </div>
+    <span class="ml-4 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap
+        {% if campaign.status == 'running' %}bg-green-100 text-green-700
+        {% elif campaign.status == 'paused' %}bg-amber-100 text-amber-700
+        {% elif campaign.status == 'completed' %}bg-blue-100 text-blue-700
+        {% elif campaign.status == 'stopped' %}bg-red-100 text-red-700
+        {% else %}bg-gray-100 text-gray-700{% endif %}">
+        {{ campaign.status.upper() }}
+    </span>
+</div>
+
+<!-- Progress Card -->
+<div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h3 class="text-lg font-bold text-gray-900 mb-1">Campaign Progress</h3>
+            <p class="text-sm text-gray-600">{{ stats.processed }} of {{ stats.total }} contacts processed</p>
+        </div>
+        <span class="text-4xl font-bold text-indigo-600">{{ stats.progress }}%</span>
+    </div>
+    <div class="w-full bg-gray-200 rounded-full h-8 overflow-hidden">
+        <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 h-8 rounded-full transition-all duration-300 flex items-center justify-center text-white text-sm font-semibold {% if campaign.status == 'running' %}animate-pulse{% endif %}" style="width: {{ stats.progress }}%">
+            {% if stats.progress > 15 %}{{ stats.processed }} / {{ stats.total }}{% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Grid -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+    <!-- Total Contacts -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6 card-hover">
+        <div class="flex items-center justify-center w-12 h-12 bg-indigo-100 rounded-lg mb-4">
+            <i class="bi bi-telephone-outbound text-indigo-600 text-xl"></i>
+        </div>
+        <p class="text-sm text-gray-600 mb-1">Total Contacts</p>
+        <p class="text-3xl font-bold text-gray-900">{{ stats.total }}</p>
+    </div>
+
+    <!-- Completed -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6 card-hover">
+        <div class="flex items-center justify-center w-12 h-12 bg-green-100 rounded-lg mb-4">
+            <i class="bi bi-check-circle-fill text-green-600 text-xl"></i>
+        </div>
+        <p class="text-sm text-gray-600 mb-1">Completed</p>
+        <p class="text-3xl font-bold text-green-600">{{ stats.completed }}</p>
+    </div>
+
+    <!-- Pending -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6 card-hover">
+        <div class="flex items-center justify-center w-12 h-12 bg-amber-100 rounded-lg mb-4">
+            <i class="bi bi-hourglass-split text-amber-600 text-xl"></i>
+        </div>
+        <p class="text-sm text-gray-600 mb-1">Pending</p>
+        <p class="text-3xl font-bold text-amber-600">{{ stats.pending }}</p>
+    </div>
+
+    <!-- Failed / No Answer -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6 card-hover">
+        <div class="flex items-center justify-center w-12 h-12 bg-red-100 rounded-lg mb-4">
+            <i class="bi bi-x-circle-fill text-red-600 text-xl"></i>
+        </div>
+        <p class="text-sm text-gray-600 mb-1">Failed / No Answer</p>
+        <p class="text-3xl font-bold text-red-600">{{ stats.failed + stats.no_answer }}</p>
+        {% if stats.failed > 0 or stats.no_answer > 0 %}
+        <p class="text-xs text-gray-500 mt-2">({{ stats.failed }} failed, {{ stats.no_answer }} no answer)</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Agent Information -->
+<div class="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6">
+    <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <i class="bi bi-robot text-indigo-600"></i>
+            AI Agent
+        </h3>
+    </div>
+    <div class="p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex-1">
+                <h4 class="text-xl font-bold text-gray-900 mb-2">{{ campaign.agent.name }}</h4>
+                <div class="flex items-center gap-4 text-sm text-gray-500">
+                    <span class="flex items-center gap-1">
+                        <i class="bi bi-mic-fill text-indigo-600"></i>
+                        Voice: {{ campaign.agent.voice_name or 'Default Voice' }}
+                    </span>
+                    <span class="flex items-center gap-1">
+                        <i class="bi bi-calendar-plus text-indigo-600"></i>
+                        Created: {{ campaign.agent.created_at.strftime('%b %d, %Y') if campaign.agent.created_at else 'N/A' }}
+                    </span>
+                </div>
+            </div>
+            <div class="flex flex-col gap-2">
+                <a href="{{ url_for('agents.view_agent', agent_id=campaign.agent.id) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-600 rounded-lg hover:bg-indigo-200 transition-colors font-medium text-sm">
+                    <i class="bi bi-eye"></i>
+                    View Agent
+                </a>
+                <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold text-center">
+                    Active
+                </span>
+            </div>
+        </div>
+        
+        <!-- Agent Prompt Preview 
+        <div class="bg-gray-50 rounded-lg p-4">
+            <h5 class="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                <i class="bi bi-chat-dots text-gray-600"></i>
+                Agent Instructions Preview
+            </h5>
+            <p class="text-sm text-gray-600 leading-relaxed">
+                {{ (campaign.agent.prompt[:200] + '...') if campaign.agent.prompt and campaign.agent.prompt|length > 200 else (campaign.agent.prompt or 'No specific instructions configured.') }}
+            </p>
+        </div>-->
+    </div>
+</div>
+
+<!-- Campaign Settings -->
+<div class="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6">
+    <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <i class="bi bi-gear-fill text-indigo-600"></i>
+            Campaign Settings
+        </h3>
+        <a href="{{ url_for('campaigns.edit_campaign', campaign_id=campaign.id) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm">
+            <i class="bi bi-pencil"></i>
+            Edit Campaign
+        </a>
+    </div>
+    <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Call Window -->
+            <div class="flex items-start gap-3">
+                <div class="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg flex-shrink-0">
+                    <i class="bi bi-clock-fill text-blue-600"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Call Window</p>
+                    <p class="text-lg font-bold text-gray-900">{{ campaign.call_window_start }} - {{ campaign.call_window_end }}</p>
+                    <p class="text-xs text-gray-500 mt-1">Active calling hours</p>
+                </div>
+            </div>
+
+            <!-- Concurrent Calls -->
+            <div class="flex items-start gap-3">
+                <div class="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-lg flex-shrink-0">
+                    <i class="bi bi-telephone-forward-fill text-purple-600"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Concurrent Calls</p>
+                    <p class="text-lg font-bold text-gray-900">{{ campaign.concurrent_calls }}</p>
+                    <p class="text-xs text-gray-500 mt-1">Max simultaneous calls</p>
+                </div>
+            </div>
+
+            <!-- Campaign Status Info -->
+            <div class="flex items-start gap-3">
+                <div class="flex items-center justify-center w-10 h-10 bg-green-100 rounded-lg flex-shrink-0">
+                    <i class="bi bi-calendar-check-fill text-green-600"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Created</p>
+                    <p class="text-lg font-bold text-gray-900">{{ campaign.created_at.strftime('%b %d, %Y') }}</p>
+                    <p class="text-xs text-gray-500 mt-1">{{ campaign.created_at.strftime('%I:%M %p') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Interest Analysis & Campaign Controls -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Interest Analysis -->
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <i class="bi bi-bar-chart-fill text-indigo-600"></i>
+                Interest Analysis
+            </h3>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <!-- Interested -->
+                <div class="bg-green-50 rounded-lg p-4 text-center">
+                    <i class="bi bi-emoji-smile text-green-600 text-3xl mb-2"></i>
+                    <p class="text-3xl font-bold text-green-600 mb-1">{{ stats.interested }}</p>
+                    <p class="text-sm text-gray-600 mb-1">Interested</p>
+                    {% if stats.completed > 0 %}
+                    <p class="text-xs text-green-600 font-medium">({{ "%.1f"|format((stats.interested / stats.completed * 100) if stats.completed > 0 else 0) }}%)</p>
+                    {% endif %}
+                </div>
+
+                <!-- Not Interested -->
+                <div class="bg-gray-50 rounded-lg p-4 text-center">
+                    <i class="bi bi-emoji-neutral text-gray-600 text-3xl mb-2"></i>
+                    <p class="text-3xl font-bold text-gray-600 mb-1">{{ stats.not_interested }}</p>
+                    <p class="text-sm text-gray-600 mb-1">Not Interested</p>
+                    {% if stats.completed > 0 %}
+                    <p class="text-xs text-gray-600 font-medium">({{ "%.1f"|format((stats.not_interested / stats.completed * 100) if stats.completed > 0 else 0) }}%)</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Average Duration -->
+            <div class="bg-indigo-50 rounded-lg p-4 text-center">
+                <div class="flex items-center justify-center gap-2">
+                    <i class="bi bi-clock-history text-indigo-600"></i>
+                    <span class="text-sm font-medium text-gray-700">Avg Call Duration:</span>
+                    <span class="px-3 py-1 bg-indigo-600 text-white rounded-full text-sm font-bold">{{ stats.avg_duration }}s</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campaign Controls -->
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <i class="bi bi-sliders text-indigo-600"></i>
+                Campaign Controls
+            </h3>
+        </div>
+        <div class="p-6">
+            {% if campaign.status == 'draft' %}
+            <!-- Upload Contacts -->
+            <form action="{{ url_for('campaigns.upload_contacts', campaign_id=campaign.id) }}" method="POST" enctype="multipart/form-data" class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <i class="bi bi-file-earmark-spreadsheet text-indigo-600"></i>
+                    Upload Contacts (CSV/Excel)
+                </label>
+                <input type="file" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent mb-3" name="file" accept=".csv,.xlsx,.xls" required>
+                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors">
+                    <i class="bi bi-upload"></i>
+                    Upload Contacts
+                </button>
+            </form>
+            <p class="text-xs text-gray-500 mb-4">Required columns: phone_number (required), name (optional)</p>
+
+            <!-- OR Divider -->
+            <div class="relative mb-4">
+                <div class="absolute inset-0 flex items-center">
+                    <div class="w-full border-t border-gray-300"></div>
+                </div>
+                <div class="relative flex justify-center text-sm">
+                    <span class="px-2 bg-white text-gray-500">OR</span>
+                </div>
+            </div>
+
+            <!-- Add Contacts Manually -->
+            <form action="{{ url_for('campaigns.add_contacts_manual', campaign_id=campaign.id) }}" method="POST" class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <i class="bi bi-pencil-square text-indigo-600"></i>
+                    Add Contacts Manually
+                </label>
+                <textarea
+                    name="contacts_text"
+                    rows="4"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent mb-3 font-mono text-sm"
+                    placeholder="Enter phone numbers (one per line)&#10;&#10;Examples:&#10;923001234567&#10;966590788780,Sultan&#10;923354646825,Abdul Aziz"
+                    required></textarea>
+                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors">
+                    <i class="bi bi-plus-circle"></i>
+                    Add Contacts
+                </button>
+            </form>
+            <p class="text-xs text-gray-500 mb-4">Format: One number per line, or phone,name (e.g., 923001234567,John)</p>
+
+            {% if stats.total > 0 %}
+            <div class="border-t border-gray-200 pt-4">
+                <form action="{{ url_for('campaigns.start_campaign', campaign_id=campaign.id) }}" method="POST">
+                    <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors text-lg">
+                        <i class="bi bi-play-circle"></i>
+                        Start Campaign
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+
+            {% elif campaign.status == 'running' %}
+            <form action="{{ url_for('campaigns.pause_campaign', campaign_id=campaign.id) }}" method="POST" class="mb-3">
+                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium transition-colors">
+                    <i class="bi bi-pause-circle"></i>
+                    Pause Campaign
+                </button>
+            </form>
+            <form action="{{ url_for('campaigns.stop_campaign', campaign_id=campaign.id) }}" method="POST" class="mb-4">
+                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors" onclick="return confirm('Stop campaign permanently?')">
+                    <i class="bi bi-stop-circle"></i>
+                    Stop Campaign
+                </button>
+            </form>
+
+            <!-- Add More Contacts -->
+            <div class="border-t border-gray-200 pt-4 mb-4">
+                <form action="{{ url_for('campaigns.add_contacts_manual', campaign_id=campaign.id) }}" method="POST">
+                    <label class="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                        <i class="bi bi-person-plus text-indigo-600"></i>
+                        Add More Contacts
+                    </label>
+                    <textarea
+                        name="contacts_text"
+                        rows="3"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent mb-2 font-mono text-sm"
+                        placeholder="923001234567&#10;966590788780,Sultan"
+                        required></textarea>
+                    <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors text-sm">
+                        <i class="bi bi-plus-circle"></i>
+                        Add Contacts
+                    </button>
+                </form>
+            </div>
+
+            {% elif campaign.status == 'paused' %}
+            <form action="{{ url_for('campaigns.start_campaign', campaign_id=campaign.id) }}" method="POST" class="mb-3">
+                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors">
+                    <i class="bi bi-play-circle"></i>
+                    Resume Campaign
+                </button>
+            </form>
+            <form action="{{ url_for('campaigns.stop_campaign', campaign_id=campaign.id) }}" method="POST" class="mb-4">
+                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors" onclick="return confirm('Stop campaign permanently?')">
+                    <i class="bi bi-stop-circle"></i>
+                    Stop Campaign
+                </button>
+            </form>
+
+            <!-- Add More Contacts -->
+            <div class="border-t border-gray-200 pt-4 mb-4">
+                <form action="{{ url_for('campaigns.add_contacts_manual', campaign_id=campaign.id) }}" method="POST">
+                    <label class="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                        <i class="bi bi-person-plus text-indigo-600"></i>
+                        Add More Contacts
+                    </label>
+                    <textarea
+                        name="contacts_text"
+                        rows="3"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent mb-2 font-mono text-sm"
+                        placeholder="923001234567&#10;966590788780,Sultan"
+                        required></textarea>
+                    <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors text-sm">
+                        <i class="bi bi-plus-circle"></i>
+                        Add Contacts
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+
+            <!-- Export & Back Buttons -->
+            <div class="border-t border-gray-200 pt-4 mt-4 space-y-2">
+                <a href="{{ url_for('campaigns.export_campaign', campaign_id=campaign.id) }}" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 border border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 font-medium transition-colors">
+                    <i class="bi bi-download"></i>
+                    Export Results (CSV)
+                </a>
+                <a href="{{ url_for('campaigns.campaigns') }}" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">
+                    <i class="bi bi-arrow-left"></i>
+                    Back to Campaigns
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Calls -->
+<div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <i class="bi bi-clock-history text-indigo-600 text-xl"></i>
+            <h3 class="text-lg font-bold text-gray-900">Recent Calls</h3>
+        </div>
+    </div>
+    <div class="p-6">
+        {% if recent_contacts %}
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-gray-200">
+                        <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Phone</th>
+                        <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
+                        <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                        <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Interest</th>
+                        <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Duration</th>
+                        <th class="text-right py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for contact in recent_contacts %}
+                    <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                        <td class="py-3 px-4">
+                            <span class="font-medium text-gray-900">{{ contact.phone_number }}</span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="text-sm text-gray-600">{{ contact.name or '-' }}</span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold
+                                {% if contact.status == 'completed' %}bg-green-100 text-green-700
+                                {% elif contact.status == 'calling' %}bg-blue-100 text-blue-700
+                                {% elif contact.status == 'failed' %}bg-red-100 text-red-700
+                                {% elif contact.status == 'no_answer' %}bg-amber-100 text-amber-700
+                                {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                {{ contact.status }}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4">
+                            {% if contact.status == 'no_answer' or contact.status == 'failed' %}
+                            <span class="text-sm text-gray-400">-</span>
+                            {% elif contact.interest_level == 'Interested' %}
+                            <span class="inline-flex items-center gap-1 text-sm text-green-600 font-medium">
+                                <i class="bi bi-emoji-smile"></i> Interested
+                            </span>
+                            {% elif contact.interest_level == 'Not Interested' %}
+                            <span class="inline-flex items-center gap-1 text-sm text-gray-600">
+                                <i class="bi bi-emoji-neutral"></i> Not Int.
+                            </span>
+                            {% else %}
+                            <span class="text-sm text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="text-sm text-gray-600">{{ contact.duration }}s</span>
+                        </td>
+                        <td class="py-3 px-4 text-right">
+                            {% if contact.room_name %}
+                                {% set call_log = call_logs_map.get(contact.room_name) %}
+                                {% if call_log %}
+                                <a href="{{ url_for('core.view_call_log', log_id=call_log) }}" class="inline-flex items-center gap-1 px-3 py-1 text-indigo-600 hover:bg-indigo-50 rounded font-medium transition-colors text-sm">
+                                    <i class="bi bi-eye"></i>
+                                    View Detail
+                                </a>
+                                {% else %}
+                                <span class="text-sm text-amber-600">-</span>
+                                {% endif %}
+                            {% else %}
+                            <span class="text-sm text-gray-400">No call</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination Controls -->
+        {% if contacts_pagination.pages > 1 %}
+        <div class="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+            <div class="text-sm text-gray-600">
+                Showing {{ ((contacts_pagination.page - 1) * contacts_pagination.per_page) + 1 }} to {{ contacts_pagination.page * contacts_pagination.per_page if contacts_pagination.page * contacts_pagination.per_page < contacts_pagination.total else contacts_pagination.total }} of {{ contacts_pagination.total }} contacts
+            </div>
+            <div class="flex items-center gap-2">
+                {% if contacts_pagination.has_prev %}
+                <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id, contacts_page=contacts_pagination.prev_num) }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
+                    <i class="bi bi-chevron-left"></i> Previous
+                </a>
+                {% endif %}
+                
+                <span class="px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md">
+                    Page {{ contacts_pagination.page }} of {{ contacts_pagination.pages }}
+                </span>
+                
+                {% if contacts_pagination.has_next %}
+                <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id, contacts_page=contacts_pagination.next_num) }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
+                    Next <i class="bi bi-chevron-right"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div class="text-center py-12">
+            <div class="flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mx-auto mb-4">
+                <i class="bi bi-telephone-x text-gray-400 text-2xl"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-1">No calls yet</h3>
+            <p class="text-gray-600">Calls will appear here once the campaign starts</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

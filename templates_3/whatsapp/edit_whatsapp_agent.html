@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ wa_agent.name }}{% endblock %}
+
+{% block page_title %}Edit WhatsApp Agent{% endblock %}
+
+{% block dashboard_content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Back Link -->
+    <a href="{{ url_for('whatsapp.view_whatsapp_agent', agent_id=wa_agent.id) }}" class="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors">
+        <i class="bi bi-arrow-left"></i> Back to {{ wa_agent.name }}
+    </a>
+
+    <!-- Header -->
+    <div class="mb-8">
+        <h2 class="text-3xl font-bold text-gray-900">Edit WhatsApp Agent</h2>
+        <p class="text-gray-600 mt-1">Update configuration. Redeploy after saving to push changes to the workflow.</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('whatsapp.edit_whatsapp_agent', agent_id=wa_agent.id) }}">
+        <!-- Agent Selection -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">
+                <span class="inline-flex items-center justify-center w-7 h-7 bg-green-100 text-green-700 rounded-full text-sm font-bold mr-2">1</span>
+                Agent Selection
+            </h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Name *</label>
+                    <input type="text" name="name" required maxlength="100" value="{{ wa_agent.name }}"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Select Agent *</label>
+                    <select name="agent_id" id="agentSelect" required onchange="loadAgentPreview(this.value)"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none">
+                        <option value="">-- Select an Agent --</option>
+                        {% for agent in agents %}
+                        <option value="{{ agent.id }}" {% if agent.id == wa_agent.agent_id %}selected{% endif %}>
+                            {{ agent.name }} ({{ agent.voice_name }}, temp={{ agent.temperature }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Agent Preview -->
+            <div id="agentPreview" class="{{ '' if wa_agent.agent else 'hidden' }} mt-6 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <h4 class="text-sm font-semibold text-gray-700 mb-2">Agent Prompt Preview</h4>
+                <p id="agentPromptPreview" class="text-sm text-gray-600 whitespace-pre-wrap max-h-40 overflow-y-auto">{{ wa_agent.agent.prompt if wa_agent.agent else '' }}</p>
+                <div class="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                    <span id="agentTempPreview">Temperature: {{ wa_agent.agent.temperature if wa_agent.agent else '' }}</span>
+                    <span id="agentVoicePreview">Voice: {{ wa_agent.agent.voice_name if wa_agent.agent else '' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- WhatsApp API Config -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">
+                <span class="inline-flex items-center justify-center w-7 h-7 bg-green-100 text-green-700 rounded-full text-sm font-bold mr-2">2</span>
+                WhatsApp API Configuration
+            </h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Provider -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">WhatsApp Provider *</label>
+                    <select name="whatsapp_provider" id="providerSelect" onchange="onProviderChange()"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none">
+                        <option value="whapi" {{ 'selected' if wa_agent.whatsapp_provider == 'whapi' else '' }}>Whapi</option>
+                        <option value="meta" {{ 'selected' if wa_agent.whatsapp_provider == 'meta' else '' }}>Meta (Official WhatsApp Business API)</option>
+                        <option value="unifonic" {{ 'selected' if wa_agent.whatsapp_provider == 'unifonic' else '' }}>Unifonic</option>
+                        <option value="custom" {{ 'selected' if wa_agent.whatsapp_provider == 'custom' else '' }}>Custom</option>
+                    </select>
+                </div>
+
+                <!-- Generic API fields (shown for whapi, unifonic, custom) -->
+                <div id="genericApiFields" class="{{ 'hidden' if wa_agent.whatsapp_provider == 'meta' else '' }}">
+                    <div class="mb-6">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">API Base URL *</label>
+                        <input type="url" name="whatsapp_api_url" id="apiUrlInput" value="{{ wa_agent.whatsapp_api_url or '' }}"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">API Key *</label>
+                        <input type="password" name="whatsapp_api_key" value="{{ wa_agent.whatsapp_api_key or '' }}"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none">
+                    </div>
+                </div>
+
+                <!-- Meta Official API fields -->
+                <div id="metaApiFields" class="{{ '' if wa_agent.whatsapp_provider == 'meta' else 'hidden' }} md:col-span-2">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-5">
+                        <div class="flex items-start gap-3">
+                            <i class="bi bi-info-circle text-blue-600 text-lg mt-0.5"></i>
+                            <div>
+                                <h4 class="text-sm font-semibold text-blue-900">Meta WhatsApp Business API</h4>
+                                <p class="text-xs text-blue-700 mt-1">Update your credentials from the <a href="https://developers.facebook.com/apps" target="_blank" class="underline font-medium">Facebook Developer Dashboard</a>.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Phone Number *</label>
+                            <input type="text" name="meta_phone_number" id="metaPhoneNumber" value="{{ wa_agent.whatsapp_phone_number or '' }}" placeholder="+1 555 123 4567"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none">
+                            <p class="text-xs text-gray-500 mt-1">The phone number from which messages will be sent</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Phone Number ID *</label>
+                            <input type="text" name="meta_phone_number_id" value="{{ wa_agent.meta_phone_number_id or '' }}" placeholder="106540352242922"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none">
+                            <p class="text-xs text-gray-500 mt-1">From Facebook Developer Dashboard → WhatsApp → API Setup</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Business Account ID *</label>
+                            <input type="text" name="meta_business_account_id" value="{{ wa_agent.meta_business_account_id or '' }}" placeholder="102290129340398"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none">
+                            <p class="text-xs text-gray-500 mt-1">WhatsApp Business Account ID from Developer Dashboard</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">API Key (Access Token) *</label>
+                            <div class="relative">
+                                <input type="password" name="meta_access_token" id="metaAccessToken" value="{{ wa_agent.meta_access_token or '' }}" placeholder="EAAJB..."
+                                       class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none">
+                                <button type="button" onclick="toggleMetaTokenVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                    <i id="metaTokenEye" class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Permanent System User Access Token</p>
+                        </div>
+                    </div>
+
+                    {% if wa_agent.meta_verify_token %}
+                    <div class="mt-5 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <h4 class="text-sm font-semibold text-gray-700 mb-2"><i class="bi bi-link-45deg"></i> Webhook Configuration</h4>
+                        <div class="space-y-2 text-xs">
+                            <div>
+                                <span class="font-medium text-gray-600">Verify Token:</span>
+                                <code class="ml-2 bg-gray-100 px-2 py-0.5 rounded text-gray-800">{{ wa_agent.meta_verify_token }}</code>
+                            </div>
+                            <div>
+                                <span class="font-medium text-gray-600">Status:</span>
+                                {% if wa_agent.meta_webhook_verified %}
+                                <span class="text-green-600 font-medium ml-2"><i class="bi bi-check-circle"></i> Verified</span>
+                                {% else %}
+                                <span class="text-amber-600 font-medium ml-2"><i class="bi bi-exclamation-circle"></i> Not Verified</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Phone Number (for non-Meta providers) -->
+                <div id="genericPhoneField" class="{{ 'hidden' if wa_agent.whatsapp_provider == 'meta' else '' }}">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Business Phone Number</label>
+                    <input type="text" name="whatsapp_phone_number" value="{{ wa_agent.whatsapp_phone_number or '' }}"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none">
+                </div>
+            </div>
+
+            <!-- Custom Endpoints -->
+            <div id="customEndpoints" class="{{ '' if wa_agent.whatsapp_provider == 'custom' else 'hidden' }} mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <h4 class="text-sm font-bold text-gray-700 mb-3"><i class="bi bi-link-45deg"></i> Custom API Endpoints</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">Send Text Message URL</label>
+                        <input type="url" name="send_text_endpoint" value="{{ wa_agent.send_text_endpoint or '' }}"
+                               placeholder="https://api.example.com/v1/messages/text"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">Send Voice Message URL</label>
+                        <input type="url" name="send_voice_endpoint" value="{{ wa_agent.send_voice_endpoint or '' }}"
+                               placeholder="https://api.example.com/v1/messages/voice"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WhatsApp System Prompt -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">
+                <span class="inline-flex items-center justify-center w-7 h-7 bg-green-100 text-green-700 rounded-full text-sm font-bold mr-2">3</span>
+                WhatsApp Behavior
+            </h3>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">WhatsApp System Prompt</label>
+                <textarea name="whatsapp_system_prompt" rows="8"
+                          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none font-mono text-sm">{{ wa_agent.whatsapp_system_prompt or '' }}</textarea>
+            </div>
+        </div>
+
+        <!-- Features -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">
+                <span class="inline-flex items-center justify-center w-7 h-7 bg-green-100 text-green-700 rounded-full text-sm font-bold mr-2">4</span>
+                Features & Settings
+            </h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" name="enable_voice_response" {% if wa_agent.enable_voice_response %}checked{% endif %}
+                               class="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                        <div>
+                            <span class="text-sm font-medium text-gray-700">Voice Responses</span>
+                            <p class="text-xs text-gray-500">Reply with voice when customer sends voice</p>
+                        </div>
+                    </label>
+
+                    <label class="flex items-center gap-3 cursor-pointer" style="display:none">
+                        <input type="checkbox" name="enable_image_analysis" {% if wa_agent.enable_image_analysis %}checked{% endif %}
+                               class="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                        <div>
+                            <span class="text-sm font-medium text-gray-700">Image Analysis</span>
+                            <p class="text-xs text-gray-500">Analyze incoming images</p>
+                        </div>
+                    </label>
+
+                    <label class="flex items-center gap-3 cursor-pointer" style="display:none">
+                        <input type="checkbox" name="enable_document_analysis" {% if wa_agent.enable_document_analysis %}checked{% endif %}
+                               class="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                        <div>
+                            <span class="text-sm font-medium text-gray-700">Document/PDF Analysis</span>
+                            <p class="text-xs text-gray-500">Extract and analyze PDFs</p>
+                        </div>
+                    </label>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Memory Window</label>
+                    <input type="number" name="memory_window" value="{{ wa_agent.memory_window }}" min="1" max="50"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none">
+                    <p class="text-xs text-gray-500 mt-1">Messages to remember (1-50)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="flex items-center justify-between">
+            <p class="text-sm text-gray-500">
+                {% if wa_agent.n8n_workflow_id %}
+                <i class="bi bi-info-circle"></i> After saving, hit <strong>Redeploy</strong> on the detail page to push changes to the workflow.
+                {% endif %}
+            </p>
+            <div class="flex items-center gap-4">
+                <a href="{{ url_for('whatsapp.view_whatsapp_agent', agent_id=wa_agent.id) }}" class="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-colors">
+                    Cancel
+                </a>
+                <button type="submit" class="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold transition-colors">
+                    <i class="bi bi-check-lg"></i> Save Changes
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+function loadAgentPreview(agentId) {
+    const preview = document.getElementById('agentPreview');
+    if (!agentId) {
+        preview.classList.add('hidden');
+        return;
+    }
+
+    fetch(`/whatsapp/api/agent-prompt/${agentId}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) { preview.classList.add('hidden'); return; }
+            document.getElementById('agentPromptPreview').textContent = data.prompt || '(No prompt)';
+            document.getElementById('agentTempPreview').textContent = `Temperature: ${data.temperature}`;
+            document.getElementById('agentVoicePreview').textContent = `Voice: ${data.voice_name}`;
+            preview.classList.remove('hidden');
+        })
+        .catch(() => preview.classList.add('hidden'));
+}
+
+function onProviderChange() {
+    const provider = document.getElementById('providerSelect').value;
+    const customSection = document.getElementById('customEndpoints');
+    const genericApiFields = document.getElementById('genericApiFields');
+    const metaApiFields = document.getElementById('metaApiFields');
+    const genericPhoneField = document.getElementById('genericPhoneField');
+
+    // Get all inputs to disable/enable
+    const genericInputs = genericApiFields.querySelectorAll('input');
+    const metaInputs = metaApiFields.querySelectorAll('input');
+    const genericPhoneInput = genericPhoneField ? genericPhoneField.querySelector('input') : null;
+
+    if (provider === 'meta') {
+        genericApiFields.classList.add('hidden');
+        genericPhoneField.classList.add('hidden');
+        metaApiFields.classList.remove('hidden');
+        customSection.classList.add('hidden');
+
+        // Disable generic inputs so they are NOT submitted with the form
+        genericInputs.forEach(i => i.disabled = true);
+        if (genericPhoneInput) genericPhoneInput.disabled = true;
+        // Enable meta inputs
+        metaInputs.forEach(i => i.disabled = false);
+    } else {
+        genericApiFields.classList.remove('hidden');
+        genericPhoneField.classList.remove('hidden');
+        metaApiFields.classList.add('hidden');
+
+        // Enable generic inputs
+        genericInputs.forEach(i => i.disabled = false);
+        if (genericPhoneInput) genericPhoneInput.disabled = false;
+        // Disable meta inputs so they are NOT submitted with the form
+        metaInputs.forEach(i => i.disabled = true);
+
+        if (provider === 'custom') {
+            customSection.classList.remove('hidden');
+        } else {
+            customSection.classList.add('hidden');
+        }
+    }
+}
+
+function toggleMetaTokenVisibility() {
+    const input = document.getElementById('metaAccessToken');
+    const eye = document.getElementById('metaTokenEye');
+    if (input.type === 'password') {
+        input.type = 'text';
+        eye.className = 'bi bi-eye-slash';
+    } else {
+        input.type = 'password';
+        eye.className = 'bi bi-eye';
+    }
+}
+
+// Initialize on page load to set correct disabled state
+document.addEventListener('DOMContentLoaded', function() {
+    onProviderChange();
+});
+</script>
+{% endblock %}

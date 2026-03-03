@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ agent.name }} - Knowledge Base{% endblock %}
+
+{% block page_title %}Knowledge Base{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                <i class="bi bi-book me-2"></i>{{ agent.name }} - Knowledge Base
+            </h1>
+            <p class="text-gray-600">Upload documents for RAG (Retrieval-Augmented Generation)</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('agents.create_agent') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Agents
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm" style="border-left: 4px solid #0d6efd !important;">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-files fs-1 text-primary mb-2"></i>
+                    <h2 class="fw-bold mb-1">{{ document_count }}</h2>
+                    <p class="text-muted mb-0 small">Documents</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm" style="border-left: 4px solid #198754 !important;">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-hdd fs-1 text-success mb-2"></i>
+                    <h2 class="fw-bold mb-1">{{ "%.2f"|format(total_size / 1024 / 1024) }} MB</h2>
+                    <p class="text-muted mb-0 small">Total Size</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm" style="border-left: 4px solid #ffc107 !important;">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-lightning-charge fs-1 text-warning mb-2"></i>
+                    <h2 class="fw-bold mb-1">
+                        {% if document_count > 0 %}Active{% else %}Inactive{% endif %}
+                    </h2>
+                    <p class="text-muted mb-0 small">RAG Status</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Form -->
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-header bg-white border-0 pt-4 pb-3">
+            <h5 class="mb-0"><i class="bi bi-upload me-2 text-primary"></i>Upload Documents</h5>
+        </div>
+        <div class="card-body">
+            <form action="{{ url_for('agents.upload_knowledge_base', agent_num=agent.user_agent_number) }}" method="POST" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="files" class="form-label fw-semibold">Select Documents</label>
+                    <input type="file" class="form-control" id="files" name="files" multiple
+                           accept=".txt,.pdf,.doc,.docx,.md,.csv" required>
+                    <small class="text-muted">
+                        Supported formats: TXT, PDF, DOC, DOCX, MD, CSV (Multiple files allowed)
+                    </small>
+                </div>
+
+                <div class="alert alert-info border-0" style="background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>How it works:</strong> Documents are automatically indexed using vector embeddings.
+                    The agent will search this knowledge base to answer questions during conversations.
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-upload me-2"></i>Upload & Index Documents
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Documents List -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 pt-4 pb-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-list-ul me-2 text-primary"></i>Uploaded Documents</h5>
+            {% if document_count > 0 %}
+            <form action="{{ url_for('agents.rebuild_knowledge_base_index', agent_num=agent.user_agent_number) }}" method="POST" class="d-inline">
+                <button type="submit" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Rebuild Index
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            {% if documents %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th><i class="bi bi-file-earmark me-1"></i>Filename</th>
+                            <th><i class="bi bi-filetype me-1"></i>Type</th>
+                            <th><i class="bi bi-hdd me-1"></i>Size</th>
+                            <th><i class="bi bi-calendar me-1"></i>Uploaded</th>
+                            <th><i class="bi bi-activity me-1"></i>Status</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for doc in documents %}
+                        <tr>
+                            <td>
+                                <i class="bi bi-file-earmark-text text-primary me-2"></i>
+                                <strong>{{ doc.filename }}</strong>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ doc.file_type.upper() }}</span>
+                            </td>
+                            <td>{{ "%.2f"|format(doc.file_size / 1024) }} KB</td>
+                            <td>
+                                <small class="text-muted">
+                                    {{ doc.created_at.strftime('%Y-%m-%d %H:%M') if doc.created_at else '-' }}
+                                </small>
+                            </td>
+                            <td>
+                                {% if doc.status == 'ready' %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle me-1"></i>Ready
+                                </span>
+                                {% elif doc.status == 'processing' %}
+                                <span class="badge bg-warning">
+                                    <i class="bi bi-hourglass-split me-1"></i>Processing
+                                </span>
+                                {% else %}
+                                <span class="badge bg-danger">
+                                    <i class="bi bi-x-circle me-1"></i>Failed
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <form action="{{ url_for('agents.delete_knowledge_base_document', agent_num=agent.user_agent_number, doc_id=doc.id) }}"
+                                      method="POST"
+                                      class="d-inline"
+                                      onsubmit="return confirm('Delete this document?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 4rem; color: #cbd5e0;"></i>
+                <h3 class="mt-4 mb-2">No Documents Yet</h3>
+                <p class="text-gray-600">Upload documents to enable RAG for this agent</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Usage Guide -->
+    <div class="card mt-4 border-0 shadow-sm">
+        <div class="card-header bg-white border-0 pt-4 pb-3">
+            <h5 class="mb-0"><i class="bi bi-question-circle me-2 text-primary"></i>How to Use Knowledge Base</h5>
+        </div>
+        <div class="card-body">
+            <ol class="mb-0">
+                <li class="mb-2">
+                    <strong>Upload Documents:</strong> Add relevant documents (manuals, FAQs, product info, etc.)
+                </li>
+                <li class="mb-2">
+                    <strong>Automatic Indexing:</strong> Documents are automatically processed and indexed using vector embeddings
+                </li>
+                <li class="mb-2">
+                    <strong>Agent Uses RAG:</strong> During conversations, the agent will search the knowledge base to find relevant information
+                </li>
+                <li class="mb-0">
+                    <strong>Update Anytime:</strong> Add or remove documents as needed. The index is automatically updated.
+                </li>
+            </ol>
+        </div>
+    </div>
+</div>
+{% endblock %}

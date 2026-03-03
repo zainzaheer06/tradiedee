@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% block title %}Edit Campaign — Tradiedee{% endblock %}
+
+{% block dashboard_content %}
+
+<div style="margin-bottom:20px;">
+    <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id) }}" class="btn btn-ghost btn-sm" style="padding-left:0;">
+        <i class="bi bi-arrow-left" style="font-size:12px;"></i> Back to Campaign
+    </a>
+</div>
+
+<div style="max-width:640px; margin:0 auto;">
+    <div class="ph" style="margin-bottom:20px;">
+        <div>
+            <h1 class="ph-title">Edit Campaign</h1>
+            <p class="ph-sub">Update settings for <strong>{{ campaign.name }}</strong></p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div style="padding:14px 20px; border-bottom:1px solid var(--card-border); display:flex; align-items:center; gap:10px;">
+            <div style="width:36px; height:36px; border-radius:9px; background:#EEF2FF; display:flex; align-items:center; justify-content:center;">
+                <i class="bi bi-pencil-square" style="font-size:16px; color:#4F46E5;"></i>
+            </div>
+            <div>
+                <p style="font-size:14px; font-weight:600; color:var(--t1);">Campaign Configuration</p>
+                <p style="font-size:12px; color:var(--t4);">Update the details below to modify your campaign</p>
+            </div>
+        </div>
+
+        <div style="padding:24px;">
+            <form method="POST" style="display:flex; flex-direction:column; gap:20px;">
+
+                <!-- Name -->
+                <div>
+                    <label for="name" style="display:block; font-size:12.5px; font-weight:600; color:var(--t2); margin-bottom:6px;">
+                        Campaign Name <span style="color:var(--red);">*</span>
+                    </label>
+                    <input type="text" id="name" name="name" required class="inp"
+                           value="{{ campaign.name }}" placeholder="e.g., Summer Sales 2025">
+                </div>
+
+                <!-- Agent -->
+                <div>
+                    <label for="agent_id" style="display:block; font-size:12.5px; font-weight:600; color:var(--t2); margin-bottom:6px;">
+                        Select Agent <span style="color:var(--red);">*</span>
+                    </label>
+                    <select id="agent_id" name="agent_id" required class="inp">
+                        <option value="">Choose an agent...</option>
+                        {% for agent in agents %}
+                        <option value="{{ agent.id }}" {% if agent.id == campaign.agent_id %}selected{% endif %}>{{ agent.name }} ({{ agent.voice_name }})</option>
+                        {% endfor %}
+                    </select>
+                    {% if not agents %}
+                    <div style="margin-top:10px; padding:12px 14px; background:#FFFBEB; border:1px solid #FDE68A; border-radius:8px; display:flex; align-items:flex-start; gap:10px;">
+                        <i class="bi bi-exclamation-triangle" style="color:#D97706; font-size:14px; margin-top:1px;"></i>
+                        <p style="font-size:12.5px; color:#92400E;">
+                            No outbound agents found.
+                            <a href="{{ url_for('agents.create_agent') }}" style="font-weight:600; color:#78350F;">Create one first</a>.
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label for="description" style="display:block; font-size:12.5px; font-weight:600; color:var(--t2); margin-bottom:6px;">Description</label>
+                    <textarea id="description" name="description" rows="3" class="inp"
+                              placeholder="What is this campaign about?">{{ campaign.description or '' }}</textarea>
+                </div>
+
+                <div style="border-top:1px solid var(--card-border);"></div>
+
+                <!-- Call Window -->
+                <div>
+                    <p style="font-size:13px; font-weight:600; color:var(--t1); margin-bottom:14px; display:flex; align-items:center; gap:7px;">
+                        <i class="bi bi-clock" style="color:#4F46E5;"></i> Call Window
+                    </p>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+                        <div>
+                            <label for="call_window_start" style="display:block; font-size:12.5px; font-weight:600; color:var(--t2); margin-bottom:6px;">Start Time</label>
+                            <input type="time" id="call_window_start" name="call_window_start" value="{{ campaign.call_window_start }}" class="inp">
+                        </div>
+                        <div>
+                            <label for="call_window_end" style="display:block; font-size:12.5px; font-weight:600; color:var(--t2); margin-bottom:6px;">End Time</label>
+                            <input type="time" id="call_window_end" name="call_window_end" value="{{ campaign.call_window_end }}" class="inp">
+                        </div>
+                    </div>
+                    <div style="padding:10px 14px; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:7px; display:flex; align-items:center; gap:8px;">
+                        <i class="bi bi-info-circle" style="font-size:13px; color:#2563EB;"></i>
+                        <p style="font-size:12.5px; color:#1D4ED8;">Calls will only be made within this time window</p>
+                    </div>
+                </div>
+
+                <div style="border-top:1px solid var(--card-border);"></div>
+
+                <!-- Concurrent Calls -->
+                <div>
+                    <label for="concurrent_calls" style="display:block; font-size:12.5px; font-weight:600; color:var(--t2); margin-bottom:6px;">
+                        <i class="bi bi-telephone-forward" style="color:#4F46E5;"></i> Concurrent Calls
+                    </label>
+                    <input type="number" id="concurrent_calls" name="concurrent_calls" value="{{ campaign.concurrent_calls }}" min="1" max="7" class="inp" style="width:120px;">
+                    <p style="font-size:12px; color:var(--t4); margin-top:5px;">Max simultaneous calls (1–7)</p>
+                </div>
+
+                <!-- Warning note -->
+                <div style="padding:12px 14px; background:#FFFBEB; border:1px solid #FDE68A; border-radius:8px; display:flex; align-items:flex-start; gap:10px;">
+                    <i class="bi bi-exclamation-circle" style="font-size:13px; color:#D97706; margin-top:1px;"></i>
+                    <p style="font-size:12.5px; color:#92400E; line-height:1.6;">
+                        <strong>Note:</strong> Changing the agent will only affect future calls. Previous call logs remain unchanged.
+                    </p>
+                </div>
+
+                <!-- Buttons -->
+                <div style="display:flex; gap:10px;">
+                    <button type="submit" class="btn btn-primary" style="flex:1; justify-content:center; padding:10px;">
+                        <i class="bi bi-check-circle" style="font-size:13px;"></i> Update Campaign
+                    </button>
+                    <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id) }}" class="btn btn-ghost" style="padding:10px 20px;">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

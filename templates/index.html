@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tradiedee - Voice Agent Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- LiveKit Client SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .voice-circle {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .voice-circle:hover {
+            transform: scale(1.05);
+        }
+
+        .pulse-ring {
+            position: absolute;
+            border: 3px solid rgba(102, 126, 234, 0.5);
+            border-radius: 50%;
+            animation: pulse 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        .pulse-ring:nth-child(1) {
+            width: 100%;
+            height: 100%;
+        }
+
+        .pulse-ring:nth-child(2) {
+            width: 120%;
+            height: 120%;
+            top: -10%;
+            left: -10%;
+            animation-delay: 0.3s;
+        }
+
+        .pulse-ring:nth-child(3) {
+            width: 140%;
+            height: 140%;
+            top: -20%;
+            left: -20%;
+            animation-delay: 0.6s;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(0.8);
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(1.2);
+                opacity: 0;
+            }
+        }
+
+        .listening-animation {
+            animation: listening 1.5s ease-in-out infinite;
+        }
+
+        @keyframes listening {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .wave-bars {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            height: 40px;
+        }
+
+        .wave-bar {
+            width: 4px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 4px;
+            animation: wave 1s ease-in-out infinite;
+        }
+
+        .wave-bar:nth-child(1) { animation-delay: 0s; }
+        .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+        .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+        .wave-bar:nth-child(4) { animation-delay: 0.3s; }
+        .wave-bar:nth-child(5) { animation-delay: 0.4s; }
+
+        @keyframes wave {
+            0%, 100% { height: 10px; }
+            50% { height: 40px; }
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid white;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center justify-center w-10 h-10 bg-indigo-600 rounded-lg">
+                        <i class="bi bi-telephone-fill text-white text-lg"></i>
+                    </div>
+                    <span class="text-xl font-bold text-gray-900">Tradiedee</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="/homepage#demo" class="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition-colors">
+                        Try Demo
+                    </a>
+                    <a href="{{ url_for('core.login') }}" class="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition-colors">
+                        Login
+                    </a>
+                    <a href="{{ url_for('core.signup') }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors">
+                        Sign Up
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative overflow-hidden gradient-bg py-20">
+        <div class="absolute inset-0 opacity-10">
+            <div class="absolute inset-0" style="background-image: radial-gradient(circle, white 1px, transparent 1px); background-size: 30px 30px;"></div>
+        </div>
+
+        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h1 class="text-5xl md:text-6xl font-bold text-white mb-6">
+                AI Voice Agents<br/>That Actually Work
+            </h1>
+            <p class="text-xl md:text-2xl text-white/90 mb-8 max-w-3xl mx-auto">
+                Create intelligent voice agents that can handle calls, answer questions, and engage with customers in multiple languages
+            </p>
+            <div class="flex items-center justify-center gap-4 mb-4">
+                <span class="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm font-medium">
+                    <i class="bi bi-check-circle-fill text-green-300"></i> Natural Conversations
+                </span>
+                <span class="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm font-medium">
+                    <i class="bi bi-check-circle-fill text-green-300"></i> Multiple Voices
+                </span>
+                <span class="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm font-medium">
+                    <i class="bi bi-check-circle-fill text-green-300"></i> Easy Setup
+                </span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Voice Demo -->
+    <section id="demo" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl font-bold text-gray-900 mb-4">
+                    Try Our <span class="gradient-text">Voice Agent</span> Now
+                </h2>
+                <p class="text-xl text-gray-600">
+                    Click the button below to start a conversation with our AI voice agent
+                </p>
+            </div>
+
+            <!-- Voice Agent Interface -->
+            <div class="max-w-2xl mx-auto">
+                <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-3xl p-12 border border-indigo-100 shadow-2xl">
+                    <!-- Status Display -->
+                    <div id="statusDisplay" class="text-center mb-8">
+                        <p class="text-lg font-semibold text-gray-700">Ready to talk</p>
+                        <p class="text-sm text-gray-500 mt-1">Click the button to start</p>
+                    </div>
+
+                    <!-- Voice Circle Button -->
+                    <div class="flex items-center justify-center mb-8">
+                        <div id="voiceButton" class="voice-circle flex items-center justify-center">
+                            <div class="pulse-ring"></div>
+                            <div class="pulse-ring"></div>
+                            <div class="pulse-ring"></div>
+
+                            <div id="buttonContent" class="relative z-10 w-full h-full rounded-full gradient-bg flex flex-col items-center justify-center shadow-2xl">
+                                <i class="bi bi-mic-fill text-white text-6xl mb-3"></i>
+                                <span class="text-white font-bold text-xl">Start Talking</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Wave Animation (Hidden by default) -->
+                    <div id="waveAnimation" class="hidden justify-center mb-8">
+                        <div class="wave-bars">
+                            <div class="wave-bar"></div>
+                            <div class="wave-bar"></div>
+                            <div class="wave-bar"></div>
+                            <div class="wave-bar"></div>
+                            <div class="wave-bar"></div>
+                        </div>
+                    </div>
+
+                    <!-- Transcript Display -->
+                    <div style="display: none;" id="transcriptBox" class="hidden bg-white rounded-xl p-6 shadow-inner border border-gray-200 max-h-64 overflow-y-auto">
+                        <h3 class="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                            <i class="bi bi-chat-dots"></i> Conversation
+                        </h3>
+                        <div id="transcriptContent" class="space-y-2 text-sm">
+                            <!-- Transcript messages will appear here -->
+                        </div>
+                    </div>
+
+                    <!-- Info Box -->
+                    
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="py-20 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-900 mb-4">Powerful Features</h2>
+                <p class="text-xl text-gray-600">Everything you need to create amazing voice experiences</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Feature 1 -->
+                <div class="bg-white rounded-xl p-8 shadow-lg hover:shadow-xl transition-shadow">
+                    <div class="w-14 h-14 bg-indigo-100 rounded-lg flex items-center justify-center mb-6">
+                        <i class="bi bi-lightning-charge-fill text-indigo-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Quick Setup</h3>
+                    <p class="text-gray-600">Create and deploy voice agents in minutes with our intuitive interface. No coding required.</p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="bg-white rounded-xl p-8 shadow-lg hover:shadow-xl transition-shadow">
+                    <div class="w-14 h-14 bg-purple-100 rounded-lg flex items-center justify-center mb-6">
+                        <i class="bi bi-mic-fill text-purple-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Natural Voices</h3>
+                    <p class="text-gray-600">Choose from multiple premium AI voices including Fatima, Ayesha, Hiba, and Ali.</p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="bg-white rounded-xl p-8 shadow-lg hover:shadow-xl transition-shadow">
+                    <div class="w-14 h-14 bg-green-100 rounded-lg flex items-center justify-center mb-6">
+                        <i class="bi bi-globe text-green-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Multi-Language</h3>
+                    <p class="text-gray-600">Support for Arabic, English, and more languages with natural pronunciation.</p>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="bg-white rounded-xl p-8 shadow-lg hover:shadow-xl transition-shadow">
+                    <div class="w-14 h-14 bg-blue-100 rounded-lg flex items-center justify-center mb-6">
+                        <i class="bi bi-graph-up text-blue-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Analytics</h3>
+                    <p class="text-gray-600">Track call logs, monitor usage, and analyze performance with detailed insights.</p>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="bg-white rounded-xl p-8 shadow-lg hover:shadow-xl transition-shadow">
+                    <div class="w-14 h-14 bg-red-100 rounded-lg flex items-center justify-center mb-6">
+                        <i class="bi bi-shield-check text-red-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Secure & Reliable</h3>
+                    <p class="text-gray-600">Enterprise-grade security with 99.9% uptime guarantee for your voice agents.</p>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="bg-white rounded-xl p-8 shadow-lg hover:shadow-xl transition-shadow">
+                    <div class="w-14 h-14 bg-yellow-100 rounded-lg flex items-center justify-center mb-6">
+                        <i class="bi bi-stars text-yellow-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Custom Prompts</h3>
+                    <p class="text-gray-600">Define your agent's personality, behavior, and responses with custom system prompts.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-20 gradient-bg">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-4xl md:text-5xl font-bold text-white mb-6">
+                Ready to Get Started?
+            </h2>
+            <p class="text-xl text-white/90 mb-8">
+                Join thousands of businesses using AI voice agents to transform their customer experience
+            </p>
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <a href="{{ url_for('core.signup') }}" class="px-8 py-4 bg-white text-indigo-600 rounded-lg hover:bg-gray-100 font-bold text-lg transition-colors shadow-xl">
+                    Start Free Trial
+                </a>
+                <a href="{{ url_for('core.login') }}" class="px-8 py-4 bg-transparent border-2 border-white text-white rounded-lg hover:bg-white/10 font-bold text-lg transition-colors">
+                    Sign In
+                </a>
+            </div>
+            <p class="text-white/80 text-sm mt-6">
+                500 free minutes • No credit card required • Cancel anytime
+            </p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="flex items-center justify-center w-10 h-10 bg-indigo-600 rounded-lg">
+                            <i class="bi bi-telephone-fill text-white"></i>
+                        </div>
+                        <span class="text-xl font-bold">Tradiedee</span>
+                    </div>
+                    <p class="text-gray-400 text-sm">
+                        AI-powered voice agents for modern businesses
+                    </p>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Product</h4>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li><a href="#" class="hover:text-white transition-colors">Features</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Pricing</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Demo</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Company</h4>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li><a href="#" class="hover:text-white transition-colors">About</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Contact</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Support</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Legal</h4>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li><a href="#" class="hover:text-white transition-colors">Privacy Policy</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 mt-12 pt-8 text-center text-sm text-gray-400">
+                <p>&copy; 2024 Tradiedee. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Check if LiveKit is loaded
+        console.log('LiveKit SDK loaded:', typeof LivekitClient !== 'undefined' ? 'Yes' : 'No');
+        if (typeof LivekitClient === 'undefined') {
+            console.error('LiveKit SDK failed to load. Check CDN connection.');
+        }
+
+        let isActive = false;
+        let isInitializing = false;
+        let livekitRoom = null;
+        let roomName = null;
+
+        const voiceButton = document.getElementById('voiceButton');
+        const buttonContent = document.getElementById('buttonContent');
+        const statusDisplay = document.getElementById('statusDisplay');
+        const waveAnimation = document.getElementById('waveAnimation');
+        const transcriptBox = document.getElementById('transcriptBox');
+        const transcriptContent = document.getElementById('transcriptContent');
+
+        voiceButton.addEventListener('click', async function() {
+            if (isInitializing) return;
+
+            if (!isActive) {
+                await startVoiceAgent();
+            } else {
+                await stopVoiceAgent();
+            }
+        });
+
+        async function startVoiceAgent() {
+            isInitializing = true;
+            isActive = true;
+
+            // Show initializing state
+            buttonContent.innerHTML = `
+                <div class="spinner mx-auto mb-3"></div>
+                <span class="text-white font-bold text-lg">Initializing...</span>
+            `;
+            statusDisplay.innerHTML = `
+                <p class="text-lg font-semibold text-indigo-600">Starting agent...</p>
+                <p class="text-sm text-gray-500">Requesting microphone access...</p>
+            `;
+
+            try {
+                // Check if LiveKit is available
+                if (typeof LivekitClient === 'undefined') {
+                    throw new Error('LiveKit SDK not loaded. Please refresh the page.');
+                }
+
+                // Step 1: Get LiveKit token
+                const tokenResponse = await fetch('/api/demo-token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (!tokenResponse.ok) {
+                    throw new Error('Failed to get access token');
+                }
+
+                const tokenData = await tokenResponse.json();
+                roomName = tokenData.room_name;
+
+                statusDisplay.innerHTML = `
+                    <p class="text-lg font-semibold text-indigo-600">Connecting to room...</p>
+                    <p class="text-sm text-gray-500">Please wait</p>
+                `;
+
+                // Step 2: Connect to LiveKit room
+                livekitRoom = new LivekitClient.Room();
+
+                // Set up event listeners
+                livekitRoom.on('trackSubscribed', (track, publication, participant) => {
+                    if (track.kind === 'audio' && participant.identity !== tokenData.participant_identity) {
+                        // Agent audio track - attach to audio element
+                        const audioElement = track.attach();
+                        document.body.appendChild(audioElement);
+                        console.log('🔊 Agent audio track attached');
+                    }
+                });
+
+                livekitRoom.on('trackPublished', (publication, participant) => {
+                    console.log('📢 Track published:', publication.kind, participant.identity);
+                });
+
+                livekitRoom.on('participantConnected', (participant) => {
+                    console.log('👤 Participant connected:', participant.identity);
+                    if (participant.identity !== tokenData.participant_identity) {
+                        addTranscriptMessage('System', 'Agent joined the conversation');
+                    }
+                });
+
+                // Connect to room
+                await livekitRoom.connect(tokenData.url, tokenData.token);
+                console.log('✅ Connected to LiveKit room:', roomName);
+
+                // Enable local audio (microphone)
+                await livekitRoom.localParticipant.setMicrophoneEnabled(true);
+                console.log('🎤 Microphone enabled');
+
+                statusDisplay.innerHTML = `
+                    <p class="text-lg font-semibold text-indigo-600">Starting voice agent...</p>
+                    <p class="text-sm text-gray-500">Agent initializing (~10 seconds)</p>
+                `;
+
+                // Step 3: Start the agent
+                const agentResponse = await fetch('/api/start-demo-agent', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ room_name: roomName })
+                });
+
+                if (!agentResponse.ok) {
+                    throw new Error('Failed to start agent');
+                }
+
+                console.log('🤖 Agent dispatch created');
+
+                // Wait for agent to initialize
+                await new Promise(resolve => setTimeout(resolve, 10000));
+
+                isInitializing = false;
+
+                // Show active state
+                buttonContent.innerHTML = `
+                    <i class="bi bi-mic-fill text-white text-6xl mb-3 listening-animation"></i>
+                    <span class="text-white font-bold text-xl">Listening...</span>
+                `;
+                buttonContent.classList.add('listening-animation');
+
+                statusDisplay.innerHTML = `
+                    <p class="text-lg font-semibold text-green-600">🎙️ Agent is listening</p>
+                    <p class="text-sm text-gray-500">Start speaking now!</p>
+                `;
+
+                waveAnimation.classList.remove('hidden');
+                waveAnimation.classList.add('flex');
+                transcriptBox.classList.remove('hidden');
+
+                addTranscriptMessage('System', 'Connected! The voice agent is ready. Start talking...');
+
+            } catch (error) {
+                console.error('❌ Error:', error);
+                isInitializing = false;
+                isActive = false;
+
+                buttonContent.innerHTML = `
+                    <i class="bi bi-exclamation-triangle text-white text-6xl mb-3"></i>
+                    <span class="text-white font-bold text-xl">Error</span>
+                `;
+
+                statusDisplay.innerHTML = `
+                    <p class="text-lg font-semibold text-red-600">Connection failed</p>
+                    <p class="text-sm text-gray-500">${error.message}</p>
+                `;
+
+                if (livekitRoom) {
+                    await livekitRoom.disconnect();
+                    livekitRoom = null;
+                }
+
+                // Reset after 3 seconds
+                setTimeout(() => {
+                    buttonContent.classList.remove('listening-animation');
+                    buttonContent.innerHTML = `
+                        <i class="bi bi-mic-fill text-white text-6xl mb-3"></i>
+                        <span class="text-white font-bold text-xl">Start Talking</span>
+                    `;
+                    statusDisplay.innerHTML = `
+                        <p class="text-lg font-semibold text-gray-700">Ready to talk</p>
+                        <p class="text-sm text-gray-500">Click the button to start</p>
+                    `;
+                }, 3000);
+            }
+        }
+
+        async function stopVoiceAgent() {
+            isActive = false;
+
+            if (livekitRoom) {
+                await livekitRoom.disconnect();
+                livekitRoom = null;
+                console.log('🔌 Disconnected from LiveKit room');
+            }
+
+            buttonContent.classList.remove('listening-animation');
+            buttonContent.innerHTML = `
+                <i class="bi bi-mic-fill text-white text-6xl mb-3"></i>
+                <span class="text-white font-bold text-xl">Start Talking</span>
+            `;
+
+            statusDisplay.innerHTML = `
+                <p class="text-lg font-semibold text-gray-700">Session ended</p>
+                <p class="text-sm text-gray-500">Click to start again</p>
+            `;
+
+            waveAnimation.classList.add('hidden');
+            waveAnimation.classList.remove('flex');
+
+            addTranscriptMessage('System', 'Session ended. Click the button to start a new conversation.');
+        }
+
+        function addTranscriptMessage(speaker, message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = speaker === 'You' ? 'text-right' : 'text-left';
+
+            let bgColor = 'bg-gray-100 text-gray-900';
+            if (speaker === 'You') bgColor = 'bg-indigo-100 text-indigo-900';
+            if (speaker === 'System') bgColor = 'bg-blue-50 text-blue-900';
+
+            messageDiv.innerHTML = `
+                <div class="inline-block ${bgColor} rounded-lg px-4 py-2 max-w-sm">
+                    <p class="font-semibold text-xs mb-1">${speaker}</p>
+                    <p class="text-sm">${message}</p>
+                </div>
+            `;
+            transcriptContent.appendChild(messageDiv);
+            transcriptContent.scrollTop = transcriptContent.scrollHeight;
+        }
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', async () => {
+            if (livekitRoom) {
+                await livekitRoom.disconnect();
+            }
+        });
+    </script>
+</body>
+</html>

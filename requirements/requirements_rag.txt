@@ -1,0 +1,10 @@
+# RAG (Retrieval-Augmented Generation) Dependencies
+# Install with: pip install -r requirements_rag.txt
+
+# Core LlamaIndex
+llama-index-core>=0.10.0
+llama-index-llms-openai>=0.1.0
+llama-index-embeddings-openai>=0.1.0
+llama-index-readers-file
+# Optional: Additional document loaders
+# llama-index-readers-file>=0.1.0  # For PDF, DOCX, etc.

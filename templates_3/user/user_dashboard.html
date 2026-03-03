@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block breadcrumb_parent %}Home{% endblock %}
+{% block breadcrumb_current %}Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Live waveform canvas */
+    .waveform-bg {
+        position: absolute; inset: 0; overflow: hidden; border-radius: inherit;
+    }
+    .waveform-bg canvas { width: 100%; height: 100%; }
+
+    /* Pulse ring animation */
+    @keyframes pulse-ring {
+        0% { transform: scale(1); opacity: 0.4; }
+        100% { transform: scale(1.8); opacity: 0; }
+    }
+    .pulse-ring::after {
+        content: ''; position: absolute; inset: -4px; border-radius: 50%;
+        border: 2px solid currentColor; animation: pulse-ring 2s ease-out infinite;
+    }
+
+    /* Stat card gradient borders */
+    .stat-card { position: relative; overflow: hidden; }
+    .stat-card::before {
+        content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+        border-radius: 12px 12px 0 0;
+    }
+    .stat-card.purple::before { background: linear-gradient(90deg, #4F46E5, #a78bfa); }
+    .stat-card.blue::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .stat-card.emerald::before { background: linear-gradient(90deg, #059669, #34d399); }
+    .stat-card.amber::before { background: linear-gradient(90deg, #d97706, #fbbf24); }
+
+    /* Animate count up */
+    .count-up { font-variant-numeric: tabular-nums; }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+
+<!-- Hero Banner: Voice Agent Command Center -->
+<div class="relative rounded-2xl overflow-hidden mb-6" style="background: linear-gradient(135deg, #0B0F1E 0%, #1a1744 50%, #312e81 100%);">
+    <!-- Animated waveform background -->
+    <div class="waveform-bg opacity-20">
+        <canvas id="heroWaveform"></canvas>
+    </div>
+
+    <div class="relative z-10 px-8 py-8 flex items-center justify-between">
+        <div>
+            <div class="flex items-center gap-3 mb-3">
+                <div class="relative">
+                    <div class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/10">
+                        <i class="bi bi-soundwave text-nevox-400 text-lg"></i>
+                    </div>
+                    <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-sidebar"></div>
+                </div>
+                <div>
+                    <p class="text-white/50 text-xs font-medium uppercase tracking-wider">Voice Agent Platform</p>
+                </div>
+            </div>
+            <h1 class="text-2xl font-bold text-white mb-1">Welcome back, {{ session.username }}</h1>
+            <p class="text-white/40 text-sm">Your AI voice agents are standing by. Here's your activity overview.</p>
+        </div>
+
+        <!-- Live status indicator -->
+        <div class="hidden md:flex items-center gap-6">
+            <div class="text-center">
+                <div class="flex items-center justify-center gap-2 mb-1">
+                    <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                    <span class="text-emerald-400 text-xs font-semibold uppercase tracking-wide">System Active</span>
+                </div>
+                <p class="text-white/30 text-[0.65rem]">All agents operational</p>
+            </div>
+            <a href="{{ url_for('agents.new_agent_form') }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-white/10 backdrop-blur-sm text-white text-sm font-semibold rounded-xl hover:bg-white/15 transition-all border border-white/10">
+                <i class="bi bi-plus-lg" style="font-size: 0.75rem;"></i> Create Agent
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <!-- Minutes Balance -->
+    <div class="stat-card purple bg-white rounded-xl border border-gray-200/80 p-5 card-hover">
+        <div class="flex items-center justify-between mb-4">
+            <div class="w-10 h-10 rounded-xl bg-nevox-50 flex items-center justify-center">
+                <i class="bi bi-clock-history text-nevox-600" style="font-size: 1.125rem;"></i>
+            </div>
+            <span class="text-[0.65rem] font-bold uppercase tracking-wider text-gray-400">Minutes</span>
+        </div>
+        <p class="text-3xl font-bold text-gray-900 count-up">{{ user.minutes_balance }}</p>
+        <p class="text-xs mt-2 {% if user.minutes_balance < 100 %}text-amber-600{% else %}text-gray-400{% endif %}">
+            {% if user.minutes_balance < 100 %}
+            <i class="bi bi-exclamation-triangle"></i> Low balance - top up soon
+            {% else %}
+            Available balance
+            {% endif %}
+        </p>
+    </div>
+
+    <!-- Active Agents -->
+    <a href="{{ url_for('agents.create_agent') }}" class="stat-card blue bg-white rounded-xl border border-gray-200/80 p-5 card-hover block group">
+        <div class="flex items-center justify-between mb-4">
+            <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                <i class="bi bi-robot text-blue-600" style="font-size: 1.125rem;"></i>
+            </div>
+            <span class="text-[0.65rem] font-bold uppercase tracking-wider text-gray-400">Agents</span>
+        </div>
+        <p class="text-3xl font-bold text-gray-900 count-up">{{ agents|length }}</p>
+        <p class="text-xs text-nevox-600 mt-2 flex items-center gap-1 group-hover:gap-2 transition-all font-medium">
+            Manage agents <i class="bi bi-arrow-right" style="font-size: 0.6rem;"></i>
+        </p>
+    </a>
+
+    <!-- Total Calls -->
+    <a href="{{ url_for('core.call_logs') }}" class="stat-card emerald bg-white rounded-xl border border-gray-200/80 p-5 card-hover block group">
+        <div class="flex items-center justify-between mb-4">
+            <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                <i class="bi bi-telephone text-emerald-600" style="font-size: 1.125rem;"></i>
+            </div>
+            <span class="text-[0.65rem] font-bold uppercase tracking-wider text-gray-400">Calls</span>
+        </div>
+        <p class="text-3xl font-bold text-gray-900 count-up">{{ total_calls }}</p>
+        <p class="text-xs text-nevox-600 mt-2 flex items-center gap-1 group-hover:gap-2 transition-all font-medium">
+            View call logs <i class="bi bi-arrow-right" style="font-size: 0.6rem;"></i>
+        </p>
+    </a>
+
+    <!-- Success Rate -->
+    <div class="stat-card amber bg-white rounded-xl border border-gray-200/80 p-5 card-hover">
+        <div class="flex items-center justify-between mb-4">
+            <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+                <i class="bi bi-graph-up-arrow text-amber-600" style="font-size: 1.125rem;"></i>
+            </div>
+            <span class="text-[0.65rem] font-bold uppercase tracking-wider text-gray-400">Rate</span>
+        </div>
+        <p class="text-3xl font-bold text-gray-900 count-up">
+            {% if total_calls > 0 %}
+                {{ ((recent_calls|selectattr('status', 'equalto', 'completed')|list|length / recent_calls|length) * 100)|round|int if recent_calls|length > 0 else 0 }}%
+            {% else %}
+                0%
+            {% endif %}
+        </p>
+        <p class="text-xs text-gray-400 mt-2">Completion rate</p>
+    </div>
+</div>
+
+<!-- Recent Calls Table -->
+<div class="bg-white rounded-xl border border-gray-200/80 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-nevox-50 flex items-center justify-center">
+                <i class="bi bi-soundwave text-nevox-600" style="font-size: 0.875rem;"></i>
+            </div>
+            <div>
+                <h2 class="text-sm font-bold text-gray-900">Recent Calls</h2>
+                <p class="text-[0.6875rem] text-gray-400">Latest voice agent activity</p>
+            </div>
+        </div>
+        {% if recent_calls %}
+        <a href="{{ url_for('core.call_logs') }}" class="inline-flex items-center gap-1.5 text-xs font-semibold text-nevox-600 hover:text-nevox-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-nevox-50">
+            View all <i class="bi bi-arrow-right" style="font-size: 0.6rem;"></i>
+        </a>
+        {% endif %}
+    </div>
+
+    {% if recent_calls %}
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b border-gray-100 bg-gray-50/50">
+                    <th class="text-left py-3 px-6 text-[0.6875rem] font-semibold text-gray-400 uppercase tracking-wider">To Number</th>
+                    <th class="text-left py-3 px-6 text-[0.6875rem] font-semibold text-gray-400 uppercase tracking-wider">Duration</th>
+                    <th class="text-left py-3 px-6 text-[0.6875rem] font-semibold text-gray-400 uppercase tracking-wider">Minutes</th>
+                    <th class="text-left py-3 px-6 text-[0.6875rem] font-semibold text-gray-400 uppercase tracking-wider">Date</th>
+                    <th class="text-left py-3 px-6 text-[0.6875rem] font-semibold text-gray-400 uppercase tracking-wider">Status</th>
+                    <th class="text-right py-3 px-6 text-[0.6875rem] font-semibold text-gray-400 uppercase tracking-wider"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+                {% for call in recent_calls[:10] %}
+                <tr class="hover:bg-gray-50/70 transition-colors group">
+                    <td class="py-3 px-6">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                <i class="bi bi-telephone text-gray-500" style="font-size: 0.7rem;"></i>
+                            </div>
+                            <span class="text-sm font-semibold text-gray-900">{{ call.to_number }}</span>
+                        </div>
+                    </td>
+                    <td class="py-3 px-6">
+                        <span class="text-sm text-gray-600 font-medium">{{ call.duration_seconds }}s</span>
+                    </td>
+                    <td class="py-3 px-6">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-nevox-50 text-nevox-700">{{ call.minutes_used }} min</span>
+                    </td>
+                    <td class="py-3 px-6">
+                        <span class="text-sm text-gray-500">{{ call.created_at.strftime('%b %d, %Y %H:%M') }}</span>
+                    </td>
+                    <td class="py-3 px-6">
+                        {% if call.status == 'completed' %}
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            Completed
+                        </span>
+                        {% elif call.status == 'no_answer' %}
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-100">
+                            <span class="w-1.5 h-1.5 rounded-full bg-orange-400"></span>
+                            No Answer
+                        </span>
+                        {% elif call.status == 'failed' %}
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-700 border border-red-100">
+                            <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                            Failed
+                        </span>
+                        {% else %}
+                        <span class="badge-primary">{{ call.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-3 px-6 text-right">
+                        <a href="{{ url_for('core.view_call_log', log_id=call.id) }}" class="text-gray-300 group-hover:text-nevox-600 transition-colors">
+                            <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="text-center py-16 px-6">
+        <div class="relative inline-block mb-5">
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-nevox-100 to-nevox-50 flex items-center justify-center">
+                <i class="bi bi-soundwave text-nevox-400" style="font-size: 1.5rem;"></i>
+            </div>
+            <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-gray-100 rounded-full flex items-center justify-center border-2 border-white">
+                <i class="bi bi-plus text-gray-400" style="font-size: 0.6rem;"></i>
+            </div>
+        </div>
+        <h3 class="text-base font-bold text-gray-900 mb-1">No calls yet</h3>
+        <p class="text-sm text-gray-500 mb-6 max-w-sm mx-auto">Create a voice agent and make your first call to see activity here</p>
+        <a href="{{ url_for('agents.new_agent_form') }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-nevox-600 text-white text-sm font-semibold rounded-xl hover:bg-nevox-700 transition-colors shadow-sm shadow-nevox-600/20">
+            <i class="bi bi-plus-lg" style="font-size: 0.75rem;"></i> Create Your First Agent
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Animated waveform in hero banner
+(function() {
+    const canvas = document.getElementById('heroWaveform');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let w, h, t = 0;
+
+    function resize() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = w = rect.width;
+        canvas.height = h = rect.height;
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, w, h);
+        ctx.strokeStyle = 'rgba(167, 139, 250, 0.6)';
+        ctx.lineWidth = 1.5;
+
+        for (let wave = 0; wave < 3; wave++) {
+            ctx.beginPath();
+            const amplitude = 15 + wave * 8;
+            const frequency = 0.008 + wave * 0.003;
+            const speed = 0.02 + wave * 0.005;
+
+            for (let x = 0; x < w; x++) {
+                const y = h / 2 + Math.sin(x * frequency + t * speed) * amplitude * Math.sin(x * 0.002 + t * 0.01);
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.globalAlpha = 0.3 - wave * 0.08;
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+        t++;
+        requestAnimationFrame(draw);
+    }
+
+    resize();
+    window.addEventListener('resize', resize);
+    draw();
+})();
+</script>
+{% endblock %}

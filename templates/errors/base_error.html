@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Error - Tradiedee{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center">
+    <div class="max-w-md w-full mx-auto p-6">
+        <div class="text-center">
+            <!-- Logo/Branding -->
+            <div class="mb-8">
+                <h1 class="text-2xl font-bold text-gray-900">Tradiedee</h1>
+            </div>
+            
+            <!-- Error Content -->
+            {% block error_content %}{% endblock %}
+            
+            <!-- Footer -->
+            <div class="mt-8 text-xs text-gray-400">
+                <p>&copy; {{ current_year }} Tradiedee. All rights reserved.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

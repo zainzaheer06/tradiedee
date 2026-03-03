@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}Business Setup - Tradiedee{% endblock %}
+
+{% block dashboard_content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Progress -->
+            <div class="mb-4">
+                <h2 class="mb-4">🚀 Welcome! Let's Set Up Your Business</h2>
+                <div class="progress mb-4" style="height: 8px;">
+                    <div class="progress-bar" id="progressBar" role="progressbar" style="width: 25%;" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+            </div>
+
+            <!-- Form -->
+            <form id="setupForm">
+                <!-- Step 1: Basic Info -->
+                <div class="step" id="step1">
+                    <h4 class="mb-4">Step 1: Business Information</h4>
+
+                    <div class="mb-3">
+                        <label for="businessName" class="form-label">Business Name *</label>
+                        <input type="text" class="form-control form-control-lg" id="businessName" name="business_name" placeholder="e.g., John's Plumbing" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="businessType" class="form-label">Business Type *</label>
+                        <select class="form-select form-select-lg" id="businessType" name="business_type" required>
+                            <option value="">Select a type...</option>
+                            <option value="Plumbing">Plumbing</option>
+                            <option value="Electrical">Electrical</option>
+                            <option value="HVAC">HVAC/Heating</option>
+                            <option value="General">General Trades</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="businessPhone" class="form-label">Phone Number</label>
+                        <input type="tel" class="form-control form-control-lg" id="businessPhone" name="phone_number" placeholder="+61412345678">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="tone" class="form-label">Greeting Tone</label>
+                        <select class="form-select form-select-lg" id="tone" name="tone">
+                            <option value="friendly" selected>Friendly & Casual</option>
+                            <option value="professional">Professional & Formal</option>
+                        </select>
+                    </div>
+
+                    <button type="button" class="btn btn-primary btn-lg w-100" onclick="nextStep(2)">Continue →</button>
+                </div>
+
+                <!-- Step 2: ServiceM8 Configuration -->
+                <div class="step d-none" id="step2">
+                    <h4 class="mb-4">Step 2: ServiceM8 Integration (Optional)</h4>
+
+                    <div class="alert alert-info">
+                        <strong>ℹ️ What is ServiceM8?</strong><br>
+                        ServiceM8 is a job management system. If you use it, we can automatically sync bookings. If not, no problem - we'll manage jobs separately.
+                    </div>
+
+                    <div class="form-check form-switch mb-4">
+                        <input class="form-check-input" type="checkbox" id="enableServiceM8" name="serviceM8_enabled">
+                        <label class="form-check-label" for="enableServiceM8">
+                            I use ServiceM8
+                        </label>
+                    </div>
+
+                    <div id="serviceM8Fields" style="display: none;">
+                        <div class="mb-3">
+                            <label for="serviceM8ApiKey" class="form-label">ServiceM8 API Key *</label>
+                            <input type="password" class="form-control form-control-lg" id="serviceM8ApiKey" name="serviceM8_api_key" placeholder="Paste your API key">
+                            <small class="text-muted">Get this from ServiceM8 Settings → API Keys</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="serviceM8CustomerId" class="form-label">Customer ID *</label>
+                            <input type="text" class="form-control form-control-lg" id="serviceM8CustomerId" name="serviceM8_customer_id" placeholder="Your customer ID">
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-lg flex-grow-1" onclick="prevStep(1)">← Back</button>
+                        <button type="button" class="btn btn-primary btn-lg flex-grow-1" onclick="nextStep(3)">Continue →</button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Google Maps API -->
+                <div class="step d-none" id="step3">
+                    <h4 class="mb-4">Step 3: Address Validation</h4>
+
+                    <div class="alert alert-success">
+                        <strong>✨ Smart Features</strong><br>
+                        We'll validate customer addresses so technicians always go to the right location.
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="googleApiKey" class="form-label">Google Maps API Key</label>
+                        <input type="password" class="form-control form-control-lg" id="googleApiKey" name="google_api_key" placeholder="Optional">
+                        <small class="text-muted">
+                            <a href="https://console.cloud.google.com/" target="_blank">Get API key</a> - enables address validation and maps
+                        </small>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-lg flex-grow-1" onclick="prevStep(2)">← Back</button>
+                        <button type="button" class="btn btn-primary btn-lg flex-grow-1" onclick="nextStep(4)">Continue →</button>
+                    </div>
+                </div>
+
+                <!-- Step 4: Emergency Configuration -->
+                <div class="step d-none" id="step4">
+                    <h4 class="mb-4">Step 4: Working Hours & Timezone</h4>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="workingHoursStart" class="form-label">Start Time</label>
+                            <input type="time" class="form-control form-control-lg" id="workingHoursStart" name="working_hours_start" value="08:00">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="workingHoursEnd" class="form-label">End Time</label>
+                            <input type="time" class="form-control form-control-lg" id="workingHoursEnd" name="working_hours_end" value="17:00">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="timezone" class="form-label">Timezone</label>
+                        <select class="form-select form-select-lg" id="timezone" name="timezone">
+                            <option value="Australia/Sydney" selected>Australia/Sydney (NSW, ACT)</option>
+                            <option value="Australia/Melbourne">Australia/Melbourne (VIC, TAS)</option>
+                            <option value="Australia/Brisbane">Australia/Brisbane (QLD)</option>
+                            <option value="Australia/Perth">Australia/Perth (WA)</option>
+                            <option value="Australia/Adelaide">Australia/Adelaide (SA)</option>
+                            <option value="Australia/Darwin">Australia/Darwin (NT)</option>
+                            <option value="Australia/Hobart">Australia/Hobart (TAS)</option>
+                        </select>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-lg flex-grow-1" onclick="prevStep(3)">← Back</button>
+                        <button type="button" class="btn btn-success btn-lg flex-grow-1" onclick="submitSetup()">Complete Setup</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Toggle ServiceM8 fields
+    document.getElementById('enableServiceM8').addEventListener('change', function() {
+        document.getElementById('serviceM8Fields').style.display = this.checked ? 'block' : 'none';
+    });
+
+    function nextStep(step) {
+        // Validate current step
+        const form = document.getElementById('setupForm');
+        const currentStep = step - 1;
+
+        // Check required fields in current step
+        let isValid = true;
+        if (currentStep === 1) {
+            const businessName = document.getElementById('businessName').value;
+            const businessType = document.getElementById('businessType').value;
+            if (!businessName || !businessType) {
+                alert('Please fill in all required fields');
+                isValid = false;
+            }
+        }
+
+        if (!isValid) return;
+
+        // Hide all steps
+        document.querySelectorAll('.step').forEach(el => el.classList.add('d-none'));
+
+        // Show target step
+        document.getElementById('step' + step).classList.remove('d-none');
+
+        // Update progress
+        const progress = (step / 4) * 100;
+        document.getElementById('progressBar').style.width = progress + '%';
+    }
+
+    function prevStep(step) {
+        // Hide all steps
+        document.querySelectorAll('.step').forEach(el => el.classList.add('d-none'));
+
+        // Show target step
+        document.getElementById('step' + step).classList.remove('d-none');
+
+        // Update progress
+        const progress = (step / 4) * 100;
+        document.getElementById('progressBar').style.width = progress + '%';
+    }
+
+    function submitSetup() {
+        const form = document.getElementById('setupForm');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData);
+
+        // Convert checkbox
+        data.serviceM8_enabled = document.getElementById('enableServiceM8').checked;
+
+        fetch('{{ url_for("business_setup.setup") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                window.location.href = '{{ url_for("business_setup.configure_emergency") }}';
+            } else {
+                alert('Error: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error);
+        });
+    }
+</script>
+
+<style>
+    .form-control-lg, .form-select-lg, .btn-lg {
+        font-size: 1.1rem;
+        padding: 0.75rem 1rem;
+    }
+</style>
+{% endblock %}

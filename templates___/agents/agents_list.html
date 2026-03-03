@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Agents{% endblock %}
+{% block page_title %}Agents{% endblock %}
+
+{% block dashboard_content %}
+<div
+    x-data="{ view: localStorage.getItem('agentView') || 'grid', setView(m) { this.view = m; localStorage.setItem('agentView', m); } }">
+
+    <!-- Page Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 style="font-size:18px; font-weight:700; color:#111827;">Voice Agents</h1>
+            <p style="font-size:13px; color:#6b7280; margin-top:2px;">
+                {{ pagination.total if pagination else agents|length }} agent{{ 's' if (pagination.total if pagination
+                else agents|length) != 1 else '' }}
+            </p>
+        </div>
+        <div class="flex items-center gap-3">
+            <!-- View toggle -->
+            <div
+                style="display:flex; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:8px; padding:3px; gap:2px;">
+                <button @click="setView('grid')"
+                    style="padding:5px 10px; border-radius:6px; border:none; cursor:pointer; font-size:12px; transition:all 0.15s;"
+                    :style="view==='grid' ? 'background:#fff; color:#111827; box-shadow:0 1px 3px rgba(0,0,0,0.08);' : 'background:transparent; color:#9ca3af;'">
+                    <i class="bi bi-grid-3x3-gap"></i>
+                </button>
+                <button @click="setView('list')"
+                    style="padding:5px 10px; border-radius:6px; border:none; cursor:pointer; font-size:12px; transition:all 0.15s;"
+                    :style="view==='list' ? 'background:#fff; color:#111827; box-shadow:0 1px 3px rgba(0,0,0,0.08);' : 'background:transparent; color:#9ca3af;'">
+                    <i class="bi bi-list-ul"></i>
+                </button>
+            </div>
+
+            <a href="{{ url_for('agents.new_agent_form') }}" class="btn-primary">
+                <i class="bi bi-plus-lg" style="font-size:12px;"></i>
+                New Agent
+            </a>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="card flex items-center gap-3 mb-5" style="padding:12px 16px;">
+        <div style="flex:1; position:relative;">
+            <i class="bi bi-search"
+                style="position:absolute; left:11px; top:50%; transform:translateY(-50%); color:#9ca3af; font-size:13px;"></i>
+            <input type="text" name="search" value="{{ search_query or '' }}" placeholder="Search agents..."
+                class="input" style="padding-left:34px; background:#f9fafb;"
+                hx-get="{{ url_for('agents.agents_list') }}" hx-trigger="keyup changed delay:350ms, search"
+                hx-target="#agents-container" hx-swap="innerHTML" hx-indicator="#search-spinner" hx-push-url="true">
+        </div>
+        <div id="search-spinner" class="htmx-indicator text-muted" style="font-size:12px; align-items:center; gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                style="animation:spin 0.7s linear infinite;">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4" />
+            </svg>
+            Searching...
+        </div>
+        {% if search_query %}
+        <a href="{{ url_for('agents.agents_list') }}" class="btn-secondary" style="padding:7px 12px;">
+            <i class="bi bi-x" style="font-size:14px;"></i> Clear
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Agents Output -->
+    <div id="agents-container">
+        {% include 'partials/agent_cards.html' %}
+    </div>
+
+</div>
+{% endblock %}
