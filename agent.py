@@ -4,14 +4,26 @@ import os
 import time
 import json
 import aiohttp
-import sqlite3
+
 from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 
 
+from types import SimpleNamespace
 from typing import AsyncIterable
 import re
-import time
+
+# Redis caching service (40x speedup!)
+from services.redis_service import redis_service
+
+# SQLAlchemy ORM database access (replaces sqlite3)
+from database import get_readonly_session, check_connection
+from models import Agent as AgentModel  # Renamed to avoid conflict with livekit.agents.Agent
+
+from datetime import datetime
+
+
+
 
 # Saudi Arabia Timezone (UTC+3)
 SAUDI_TZ = timezone(timedelta(hours=3))
@@ -20,6 +32,8 @@ from livekit.agents import voice
 from livekit.agents import (
     Agent,
     AgentSession,
+    AudioConfig,
+    BackgroundAudioPlayer,
     JobContext,
     ModelSettings,
     MetricsCollectedEvent,
@@ -46,12 +60,8 @@ from services.recording_service import recording_service
 # Import tool service for dynamic tools
 from services.tool_service import tool_service
 
-logger = logging.getLogger("agent")
+logger = logging.getLogger("agent-tradie")
 load_dotenv(".env")
-
-# --- Config Cache ---
-_agent_config_cache = {}
-_cache_ttl = 300  # 5 minutes
 
 
 
@@ -63,8 +73,8 @@ _cache_ttl = 300  # 5 minutes
 REMOVE_LIST = [
     "end_call", "query", "search", "add_sip_participant", "detected_answering_machine",
     "log_participants", "hangup", "execute", "call", "invoke", "trigger", "fetch", "get", "post",
-    "function", "callback", "error", "exception", "null", "undefined", "API", "JSON", "HTTP", 
-    "async", "await", "params", "payload", "response", "request", "status", "code", "object", 
+    "function", "callback", "error", "exception", "null", "undefined", "API", "JSON", "HTTP",
+    "async", "await", "params", "payload", "response", "request", "status", "code", "object",
     "array", "string", "boolean", "number"
 ]
 # Creates a regex like: \b(end_call|query|function|...)\b
@@ -73,286 +83,97 @@ REMOVE_PATTERN = re.compile(r'\b(' + '|'.join(map(re.escape, REMOVE_LIST)) + r')
 # Pattern 2: Artifacts (brackets, quotes)
 ARTIFACTS_PATTERN = re.compile(r'[\{\}\[\]"\'\(\)]')
 
-# Pattern 3: English to Arabic Map
-ENG_TO_AR = {
-    "ok": "تمام", "yes": "نعم", "no": "لا", "sorry": "آسف", "thank you": "شكراً", 
-    "thanks": "شكراً", "please": "من فضلك", "welcome": "أهلاً", "bye": "مع السلامة",
-    "hello": "مرحباً", "good": "جيد", "bad": "سيء", "problem": "مشكلة", 
-    "no problem": "ما في مشكلة", "goodbye": "مع السلامة", "search": "بحث", 
-    "database": "قاعدة البيانات", "voicemail": "البريد الصوتي", "detected": "تم اكتشاف", 
-    "executing": "ينفذ", "processing": "يعالج", "loading": "يحمل", "failed": "فشل", 
-    "success": "نجح"
-}
-# Regex to find these specific English words
-TRANS_PATTERN = re.compile(r'\b(' + '|'.join(map(re.escape, ENG_TO_AR.keys())) + r')\b', re.IGNORECASE)
-
-def replace_eng_with_ar(match):
-    """Helper to swap English match with Arabic value"""
-    return ENG_TO_AR.get(match.group(0).lower(), match.group(0))
 
 
-# --- Database Helper ---
-def get_agent_config(agent_id: int, use_cache=True):
-    """Fetch agent configuration from database with caching"""
-    # Check cache first
-    if use_cache and agent_id in _agent_config_cache:
-        cached_data = _agent_config_cache[agent_id]
-        if time.time() - cached_data['timestamp'] < _cache_ttl:
-            logger.debug(f"📦 Using cached config for agent {agent_id}")
-            return cached_data['config']
+# --- Database Helper with Redis Caching (40x speedup!) ---
+# Now using SQLAlchemy ORM instead of raw sqlite3
+def get_agent_config(agent_id: int, use_cache=True) -> dict | None:
+    """
+    Fetch agent configuration with Redis caching.
+    Uses SQLAlchemy ORM for database-agnostic queries.
+
+    PERFORMANCE IMPROVEMENT:
+    - Redis cache: ~0.5ms (40x faster than DB!)
+    - Database queries reduced by 95%
+
+    Args:
+        agent_id: Agent ID to fetch
+        use_cache: Whether to use Redis cache (default: True)
+
+    Returns:
+        dict: Agent configuration or None if not found
+    """
+    # STEP 1: Try Redis cache first (FAST! ~0.5ms)
+    if use_cache:
+        cached_config = redis_service.get_agent_config(agent_id)
+        if cached_config:
+            logger.debug(f"Redis cache HIT: agent {agent_id}")
+            return cached_config
+
+    # STEP 2: Cache miss - load from database using SQLAlchemy ORM
+    logger.debug(f"Redis cache MISS: agent {agent_id} - loading from DB")
 
     try:
-        db_path = os.path.join(os.path.dirname(__file__), 'instance', 'voice_agent.db')
-        if not os.path.exists(db_path):
-            db_path = os.path.join(os.path.dirname(__file__), 'voice_agent.db')
+        # Use get_readonly_session for SELECT queries (more efficient)
+        with get_readonly_session() as session:
+            agent = session.query(AgentModel).filter_by(id=agent_id).first()
 
-        if not os.path.exists(db_path):
-            logger.error(f"❌ Database not found at: {db_path}")
-            return None
+            if agent:
+                # Convert to dict INSIDE session (critical to avoid DetachedInstanceError!)
+                config = {
+                    'id': agent.id,
+                    'name': agent.name,
+                    'prompt': agent.prompt,
+                    'greeting': agent.greeting or "G'day! You've reached us. How can I help you today?",
+                    'voice_id': agent.voice_id,
+                    'voice_name': agent.voice_name,
+                    'voice_speed': agent.voice_speed if agent.voice_speed is not None else 0.95,
+                    'temperature': agent.temperature if agent.temperature else 0.7,
+                    'vad_mode': agent.vad_mode if agent.vad_mode else 'dynamic',
+                    'transfer_targets': agent.transfer_targets or None,
+                }
 
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+                # STEP 3: Cache it in Redis for next time (TTL: 1 hour)
+                redis_service.cache_agent_config(agent_id, config, ttl=3600)
 
-        cursor.execute("""
-            SELECT id, name, prompt, greeting, voice_id, voice_name
-            FROM agent
-            WHERE id = ?
-        """, (agent_id,))
+                logger.info(f"Loaded agent config from database: {config['name']}")
+                logger.info(f"  🎤 Voice: {config['voice_name']} (ID: {config['voice_id']})")
+                logger.info(f"  🔊 Voice Speed: {config['voice_speed']}x")
+                return config  # Return dict, not model object!
+            else:
+                logger.warning(f"Agent {agent_id} not found in database")
+                return None
 
-        row = cursor.fetchone()
-        conn.close()
-
-        if row:
-            config = {
-                'id': row['id'],
-                'name': row['name'],
-                'prompt': row['prompt'],
-                'greeting': row['greeting'] if row['greeting'] else 'السلام عليكم ورحمة الله وبركاته، أهلاً وسهلاً فيك. أنا مساعدك الذكي، كيف أقدر أساعدك اليوم؟',
-                'voice_id': row['voice_id'],
-                'voice_name': row['voice_name']
-            }
-
-            # Cache the result
-            _agent_config_cache[agent_id] = {
-                'config': config,
-                'timestamp': time.time()
-            }
-
-            logger.info(f"📥 Loaded agent config from database: {config['name']}")
-            return config
-        else:
-            logger.warning(f"⚠️  Agent {agent_id} not found in database")
-            return None
-
-    except sqlite3.Error as e:
-        logger.error(f"❌ Database error fetching agent config: {e}")
-        return None
     except Exception as e:
-        logger.error(f"❌ Unexpected error fetching agent config: {e}")
+        logger.error(f"Database error fetching agent config: {e}")
         import traceback
         logger.error(traceback.format_exc())
         return None
 
+
 def get_default_config():
-    """Return default agent configuration"""
+    """Return default agent configuration - CallTradie Receptionist"""
     return {
         'id': 0,
-        'name': 'Default Assistant',
-        'prompt': """
-# Role & Objective
-You are a sales representative for Nevox AI, a Saudi-based company specializing in AI voice agent solutions. Your role is to:
+        'name': 'CallTradie Receptionist',
+        'prompt': """You are a friendly Australian trades receptionist answering calls for a plumbing, electrical, or HVAC business.
+Your job is to:
+1. Greet customers warmly
+2. Understand what service they need
+3. Check if it's an emergency
+4. Get their contact details and address
+5. Check available appointment times
+6. Book their appointment
+7. Confirm with SMS
 
-After Salam: أنا نورا من نيفوكس.
-أنا مساعدة صوتية بالذكاء الاصطناعي.
-Make outbound sales calls to potential business customers
-Qualify leads by understanding their business needs
-Ask about their business and tell them how AI voice can help them.
-Demonstrate how AI voice agents can solve their specific challenges
-Schedule follow-up calls or demos for interested prospects
-Maintain a positive brand image even with uninterested prospects
-
-# Personality & Tone
-Professional yet warm - like a trusted business consultant
-Use Saudi dialect naturally and conversationally
-Confident and knowledgeable about AI voice technology
-Consultative, not pushy - focus on understanding needs first
-Keep responses brief and engaging - 1-2 sentences per turn
-Respectful of customer's time
-Use common Saudi business expressions:
-
-أبشر / أبشري (absher/absheri)
-تمام (tamam)
-ولا يهمك (wala yhemmak)
-يسعدني أخدمك (yas'idni akhdimak)
-على راحتك (ala rahtak)
-بإذن الله (bi-ithn Allah)
-ما عليك أمر (ma alayk amr)
-
-# Instructions / Rules
-Greeting is played already then tell customer You are Nora from Nevox, AI Voice agent.
-Ask permission to continue the conversation (respect their time)
-Listen actively - let customer speak and identify pain points
-Qualify quickly - determine if they're a good fit within 30-60 seconds
-Ask directly what their business is
-Suggest use-cases based on their business (مثل: مبيعات، خدمة عملاء، مواعيد، متابعة طلبات).
-Guide them naturally to understand the value.
-Speak in benefits, not features - focus on how it helps their business
-Handle objections calmly - acknowledge concerns and provide reassurance
-Ask about their business and tell them how AI voice can help them.
-Never be pushy - if they're not interested, thank them and end gracefully
-Confirm contact details (email) if they show interest
-
-# Business Information
-##Company Name: Nevox AI (نيفوكس)
-##What We Offer:
-AI-powered voice agents that handle customer calls 24/7 using natural Arabic conversation
-
-## Key Benefits/Services:
-24/7 Availability - Never miss a customer call
-Cost Reduction - Reduce staffing costs by up to 70%
-Instant Response - Zero wait times for customers
-Scalability - Handle unlimited concurrent calls
-Saudi Arabic Support - Native-level Saudi dialect conversations
-Easy Integration - Works with existing phone systems
-
-## Ideal Customers:
-Restaurants and cafes
-Medical clinics and hospitals
-Real estate agencies
-E-commerce businesses
-Service companies (cleaning, maintenance, etc.)
-Salons and spas
-Car dealerships
-Insurance agencies
-Educational institutions
-Demo Availability: Free demo calls available
-
-# Common Questions (FAQs)
-Q: What exactly does Nevox AI do?
-A: نيفوكس يوفر موظف صوت ذكي يرد على عملائك ٢٤/٧، يحجز مواعيد، يجاوب استفسارات، ويخدم عملائك بلهجة سعودية طبيعية
-(Nevox provides AI Voice agent that answer your customers 24/7, book appointments, answer questions, and serve customers in natural Saudi dialect)
-Q: How much does it cost?
-A: الأسعار تختلف حسب احتياجاتك. ممكن نسوي لك عرض خاص بعد ما أفهم احتياجات نشاطك أكثر
-(Pricing varies based on your needs. We can create a custom quote after understanding your business better)
-Q: Is it complicated to set up?
-A: أبداً، التركيب سهل جداً. فريقنا يساعدك في كل شيء ويكون جاهز خلال أيام
-(Not at all, setup is very easy. Our team helps with everything and it's ready within days)
-Q: Does it really sound natural?
-A: أيوه، يتكلم بلهجة سعودية طبيعية. تقدر تجرب demo مجاني الحين عشان تسمع بنفسك
-(Yes, it speaks in natural Saudi dialect. You can try a free demo now to hear it yourself)
-Q: What if customers ask complex questions?
-A: الموظف الذكي يتعلم من نشاطك ويقدر يجاوب أغلب الأسئلة. وإذا احتاج، يحول الاتصال لفريقك
-(The AI agent learns from your business and can answer most questions. If needed, it transfers to your team)
-Q: Can it handle multiple calls at once?
-A: أيوه، يقدر يستقبل مئات المكالمات بنفس الوقت، ما في حد أقصى
-(Yes, it can handle hundreds of simultaneous calls with no limit)
-Q: What happens to my current phone number?
-A: رقمك الحالي يظل زي ما هو، ما يتغير شي
-(Your current number stays the same, nothing changes)
-Q: I already have a receptionist/call center.
-A: ممتاز! نيفوكس يساعد فريقك، مو يستبدلهم. يرد على المكالمات البسيطة وفريقك يركز على الأمور المهمة
-(Excellent! Nevox helps your team, doesn't replace them. It handles simple calls while your team focuses on important matters)
-
-# Context
-You're making outbound sales calls to business owners/managers
-Many will be busy and may not have time to talk
-Some may have never heard of AI voice agents
-Some may be skeptical about AI technology
-Decision-makers often need time to think and consult
-Budget is a common concern for SMBs
-Trust and reliability are critical in Saudi business culture
-
-## Call Timing Considerations:
-Thursdays and Fridays may have lower answer rates
-
-# Reference Pronunciations
-## Company Name:
-Nevox = نيفوكس (Nee-vox)
-AI = ذكاء اصطناعي (Dhaka Istina'i) or commonly just "إيه آي"
-
-# Conversation Flow
-1. Opening (Introduction)
-
-"أنا NORA من نيفوكس. نحن نقدم موظفين صوت ذكي للشركات.
-معك دقيقتين أشرح لك الفكرة؟"
-
-(Hello, I'm Nora AI Voice Agent from Nevox.
-We provide AI voice agents for businesses.
-Do you have two minutes for me to explain?)
-If they say yes → Continue
-If they're busy → Offer to call back:
-"ولا يهمك، متى وقت مناسب أتصل فيك؟"
-
-2. Qualification (Understand Their Business)
-Ask about their business and tell them how AI voice can help them.
-"ممكن تعطيني فكرة سريعة عن نشاطك التجاري؟"
-Can you give me a quick idea about your business
-Tell them how an AI voice agent can help your business
-
-
-3. Value Proposition (Pitch Based on Their Business)
-For Restaurants:
-"نيفوكس يستقبل طلبات التوصيل والحجوزات تلقائياً، ٢٤ ساعة.
-عملائك ما راح ينتظرون وأنت ما راح تفوتك أي طلب"
-For Clinics/Medical:
-"الموظف الذكي يحجز المواعيد، يذكّر المرضى، ويجاوب الاستفسارات العامة.
-فريقك يركز على الرعاية الصحية"
-For Real Estate:
-"يستقبل استفسارات العملاء عن العقارات، يحدد مواعيد المعاينات،
-ويجمع بيانات العملاء المحتملين - حتى لو أنت بالخارج"
-For E-commerce:
-"يرد على أسئلة العملاء عن المنتجات، الأسعار، التوصيل،
-ويستقبل الطلبات بدون ما تحتاج موظف على الخط طول الوقت"
-Generic Value:
-"تخيل موظف يشتغل ٢٤/٧، ما يتعب، يرد على جميع المكالمات بنفس الوقت،
-وبلهجة سعودية طبيعية - وبتكلفة أقل من موظف واحد"
-
-4. Handle Objections
-"It's too expensive"
-"أفهمك، بس خلني أوضح: نيفوكس أرخص من راتب موظف واحد،
-ويشتغل ٢٤/٧ بدون إجازات. كم مكالمة تفوتك شهرياً؟
-كل مكالمة ضائعة = عميل ضائع"
-"I need to think about it"
-"طبيعي، قرار مهم. خلني أرسل لك معلومات بالواتساب
-وأتصل فيك الأسبوع الجاي؟ متى وقت مناسب؟"
-"I don't trust AI"
-"أفهم قلقك، وهذا طبيعي. عشان كذا نقدم demo مجاني -
-تجرب بنفسك وتشوف كيف يتكلم قبل ما تقرر. يناسبك؟"
-"We don't get many calls"
-"تمام، ممكن نبدأ بحل بسيط ورخيص. حتى لو ١٠ مكالمات باليوم،
-الموظف الذكي يخليك ما تفوّت ولا وحدة، وأنت تركز على شغلك"
-"I already have staff"
-"ممتاز! نيفوكس مو بديل، هو مساعد لفريقك.
-يرد على الأسئلة البسيطة والمتكررة، وفريقك يركز على العملاء المهمين"
-"Not interested"
-"ولا يهمك، أقدر احتفظ برقمك وأتواصل معك بعد فترة؟"
-[If yes: note it]
-[If no: "تمام، شكراً لوقتك، الله يوفقك" → end_call()]
-
-5. Closing (Next Steps)
-If Interested - Schedule Demo:
-"ممتاز! خلني أسوي لك demo مجاني عشان تشوف كيف يشتغل.
-متى وقت مناسب لك؟ [Collect date/time]
-وممكن رقم جوالك وإيميلك عشان نرسل لك التفاصيل؟"
-If Somewhat Interested - Send Info:
-"تمام، خلني أرسل لك فيديو قصير يشرح الخدمة بالواتساب.
-ممكن رقمك؟ وأتصل فيك بعد كم يوم نشوف رأيك؟"
-If Not Interested - Graceful Exit:
-"تمام، أقدّر وقتك. إذا احتجت أي شيء مستقبلاً، تواصل معنا.
-الله يوفقك في نشاطك!"
-
-
-
-## Example normalization rules
-
-- "@" symbol → spoken as "at", written as "@"
-- "." symbol → spoken as "dot", written as "."
-- Numbers → spoken individually ("one two three"), written as digits ("123")
-        """,
-        'greeting': 'السلام عليكم ورحمة الله وبركاته؟',
-        'voice_id': 'KjDucWgG5NYuMBznv52L',
-        'voice_name': 'Hiba-Demo'
+Be casual, friendly, and professional. Use natural Australian English.""",
+        'greeting': "G'day! You've reached us. How can I help you today?",
+        'voice_id': 'EXAVITQu4vr4xnSDxMaL',  # Bella - English female voice
+        'voice_name': 'Bella',
+        'voice_speed': 0.95,  # Default TTS voice speed
+        'temperature': 0.7,  # Default LLM temperature (more casual for trades)
+        'vad_mode': 'dynamic',
+        'transfer_targets': None
     }
 
 # --- Transcription Manager ---
@@ -370,14 +191,13 @@ class TranscriptionManager:
         if not isinstance(text, str) or not text.strip():
             return
 
-                    # ===== ADD THIS =====
+        # Block JSON/technical markup in transcriptions
         if '{' in text or '}' in text:
             logger.warning(f"🚫 TRANSCRIPTION_BLOCKED: '{text[:60]}'")
             if role in ["assistant", "agent"]:
-                text = "عذراً، ممكن تعيد مرة ثانية؟"
+                text = "Sorry, can you say that again?"
             else:
-                return
-        # ====================      
+                return      
 
         # Create unique key for deduplication
         msg_key = f"{role}:{text.strip()}"
@@ -483,156 +303,93 @@ def build_full_prompt(user_prompt: str) -> str:
     Returns:
         Complete prompt with system instructions + user prompt
     """
+    # Get current date/time - separate date and time for clarity
+    now = datetime.now(SAUDI_TZ)
+    current_date = now.strftime("%A, %B %d, %Y")  # e.g., "Thursday, February 06, 2026"
+    current_time = now.strftime("%I:%M %p")        # e.g., "01:55 AM"
+    logger.info(f"📅 Injecting date: {current_date}, time: {current_time}")
+
     # System instructions - Add your custom rules here
-    system_instructions = """
-You are a polite and helpful Saudi Arabic voice assistant.
+    system_instructions = f"""
+You are a friendly Australian trades receptionist for phone calls.
 
 # CRITICAL RULE - NO JSON EVER
 - You are a VOICE assistant for phone calls
-- ALWAYS respond in natural spoken Arabic ONLY
+- Speak naturally in casual Australian English
 - NEVER generate JSON, code, or technical syntax
-- NEVER use: {}, [], "key": "value", error:, status:, etc.
-- If you don't understand → say naturally: "عذراً، ما فهمت. ممكن تعيد؟"
-- If there's a problem → say naturally: "في مشكلة صغيرة، ممكن تنتظر لحظة؟"
+- NEVER use: {{}}, [], "key": "value", error:, status:, etc.
+- If you don't understand → say naturally: "Sorry, can you say that again?"
+- If there's a problem → say naturally: "There's a small issue, can you hang tight for a moment?"
+
+Current Date: {current_date}
+Current Time: {current_time}
+
+# COMMUNICATION STYLE
+- Speak naturally in casual, friendly Australian English
+- Be professional but approachable - like a real receptionist
+- Listen actively to understand customer needs
+- Keep responses short and conversational (1-2 sentences max, under 150 characters)
 
 # POST-GREETING BEHAVIOR (CRITICAL!)
-The greeting "السلام عليكم ورحمة الله وبركاته" is ALREADY PLAYED by the system.
-
-
-
-#  CALL ENDING - HIGHEST PRIORITY RULE 
-
-## GOODBYE DETECTION (Common Saudi Farewell Phrases):
-When user says ANY of these phrases, IMMEDIATELY call end_call():
-
-### Direct Goodbyes:
-- وداعاً، مع السلامة، باي، سلام، الله يسلمك
-- يعطيك العافية (when said alone or with goodbye tone)
-- الله يعافيك (as farewell)
-- في أمان الله، بإذن الله نلقاك
-
-### Polite Closings (Context: After order/task completion):
-- تمام شكراً، خلاص شكراً، زين شكراً، طيب شكراً
-- حسناً (when said alone after completing a task)
-- ماشي، تمام، زين، أوكي (when ending conversation)
-- شكراً كافي، شكراً كذا، شكراً ما أحتاج شي ثاني
-
-### Morning/Evening Farewells:
-- صباح الخير (when used as goodbye, not greeting)
-- مساء الخير (when used as goodbye)
-- تصبح على خير، الله يمسيك بالخير
-
-### Completion Phrases:
-- كذا تمام، كذا زين، هذا كل شي
-- ما أحتاج شي ثاني، ما عندي شي ثاني
-- خلصنا، انتهينا
-
-##  CRITICAL BEHAVIOR WHEN GOODBYE DETECTED:
-1. **IMMEDIATELY** call end_call() function
-2. **DO NOT** speak any response
-3. **DO NOT** say goodbye back
-4. **DO NOT** thank them
-5. **JUST CALL** end_call() with NO spoken output
-
-##  CORRECT Examples:
-```
-User: "صباح الخير" (after completing order)
-You: [calls end_call() - NO speech]
-
-User: "حسناً" (after confirming everything)
-You: [calls end_call() - NO speech]
-
-User: "تمام شكراً"
-You: [calls end_call() - NO speech]
-
-User: "يعطيك العافية"
-You: [calls end_call() - NO speech]
-```
-
-## ❌ WRONG Examples:
-```
-User: "صباح الخير"
-You: "صباح النور، الطلب بيوصلك" ← WRONG! Should end call
-
-User: "حسناً"
-You: "تمام، شكراً لك" ← WRONG! Should end call
-
-User: "يعطيك العافية"
-You: "الله يعافيك، مع السلامة" [then calls end_call()] ← WRONG! Call function FIRST
-```
-
-
-
+The greeting is ALREADY PLAYED by the system.
 YOU MUST:
-1. DO NOT repeat "وعليكم السلام" again
-2. Immediately proceed to introduce yourself (as per your role instructions)
-3. Ask how you can help
-4. NEVER generate {error} or technical messages
-5. Continue naturally as if the greeting is complete
+1. DO NOT repeat the greeting
+2. Immediately listen to what the customer needs
+3. Ask clarifying questions to understand their issue
+4. NEVER generate {{error}} or technical messages
+5. Continue naturally as a helpful receptionist
 
-
-# DIALECT & STYLE
-- Use a natural, polite Saudi dialect suitable for all age groups.
-- Avoid heavy slang unless the user requests it.
-- Keep a balance between Saudi dialect and simple Modern Standard Arabic, especially in official/government topics.
-- Do not respond in JSON, markup,technical responses.
+# CUSTOMER INTERACTION STYLE
+- Ask for their name and contact details when booking appointments
+- Be empathetic if they have an emergency
+- Check availability and suggest appointment times
+- Confirm their address and phone number
+- Offer to send SMS confirmation
 
 # RESPONSE BEHAVIOR
-- Replies must be short, clear, and spoken naturally (1-2 sentences, max 150 characters).
-- Always respond in Arabic only.
-- Do NOT output JSON, code, or technical formatting.
-- Ask for the user's name politely when appropriate.
-- Never repeat previous responses.
-- Keep every response directly relevant to the user's question.
+- Keep every response directly relevant to the customer's question
+- Do NOT output JSON, code, or technical formatting
+- Be conversational and natural, like a real person
+- Never repeat previous responses
+- Use common Australian expressions: "G'day", "No worries", "Mate", "How can I help?"
 
 # GUARDRAILS
 ## NEVER EVER speak these things out loud:
-- Function names like "end_call", "detected_answering_machine"
-- Function parameters like {query: ...}, {name: ...},{error: ...}
-- JSON structures like {"key": "value"}
+- Function names like "end_call", "book_appointment"
+- Function parameters like {{name: ...}}, {{error: ...}}
+- JSON structures like {{"key": "value"}}
 - Technical formatting or markup
 - Code or system messages
 
+# VOICEMAIL DETECTION
+Voicemail is when you hear automated English messages like:
+- "The number you have dialed is not available"
+- "Please leave a message after the beep"
+- "The person you are calling is unavailable"
 
-# CULTURAL RULES
-- Respect Saudi culture, values, and etiquette.
-- Avoid political, religious, tribal, or sensitive discussions.
-- Do not give fatwas; instead, redirect politely to official sources.
-- Use commonly accepted Saudi expressions when suitable:
-  هلا، هلا والله، حيّاك الله، تفضل، أبشر، ولا يهمك، تمام، حاضر، وش تبغى، وش تحتاج، يعطيك العافية، الله يسعدك، ممتاز، بسيطة، لا تشيل هم.
-
-# DIALECT HANDLING
-- Default: neutral Saudi dialect (Najdi/Hijazi).
-- If the user speaks in a specific dialect, naturally mirror it without exaggeration.
-
-# END-OF-CALL LOGIC
-If the user indicates they want to end the interaction (e.g., "وداعاً", "مع السلامة", "باي", "شكراً ما أحتاج"):
-→ Immediately trigger end_call (no extra goodbye).
-
-# Handling Voiemails/Answering Machines
-- Double check if it is voicemail by listening for common phrases.
-- if yes then call end_call after leaving a polite voicemail message.
-- if no then continue the conversation naturally.
-
+If you detect voicemail:
+1. Leave a brief message
+2. Wait 2 seconds
+3. Call end_call()
 
 # IDENTITY RULES
-- Never mention OpenAI, models, or technical systems.
-- Always say you are built by Nevox AI when identity is requested.
-- If the user speaks another language, politely explain that support is limited to Arabic only.
-- No JSON, no markup, no technical responses.
+- Never mention technical systems or models
+- You're a friendly receptionist for the trades business
+- If customers ask, say you're the business receptionist
+- No JSON, no markup, no technical responses
 
-# AVOID
-- Off-topic answers.
-- Long explanations.
-- Any formatting besides normal Arabic speech.
-- Incorrect or speculative information about Saudi regulations or entities.
+# EMERGENCY HANDLING
+- If customer mentions emergency: immediately acknowledge
+- Offer to dispatch someone urgently
+- Get their address and phone number quickly
+- Be reassuring and professional
 
 # OUTPUT REQUIREMENTS (CRITICAL)
-- Arabic only.
-- 1-2 sentences max.
-- Under 150 characters.
-- Spoken-style, clean, natural, human-like.
-- No JSON, no markup, no technical responses.
+- English only, casual Australian style
+- 1-2 sentences max
+- Under 150 characters
+- Spoken-style, clean, natural, human-like
+- No JSON, no markup, no technical responses
 
 
 """
@@ -643,14 +400,57 @@ If the user indicates they want to end the interaction (e.g., "وداعاً", "�
     return full_prompt
 
 
+def build_prompt_with_webhook_context(user_prompt: str, webhook_context: dict) -> str:
+    """
+    Inject webhook data into prompt for pre-call context
+
+    Args:
+        user_prompt: The prompt from database (agent.prompt)
+        webhook_context: Dict with customer/call data (e.g., customer_name, order_id)
+
+    Returns:
+        Complete prompt with system instructions + user prompt + webhook data
+    """
+    # Get base prompt with system instructions
+    base_prompt = build_full_prompt(user_prompt)
+
+    # Add webhook data section if available
+    if webhook_context:
+        webhook_text = json.dumps(webhook_context, ensure_ascii=False, indent=2)
+
+        webhook_section = f"""
+
+# 📊 Customer Data from System
+```json
+{webhook_text}
+```
+
+Use this context to personalize the conversation. Address the customer by name if provided. Reference their appointment history or service details naturally in conversation. Be helpful and professional based on their background.
+"""
+
+        full_prompt = base_prompt + webhook_section
+        logger.info(f"✅ Prompt built WITH webhook context: {list(webhook_context.keys())}")
+        return full_prompt
+    else:
+        # No webhook data, use default prompt
+        logger.info(f"ℹ️ Prompt built WITHOUT webhook context")
+        return base_prompt
+
+
 # --- Main Agent ---
 class Assistant(Agent):
-    def __init__(self, config: dict = None, agent_id: int = None, preloaded_tools: list = None) -> None:
+    def __init__(self, config: dict = None, agent_id: int = None, preloaded_tools: list = None, chat_ctx=None, is_transferred: bool = False, background_audio=None, webhook_context: dict = None) -> None:
         if config is None:
             config = get_default_config()
 
-        # Build full prompt: system instructions + user's custom prompt
-        full_prompt = build_full_prompt(config['prompt'])
+        # Build full prompt with optional webhook context
+        if webhook_context:
+            full_prompt = build_prompt_with_webhook_context(config['prompt'], webhook_context)
+            logger.info(f"✅ Assistant initialized WITH webhook context")
+        else:
+            full_prompt = build_full_prompt(config['prompt'])
+            logger.info(f"ℹ️ Assistant initialized WITHOUT webhook context")
+
         # Use pre-loaded tools if provided, otherwise load them
         if preloaded_tools is not None:
             dynamic_tools = preloaded_tools
@@ -663,21 +463,76 @@ class Assistant(Agent):
                 except Exception as e:
                     logger.error(f"❌ Error loading custom tools: {e}")
 
+        # transfer_to_agent is registered automatically via @function_tool decorator
+        # No need to append manually — doing so causes duplicate function name error
+        if config.get('transfer_targets'):
+            logger.info(f"🔄 Handoffs enabled: targets={config['transfer_targets']}")
+
         super().__init__(
             instructions=full_prompt,
-            tools=dynamic_tools,  # Pass dynamic tools to agent
+            tools=list(dynamic_tools),
+            chat_ctx=chat_ctx,
         )
 
         self.config = config
-        self._session = None  # ✅ ADD THIS LINE
+        self.is_transferred = is_transferred
+        self.background_audio = background_audio
+        self._session = None
+        self.webhook_context = webhook_context
         logger.info(f"✅ Assistant initialized: {config['name']} (Voice: {config['voice_name']})")
         logger.debug(f"📝 Full prompt length: {len(full_prompt)} characters")
     
-    # ✅ ADD THIS METHOD
     async def on_enter(self):
-        """Called when agent enters session - save reference"""
+        """Called when agent enters session - save reference and handle transfer setup"""
         self._session = self.session
         logger.info("✅ Session reference saved")
+
+        if self.is_transferred:
+            # Swap TTS voice to match this agent's config
+            try:
+                new_tts = build_tts_engine(self.config)
+                # AgentSession.tts is read-only property; update via private attribute
+                if hasattr(self.session, '_tts'):
+                    self.session._tts = new_tts
+                    logger.info(f"🔊 TTS voice updated (_tts) to: {self.config.get('voice_name')} ({self.config.get('voice_id')})")
+                elif hasattr(self.session, 'update_options'):
+                    await self.session.update_options(tts=new_tts)
+                    logger.info(f"🔊 TTS voice updated (update_options) to: {self.config.get('voice_name')}")
+                else:
+                    logger.warning("⚠️ Cannot update TTS: no known method found")
+            except Exception as e:
+                logger.error(f"❌ Failed to update TTS voice: {e}")
+
+            # Play transfer chime / pause before new agent greets
+            chime_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sounds', 'transfer.mp3')
+            if self.background_audio and os.path.exists(chime_path):
+                try:
+                    logger.info(f"🎵 Playing transfer chime (max 3s): {chime_path}")
+                    handle = self.background_audio.play(chime_path)
+                    await asyncio.sleep(3.0)
+                    handle.stop()
+                    logger.info("🎵 Transfer chime done — new agent greeting starting")
+                except Exception as e:
+                    logger.error(f"❌ Failed to play chime: {e}")
+                    logger.info("⏸️ Fallback pause (1.2s)...")
+                    await asyncio.sleep(1.2)
+                    logger.info("▶️ Resuming — new agent greeting starting")
+            else:
+                if not os.path.exists(chime_path):
+                    logger.warning(f"⚠️ Chime file not found: {chime_path} — using silent pause")
+                logger.info("⏸️ Handoff pause (1.2s)...")
+                await asyncio.sleep(1.2)
+                logger.info("▶️ Resuming — new agent greeting starting")
+
+            # Say this agent's greeting
+            greeting = self.config.get('greeting', '')
+            agent_name = self.config.get('name', '?')
+            if greeting:
+                try:
+                    logger.info(f"🎤 [{agent_name}] saying its own greeting: {greeting[:60]}")
+                    await self.session.say(greeting)
+                except Exception as e:
+                    logger.error(f"❌ Transfer greeting error: {e}")
     
     async def tts_node(self, text: AsyncIterable[str], model_settings: ModelSettings):
         """
@@ -777,7 +632,8 @@ class Assistant(Agent):
                     fallback = "عفواً؟"
                     logger.warning(f"⚠️ No content after filtering!")
                     logger.info(f"✅ Yielding fallback: {fallback}")
-                    
+                    # Yield chunk-like object so downstream (TTS/pipeline) gets .delta.content
+                    fallback_chunk = SimpleNamespace(delta=SimpleNamespace(content=fallback))
                     # Add to chat history
                     try:
                         from livekit.agents import llm
@@ -787,8 +643,7 @@ class Assistant(Agent):
                         logger.info("✅ Fallback added to chat history")
                     except Exception as e:
                         logger.error(f"❌ Error adding to chat: {e}")
-                    
-                    yield fallback
+                    yield fallback_chunk
                 else:
                     logger.info("✅ Content passed through successfully")
 
@@ -799,42 +654,7 @@ class Assistant(Agent):
                 raise
 
         return process_stream()
-    
-    @function_tool
-    async def end_call(self, ctx: RunContext):
-        """
-        Ends the current voice call with the user in a polite and natural way.
 
-        This function is intended to be called when the user explicitly or implicitly 
-        signals that they want to finish the conversation. The steps performed are:
-
-        1. Sends a polite, static goodbye message to the user using TTS (Text-to-Speech).
-        - Example message: "شكراً جزيلاً على وقتك. مع السلامة!"
-        - Interruptions are disabled to ensure the message is fully delivered.
-
-        2. Waits briefly to ensure the goodbye message has been played.
-
-        3. Hangs up the call, ensuring the session is properly closed.
-
-        Returns:
-            str: Confirmation that the call ended, e.g., "Call ended with goodbye".
-        """
-        # First generate a natural goodbye using the LLM
-
-        # ✅ Static goodbye - no cache break!
-        await ctx.session.say(
-            "شكراً جزيلاً على وقتك. مع السلامة!",
-            allow_interruptions=False
-        )
-        
-        # Wait for message to complete
-        await asyncio.sleep(0.3)
-       
-        # Then hang up the call
-        await hangup_call()
-        return "Call ended with goodbye"
-    
-    '''
     @function_tool
     async def end_call(self, ctx: RunContext):
         """Called when the user wants to end the call"""
@@ -849,7 +669,55 @@ class Assistant(Agent):
         # Then hang up the call
         await hangup_call()
         return "Call ended with goodbye"
-    '''
+
+    @function_tool
+    async def transfer_to_agent(self, ctx: RunContext, agent_id: int):
+        """Transfer the call to a different agent.
+        Only call this when your prompt's transfer rules say to.
+        CRITICAL: Only use the exact agent_id values written in your transfer rules. Never guess or invent an agent_id."""
+        allowed = self.config.get('transfer_targets') or []
+        if agent_id not in allowed:
+            logger.warning(f"⚠️ Transfer blocked: agent_id={agent_id} not in allowed targets {allowed}")
+            return "Transfer not allowed to that agent"
+
+        target_config = get_agent_config(agent_id)
+        if not target_config:
+            logger.error(f"❌ Transfer failed: agent_id={agent_id} config not found")
+            return "Agent not found"
+
+        logger.info(f"🔄 Transferring call to agent: {target_config['name']} (id={agent_id})")
+
+        # Brief handoff announcement, then the new agent will greet
+        await ctx.session.generate_reply(
+            instructions="أخبر المستخدم بجملة واحدة فقط أنك ستحوله الآن إلى وكيل آخر."
+        )
+        await ctx.wait_for_playout()
+
+        # Strip old system prompt - keep only conversation history
+        # self.chat_ctx may be _ReadOnlyChatContext (Realtime model) - iterate directly
+        try:
+            raw_messages = list(self.chat_ctx)
+        except Exception:
+            raw_messages = []
+        clean_messages = [m for m in raw_messages if m.role != "system"]
+        clean_ctx = llm.ChatContext(messages=clean_messages) if clean_messages else None
+
+        # Load tools for target agent
+        target_tools = []
+        try:
+            target_tools = tool_service.create_function_tools(agent_id)
+        except Exception as e:
+            logger.warning(f"⚠️ Could not load tools for target agent {agent_id}: {e}")
+
+        return Assistant(
+            config=target_config,
+            agent_id=agent_id,
+            preloaded_tools=target_tools,
+            chat_ctx=clean_ctx,
+            is_transferred=True,
+            background_audio=self.background_audio,
+        )
+
     #@function_tool
     #async def detected_answering_machine(self):
     #    """Call this tool if you have detected a voicemail system, AFTER hearing the voicemail greeting"""
@@ -859,18 +727,563 @@ class Assistant(Agent):
     #    await asyncio.sleep(0.5) # Add a natural gap to the end of the voicemail message
     #    await hangup_call()
 
+def build_tts_engine(config):
+    """Build a TTS engine from agent config. Module-level so it can be called from anywhere."""
+    voice_speed = config.get('voice_speed', 0.90)
+    logger.info(f"🎙️ Building TTS engine: Voice={config.get('voice_name', '?')}, Speed={voice_speed}x")
+    return elevenlabs.TTS(
+        voice_id=config['voice_id'],
+        model="eleven_turbo_v2_5",
+        language="ar",
+        auto_mode=True,
+        voice_settings=elevenlabs.VoiceSettings(
+            stability=0.75,
+            similarity_boost=0.5,
+            style=0.0,
+            speed=voice_speed,
+            use_speaker_boost=True
+        ),
+        streaming_latency=0,
+        inactivity_timeout=60,
+        enable_ssml_parsing=False,
+        apply_text_normalization="auto"
+    )
+
+
 async def entrypoint(ctx: JobContext):
     ctx.log_context_fields = {"room": ctx.room.name}
-    
+    # Shared state for handlers (call start time updated after connect in both paths)
+    state = {
+        "start": time.time(),
+        "inactivity_task": None,
+        "call_ended": False,
+        "call_data_sent": False,
+        "monitor_task": None,
+        "conversation_monitor_task": None,
+    }
+
     logger.info(f"🎯 Room: {ctx.room.name}")
     logger.info(f"📊 Initial participants: {ctx.room.num_participants}")
 
-    # Connect to room
-    await ctx.connect()
-    call_start_time = time.time()
+    # ===== WEBHOOK CONTEXT: Initialize for outbound API calls =====
+    webhook_context = None
 
-    # Check if campaign call
+    # ===== OPTIMIZATION: Load agent config BEFORE connecting =====
+    # For call/api rooms, we can extract agent_id from room name immediately
     agent_config = None
+    preloaded_agent_id = None
+
+    if not ctx.room.name.startswith('campaign_'):
+        # Pre-load config for call/api rooms (don't wait for connect)
+        try:
+            room_parts = ctx.room.name.split('-')
+            if len(room_parts) >= 2 and room_parts[0] in ['call', 'api']:
+                preloaded_agent_id = int(room_parts[1])
+                logger.info(f"📦 Pre-loading agent {preloaded_agent_id} config BEFORE connect...")
+                fetched_config = get_agent_config(preloaded_agent_id)
+                if fetched_config:
+                    agent_config = fetched_config
+                    logger.info(f"✅ Pre-loaded agent: {agent_config['name']}")
+        except Exception as e:
+            logger.error(f"❌ Error pre-loading agent config: {e}")
+
+    # Use default if pre-load failed
+    if not agent_config and not ctx.room.name.startswith('campaign_'):
+        agent_config = get_default_config()
+
+    # ===== OPTIMIZATION: Define model initializers BEFORE connect =====
+    # These will be run in parallel with ctx.connect() for non-campaign rooms
+
+    def create_tts_engine(config):
+        """Alias to module-level build_tts_engine"""
+        return build_tts_engine(config)
+
+    def create_llm_model(config):
+        """Create LLM model with given config"""
+        llm_temperature = config.get('temperature', 0.4)
+        vad_mode = config.get('vad_mode', 'dynamic')
+        logger.info(f"🎛️ LLM Temp: {llm_temperature}, VAD Mode: {vad_mode}")
+
+        model_kwargs = {
+            'model': "gpt-realtime",
+            'modalities': ["text"],
+            'temperature': llm_temperature,
+            'input_audio_transcription': InputAudioTranscription(
+                model="gpt-4o-transcribe",
+                language="ar",
+                prompt=(
+                    "Transcribe speech only. "
+                    "If the speaker uses Arabic, output Arabic script. "
+                    "If the speaker uses English, output English text. "
+                    "Do NOT translate between languages. "
+                    "Do NOT add explanations or annotations."
+                ),
+            ),
+        }
+
+        if vad_mode == 'natural':
+            model_kwargs['turn_detection'] = TurnDetection(
+                type="semantic_vad",
+                eagerness="auto",
+                create_response=True,
+                interrupt_response=True,
+            )
+        elif vad_mode != 'precise':  # 'dynamic' (default)
+            model_kwargs['turn_detection'] = TurnDetection(
+                type="server_vad",
+                threshold=0.45,
+                prefix_padding_ms=150,
+                silence_duration_ms=250,
+                create_response=True,
+                interrupt_response=True,
+            )
+
+        return RealtimeModel(**model_kwargs)
+
+    def _register_session_handlers(sess, transcription, agent_config, ctx, state):
+        """Register all session/room event handlers. Call before session.start() so no events are missed."""
+        usage_collector = metrics.UsageCollector()
+
+        @sess.on("metrics_collected")
+        def _on_metrics_collected(ev: MetricsCollectedEvent):
+            metrics.log_metrics(ev.metrics)
+            usage_collector.collect(ev.metrics)
+
+        async def user_presence_check():
+            try:
+                logger.warning("⏰ User marked as away, checking presence...")
+                await sess.generate_reply(
+                    instructions="المستخدم غير نشط. اسأله بلطف إذا كان لا يزال موجودًا"
+                )
+                await asyncio.sleep(10)
+                logger.warning("⏰ User still inactive after presence check. Ending call...")
+                await sess.generate_reply(
+                    instructions="قل للمستخدم: يبدو أنك لم تعد هناك. سأنهي المكالمة الآن. مع السلامة"
+                )
+                await asyncio.sleep(3)
+                await hangup_call()
+            except Exception as e:
+                logger.error(f"Error in presence check: {e}")
+
+        @sess.on("user_state_changed")
+        def _user_state_changed(ev: UserStateChangedEvent):
+            logger.info(f"🔄 User state changed: {ev.new_state}")
+            if state["call_ended"]:
+                logger.debug("⏭️ Ignoring user state change (call already ended)")
+                return
+            if ev.new_state == "away":
+                logger.warning(f"⚠️ User away after {os.environ.get('USER_AWAY_TIMEOUT', '60')}s inactivity")
+                state["inactivity_task"] = asyncio.create_task(user_presence_check())
+                return
+            if state["inactivity_task"] is not None and not state["inactivity_task"].done():
+                logger.info("✅ User active again, cancelling presence check")
+                state["inactivity_task"].cancel()
+                state["inactivity_task"] = None
+
+        last_user_msg_committed = None
+        last_agent_msg_committed = None
+
+        @sess.on("user_speech_committed")
+        def on_user_speech_committed(msg: llm.ChatMessage):
+            nonlocal last_user_msg_committed
+            try:
+                text = msg.content if isinstance(msg.content, str) else str(msg.content)
+                text = text.strip()
+                if text and text != last_user_msg_committed:
+                    last_user_msg_committed = text
+                    transcription.add_user_message(text, "user_speech_committed")
+            except Exception as e:
+                logger.error(f"❌ Error capturing user speech: {e}")
+
+        @sess.on("agent_speech_committed")
+        def on_agent_speech_committed(msg: llm.ChatMessage):
+            nonlocal last_agent_msg_committed
+            try:
+                text = msg.content if isinstance(msg.content, str) else str(msg.content)
+                text = text.strip()
+                if text and text != last_agent_msg_committed:
+                    if transcription.greeting_added and text == agent_config.get("greeting"):
+                        logger.debug("⏭️  Skipping greeting (already added manually)")
+                        return
+                    last_agent_msg_committed = text
+                    transcription.add_agent_message(text, "agent_speech_committed")
+            except Exception as e:
+                logger.error(f"❌ Error capturing agent speech: {e}")
+
+        last_user_msg = None
+
+        @sess.on("user_transcript")
+        def on_user_transcript(transcript):
+            nonlocal last_user_msg
+            try:
+                if hasattr(transcript, "text"):
+                    text = transcript.text.strip()
+                elif hasattr(transcript, "transcript"):
+                    text = transcript.transcript.strip()
+                elif isinstance(transcript, str):
+                    text = transcript.strip()
+                else:
+                    text = str(transcript).strip()
+                if text and text != last_user_msg:
+                    last_user_msg = text
+                    transcription.add_user_message(text, "user_transcript")
+            except Exception as e:
+                logger.error(f"❌ Error capturing user transcript: {e}")
+
+        async def monitor_conversation():
+            last_msg_count = 0
+            try:
+                while True:
+                    await asyncio.sleep(0.5)
+                    try:
+                        if hasattr(sess, "chat_ctx") and sess.chat_ctx:
+                            messages = sess.chat_ctx.messages
+                            if len(messages) > last_msg_count:
+                                for msg in messages[last_msg_count:]:
+                                    role = msg.role
+                                    content = msg.content
+                                    if isinstance(content, str):
+                                        text = content.strip()
+                                    elif isinstance(content, list):
+                                        text = " ".join(
+                                            str(part.text) if hasattr(part, "text") else str(part)
+                                            for part in content
+                                        ).strip()
+                                    else:
+                                        text = str(content).strip()
+                                    if text:
+                                        if role == "user":
+                                            transcription.add_user_message(text, "chat_context_monitor")
+                                        elif role == "assistant":
+                                            if transcription.greeting_added and text == agent_config.get("greeting"):
+                                                logger.debug("⏭️  Monitor: Skipping greeting duplicate")
+                                                continue
+                                            transcription.add_agent_message(text, "chat_context_monitor")
+                                last_msg_count = len(messages)
+                    except Exception as e:
+                        logger.debug(f"Monitor iteration error: {e}")
+            except asyncio.CancelledError:
+                logger.debug("Conversation monitor cancelled")
+            except Exception as e:
+                logger.error(f"Monitor fatal error: {e}")
+
+        state["conversation_monitor_task"] = asyncio.create_task(monitor_conversation())
+
+        async def cleanup_monitor():
+            t = state.get("conversation_monitor_task")
+            if t and not t.done():
+                t.cancel()
+                try:
+                    await t
+                except asyncio.CancelledError:
+                    pass
+
+        ctx.add_shutdown_callback(cleanup_monitor)
+
+        @sess.on("user_message")
+        def on_user_message(msg):
+            try:
+                if hasattr(msg, "content"):
+                    content = msg.content if isinstance(msg.content, str) else str(msg.content)
+                    transcription.add_user_message(content, "user_message_event")
+            except Exception as e:
+                logger.debug(f"Error in user_message handler: {e}")
+
+        @sess.on("agent_message")
+        def on_agent_message(msg):
+            try:
+                if hasattr(msg, "content"):
+                    content = msg.content if isinstance(msg.content, str) else str(msg.content)
+                    if transcription.greeting_added and content == agent_config.get("greeting"):
+                        return
+                    transcription.add_agent_message(content, "agent_message_event")
+            except Exception as e:
+                logger.debug(f"Error in agent_message handler: {e}")
+
+        @sess.on("agent_transcript")
+        def on_agent_transcript(transcript):
+            try:
+                text = str(transcript)
+                if transcription.greeting_added and text == agent_config.get("greeting"):
+                    return
+                transcription.add_agent_message(text, "agent_transcript_event")
+            except Exception as e:
+                logger.debug(f"Error in agent_transcript handler: {e}")
+
+        @sess.on("conversation_item_added")
+        def on_conversation_item_added(event):
+            try:
+                if hasattr(event, "item"):
+                    item = event.item
+                    if hasattr(item, "role") and hasattr(item, "content"):
+                        content = " ".join(item.content) if isinstance(item.content, list) else str(item.content)
+                        if item.role == "assistant" and transcription.greeting_added and content == agent_config.get("greeting"):
+                            return
+                        transcription.add_message(item.role, content, "conversation_item")
+            except Exception as e:
+                logger.debug(f"Error in conversation_item_added: {e}")
+
+        @sess.on("chat_message")
+        def on_chat_message(msg):
+            try:
+                if hasattr(msg, "role") and hasattr(msg, "content"):
+                    content = msg.content
+                    if msg.role == "assistant" and transcription.greeting_added and content == agent_config.get("greeting"):
+                        return
+                    transcription.add_message(msg.role, content, "chat_message_event")
+            except Exception as e:
+                logger.debug(f"Error in chat_message handler: {e}")
+
+        async def log_usage():
+            logger.info(f"📊 Usage: {usage_collector.get_summary()}")
+
+        async def send_call_data():
+            if state["call_data_sent"]:
+                logger.debug("⏭️ Webhook already sent, skipping")
+                return
+            state["call_data_sent"] = True
+            call_duration = int(time.time() - state["start"])
+            logger.info("📝 Preparing transcription data...")
+            logger.info(f"   Messages captured: {len(transcription.messages)}")
+            logger.info(f"   Duration: {call_duration}s")
+            if len(transcription.messages) <= 1:
+                logger.warning("⚠️ Very few messages captured! Attempting final extraction...")
+                try:
+                    if hasattr(sess, "chat_ctx") and sess.chat_ctx:
+                        messages = sess.chat_ctx.messages
+                        logger.info(f"   Found {len(messages)} messages in chat_ctx")
+                        for msg in messages:
+                            role = msg.role
+                            content = msg.content
+                            if isinstance(content, str):
+                                text = content.strip()
+                            elif isinstance(content, list):
+                                text = " ".join(
+                                    str(part.text) if hasattr(part, "text") else str(part) for part in content
+                                ).strip()
+                            else:
+                                text = str(content).strip()
+                            if text:
+                                if role == "assistant" and transcription.greeting_added and text == agent_config.get("greeting"):
+                                    continue
+                                transcription.add_message(role, text, "final_extraction")
+                                logger.info(f"   Extracted [{role}]: {text[:60]}")
+                except Exception as e:
+                    logger.error(f"❌ Final extraction failed: {e}")
+            logger.info(f"📋 Final transcription: {len(transcription.messages)} messages")
+            for i, msg in enumerate(transcription.messages, 1):
+                logger.info(f"   {i}. [{msg['role'].upper()}] ({msg['source']}): {msg['text'][:80]}")
+            try:
+                payload = {
+                    "room_name": ctx.room.name,
+                    "duration": call_duration,
+                    "transcription": transcription.get_plain_text(),
+                    "metadata": transcription.get_json(),
+                    "message_count": len(transcription.messages),
+                }
+                logger.info(f"🚀 Sending webhook: {len(transcription.messages)} messages, {call_duration}s duration")
+                async with aiohttp.ClientSession() as http_session:
+                    webhook_url = os.environ.get("FLASK_WEBHOOK_URL", "http://localhost:5016/webhook/call-ended")
+                    # Properly encode JSON to avoid encoding issues with timezone-aware strings
+                    json_data = json.dumps(payload, ensure_ascii=False, default=str)
+                    async with http_session.post(webhook_url, data=json_data, headers={"Content-Type": "application/json"}, timeout=aiohttp.ClientTimeout(total=20)) as resp:
+                        if resp.status == 200:
+                            response_text = await resp.text()
+                            logger.info("✅ Webhook delivered successfully!")
+                            logger.info(f"   Response: {response_text[:200]}")
+                        else:
+                            logger.error(f"❌ Webhook failed with status: {resp.status}")
+            except Exception as e:
+                logger.error(f"❌ Failed to send call data: {e}")
+
+        ctx.add_shutdown_callback(log_usage)
+        ctx.add_shutdown_callback(send_call_data)
+
+        async def monitor_session():
+            try:
+                while True:
+                    await asyncio.sleep(10)
+                    try:
+                        if hasattr(sess, "llm"):
+                            llm_obj = sess.llm
+                            if hasattr(llm_obj, "sessions"):
+                                for rt_session in llm_obj.sessions:
+                                    if hasattr(rt_session, "conversation") and hasattr(rt_session.conversation, "messages"):
+                                        for msg in rt_session.conversation.messages:
+                                            if hasattr(msg, "role") and hasattr(msg, "content"):
+                                                if msg.role == "assistant" and transcription.greeting_added and msg.content == agent_config.get("greeting"):
+                                                    continue
+                                                transcription.add_message(msg.role, msg.content, "monitor_realtime")
+                        if hasattr(sess, "chat_ctx") and hasattr(sess.chat_ctx, "messages"):
+                            for msg in sess.chat_ctx.messages:
+                                if hasattr(msg, "role") and hasattr(msg, "content"):
+                                    if msg.role == "assistant" and transcription.greeting_added and msg.content == agent_config.get("greeting"):
+                                        continue
+                                    transcription.add_message(msg.role, msg.content, "monitor_chat_ctx")
+                    except Exception as e:
+                        logger.debug(f"Monitor error: {e}")
+            except asyncio.CancelledError:
+                logger.debug("Monitor task cancelled (expected on call end)")
+
+        state["monitor_task"] = asyncio.create_task(monitor_session())
+
+        @ctx.room.on("participant_disconnected")
+        def on_participant_disconnected(participant: rtc.RemoteParticipant):
+            if participant.kind == rtc.ParticipantKind.PARTICIPANT_KIND_SIP:
+                logger.info(f"📴 SIP participant disconnected: {participant.identity}")
+                state["call_ended"] = True
+                if state["inactivity_task"] and not state["inactivity_task"].done():
+                    logger.info("✅ Cancelling inactivity timer (call ended)")
+                    state["inactivity_task"].cancel()
+                if state["monitor_task"] and not state["monitor_task"].done():
+                    logger.debug("✅ Cancelling monitor task (call ended)")
+                    state["monitor_task"].cancel()
+
+                async def handle_disconnect():
+                    await send_call_data()
+                    await asyncio.sleep(0.5)
+                    await hangup_call()
+
+                asyncio.create_task(handle_disconnect())
+
+    # ===== FOR NON-CAMPAIGN CALLS: Do ALL setup BEFORE connect =====
+    # This ensures greeting plays immediately when user picks up
+
+    tts_engine = None
+    llm_model_realtime = None
+    transcription = None
+    dynamic_tools = []
+    session = None
+    agent_id = None
+
+    if not ctx.room.name.startswith('campaign_') and agent_config:
+        logger.info("🚀 Setting up EVERYTHING before connect...")
+
+        # 1. Initialize models
+        logger.info("   🔊 Initializing TTS...")
+        tts_engine = create_tts_engine(agent_config)
+
+        logger.info("   🧠 Initializing LLM...")
+        llm_model_realtime = create_llm_model(agent_config)
+
+        # 2. Initialize transcription
+        transcription = TranscriptionManager()
+
+        # 3. Load tools
+        agent_id = agent_config.get('id')
+        if agent_id:
+            try:
+                dynamic_tools = tool_service.create_function_tools(agent_id)
+                logger.info(f"   ✅ Tools loaded: {len(dynamic_tools)} tools")
+            except Exception as e:
+                logger.warning(f"   ⚠️ Skipping tools: {e}")
+
+        # 4. Load KB context (if available)
+        if agent_id and agent_id in kb_service._index_cache:
+            try:
+                kb_context = await kb_service.retrieve_context(
+                    agent_id,
+                    query="معلومات عامة عن الشركة والخدمات",
+                    top_k=10
+                )
+                if kb_context:
+                    agent_config = {**agent_config, "prompt": agent_config["prompt"] + "\n\n" + kb_context}
+                    logger.info(f"   ✅ KB context injected ({len(kb_context)} chars)")
+            except Exception as e:
+                logger.error(f"   ❌ Error loading KB: {e}")
+
+        # 5. Create session
+        session = voice.AgentSession(
+            llm=llm_model_realtime,
+            tts=tts_engine,
+            preemptive_generation=True,
+            user_away_timeout=float(os.environ.get('USER_AWAY_TIMEOUT', '60.0'))
+        )
+
+        logger.info("✅ ALL setup complete! Registering handlers (before connect)...")
+        _register_session_handlers(session, transcription, agent_config, ctx, state)
+
+        # 6. Connect (agent joins room; user's phone rings)
+        logger.info("🔗 Connecting to room...")
+        await ctx.connect()
+        logger.info("✅ Agent connected. Waiting for participant (user) to join...")
+
+        # 7. Wait for participant (user) to join BEFORE starting session or greeting
+        participant = await ctx.wait_for_participant()
+        state["start"] = time.time()  # Call duration starts when user joins
+        transcription.set_sip_info(participant)
+        logger.info(f"✅ Participant joined: {participant.identity} (Kind: {participant.kind})")
+
+        # ===== EXTRACT WEBHOOK CONTEXT from participant metadata =====
+        if participant.metadata:
+            try:
+                logger.info(f"🔍 Checking participant metadata for webhook_context...")
+                metadata = json.loads(participant.metadata)
+
+                if metadata.get('type') == 'outbound_api':
+                    webhook_context = metadata.get('webhook_context')
+                    if webhook_context:
+                        logger.info(f"✅ Webhook context found: {list(webhook_context.keys())}")
+                    else:
+                        logger.info(f"ℹ️ No webhook context in metadata")
+            except Exception as e:
+                logger.debug(f"Could not parse participant metadata: {e}")
+
+        # 8. Now start session and greeting (only after user is in the room)
+        background_audio = BackgroundAudioPlayer()
+        await session.start(
+            room=ctx.room,
+            agent=Assistant(config=agent_config, agent_id=agent_id, preloaded_tools=dynamic_tools,
+                            background_audio=background_audio, webhook_context=webhook_context),
+            room_input_options=RoomInputOptions(
+                noise_cancellation=noise_cancellation.BVCTelephony(),
+            ),
+        )
+        await background_audio.start(room=ctx.room, agent_session=session)
+        logger.info("🎵 BackgroundAudioPlayer started (ready for transfer chimes)")
+        Assistant.last_session = session
+        logger.info("✅ Session started (after participant joined)!")
+
+        greeting_message = agent_config.get('greeting', 'السلام عليكم ورحمة الله وبركاته')
+        transcription.add_agent_message(greeting_message, "initial_greeting")
+        transcription.greeting_added = True
+
+        async def send_greeting_async():
+            try:
+                greeting_start = time.time()
+                logger.info("🎤 Sending greeting...")
+                await session.say(greeting_message)
+                greeting_elapsed = time.time() - greeting_start
+                logger.info(f"✅ Greeting sent! (took {greeting_elapsed:.2f}s)")
+            except Exception as e:
+                logger.error(f"❌ Greeting error: {e}")
+
+        asyncio.create_task(send_greeting_async())
+
+        # Start recording in background
+        async def start_recording_background():
+            try:
+                logger.info("🎙️ Starting recording (background)...")
+                recording_id = await recording_service.start_recording(ctx.room.name)
+                if recording_id:
+                    transcription.recording_id = recording_id
+                    logger.info(f"✅ Recording started: {recording_id}")
+            except Exception as e:
+                logger.error(f"❌ Recording error: {e}")
+
+        asyncio.create_task(start_recording_background())
+
+        # Skip to end (all setup already done for non-campaign)
+        # The rest of the function handles campaign calls and event handlers
+
+    else:
+        # Campaign calls: Connect first, then get config from metadata
+        logger.info("🔗 Connecting to room...")
+        await ctx.connect()
+        state["start"] = time.time()
+        logger.info("✅ Connected to room!")
+
+    # Handle campaign calls (needs participant metadata)
     if ctx.room.name.startswith('campaign_'):
         logger.info("📞 Campaign call detected, waiting for participant metadata...")
         participant = await ctx.wait_for_participant()
@@ -887,535 +1300,181 @@ async def entrypoint(ctx: JobContext):
                         'prompt': metadata.get('agent_prompt'),
                         'greeting': metadata.get('agent_greeting'),
                         'voice_id': metadata.get('agent_voice_id'),
-                        'voice_name': metadata.get('agent_voice_name')
+                        'voice_name': metadata.get('agent_voice_name'),
+                        'temperature': metadata.get('agent_temperature', 0.4),
+                        'vad_mode': metadata.get('agent_vad_mode', 'dynamic'),
+                        'transfer_targets': metadata.get('agent_transfer_targets'),
                     }
                     logger.info(f"✅ Using campaign agent: {agent_config['name']}")
         except Exception as e:
             logger.error(f"❌ Error parsing campaign metadata: {e}")
 
-    # Extract agent_id from room name if not campaign
-    if not agent_config:
-        agent_config = get_default_config()
-        try:
-            room_parts = ctx.room.name.split('-')
-            if len(room_parts) >= 2 and room_parts[0] == 'call':
-                agent_id = int(room_parts[1])
-                fetched_config = get_agent_config(agent_id)
-                if fetched_config:
-                    agent_config = fetched_config
-                    logger.info(f"✅ Loaded agent: {agent_config['name']}")
-        except Exception as e:
-            logger.error(f"❌ Error parsing agent ID: {e}")
+        # Fallback for campaign if metadata parsing failed
+        if not agent_config:
+            agent_config = get_default_config()
 
-    # Initialize transcription
-    transcription = TranscriptionManager()
+        # Initialize transcription for campaign
+        transcription = TranscriptionManager()
+        agent_id = agent_config.get('id')
 
-    # ===== OPTIMIZATION 1: Pre-load KB context and tools in parallel =====
-    agent_id = agent_config.get('id')
-    
+    # ===== CAMPAIGN-ONLY: Load KB and tools (non-campaign already done above) =====
     kb_task = None
-    if agent_id and agent_id in kb_service._index_cache:
-        logger.info(f"📚 Loading KB context for agent {agent_id}...")
-        kb_task = asyncio.create_task(kb_service.retrieve_context(
-            agent_id,
-            query="معلومات عامة عن الشركة والخدمات",
-            top_k=10
-        ))
-    
-    # Load tools (cached, very fast)
-    dynamic_tools = []
-    if agent_id:
-        try:
-            dynamic_tools = tool_service.create_function_tools(agent_id)
-            logger.info(f"✅ Tools loaded: {len(dynamic_tools)} tools")
-        except Exception as e:
-            logger.warning(f"⚠️ Skipping tools: {e}")
+    if ctx.room.name.startswith('campaign_'):
+        if agent_id and agent_id in kb_service._index_cache:
+            logger.info(f"📚 Loading KB context for agent {agent_id}...")
+            kb_task = asyncio.create_task(kb_service.retrieve_context(
+                agent_id,
+                query="معلومات عامة عن الشركة والخدمات",
+                top_k=10
+            ))
 
-    # Wait for KB
-    if kb_task:
-        try:
-            kb_context = await kb_task
-            if kb_context:
-                agent_config['prompt'] = agent_config['prompt'] + "\n\n" + kb_context
-                logger.info(f"✅ KB context injected ({len(kb_context)} chars)")
-        except Exception as e:
-            logger.error(f"❌ Error loading KB: {e}")
-
-    # ===== OPTIMIZATION 2: Initialize models in parallel =====
-    logger.info("🚀 Initializing models in parallel...")
-    
-    async def init_tts():
-        return elevenlabs.TTS(
-            voice_id=agent_config['voice_id'],
-            model="eleven_turbo_v2_5",
-            language="ar",
-            auto_mode=True, 
-            voice_settings=elevenlabs.VoiceSettings(
-                stability=0.75,
-                similarity_boost=0.5,
-                style=0.0,
-                speed=0.91,
-                use_speaker_boost=True
-            ),
-            streaming_latency=0,  # Maximum speed
-            inactivity_timeout=60,
-            enable_ssml_parsing=False,
-            apply_text_normalization="auto"
-        )
-    
-    async def init_stt():
-        return google.STT(
-            languages=["ar-SA"],
-            model="latest_long",
-            spoken_punctuation=False,
-            punctuate=True,
-            interim_results=True,
-            detect_language=False,
-            sample_rate=16000,
-            credentials_file="config/google/aimeetingassistant-448613-1ff1fc705734.json",
-        )
-    
-    async def init_llm():
-        return RealtimeModel(
-            #gpt-realtime-mini-2025-10-06 vs gpt-4o-mini-realtime-preview-2024-12-17 vs gpt-realtime-2025-08-28
-            #gpt-4o-realtime-preview
-            #gpt-realtime-2025-08-28
-            #gpt-realtime-mini-2025-12-15
-            model="gpt-realtime-2025-08-28",
-            modalities=["text"],
-            temperature=0.4,
-            input_audio_transcription=InputAudioTranscription(
-                model="gpt-4o-transcribe",
-                language="ar",
-                prompt="Two speakers in Arabic, one customer, one agent."
-            ),
-            turn_detection=TurnDetection(
-                type="server_vad",
-                threshold=0.45,
-                prefix_padding_ms=150,
-                silence_duration_ms=250,
-                create_response=True,
-                interrupt_response=True,
-            ),
-        )
-    
-    # Run all initializations in parallel
-    tts_engine, llm_model_realtime = await asyncio.gather(
-        init_tts(),
-        #init_stt(),
-        init_llm()
-    )
-    
-    logger.info("✅ All models initialized!")
-
-    # Create session
-    session = voice.AgentSession(
-        llm=llm_model_realtime,
-        tts=tts_engine,
-        #stt=stt_engine_google,
-        user_away_timeout=float(os.environ.get('USER_AWAY_TIMEOUT', '60.0'))
-    )
-
-    # ===== [Keep all your event handlers here - lines 472-751] =====
-    usage_collector = metrics.UsageCollector()
-    
-    @session.on("metrics_collected")
-    def _on_metrics_collected(ev: MetricsCollectedEvent):
-        metrics.log_metrics(ev.metrics)
-        usage_collector.collect(ev.metrics)
-
-    inactivity_task: asyncio.Task | None = None
-    call_ended: bool = False
-
-    async def user_presence_check():
-        try:
-            logger.warning("⏰ User marked as away, checking presence...")
-            await session.generate_reply(
-                instructions="المستخدم غير نشط. اسأله بلطف إذا كان لا يزال موجودًا"
-            )
-            await asyncio.sleep(10)
-            logger.warning("⏰ User still inactive after presence check. Ending call...")
-            await session.generate_reply(
-                instructions="قل للمستخدم: يبدو أنك لم تعد هناك. سأنهي المكالمة الآن. مع السلامة"
-            )
-            await asyncio.sleep(3)
-            await hangup_call()
-        except Exception as e:
-            logger.error(f"Error in presence check: {e}")
-
-    @session.on("user_state_changed")
-    def _user_state_changed(ev: UserStateChangedEvent):
-        nonlocal inactivity_task, call_ended
-        logger.info(f"🔄 User state changed: {ev.new_state}")
-        
-        if call_ended:
-            logger.debug(f"⏭️ Ignoring user state change (call already ended)")
-            return
-
-        if ev.new_state == "away":
-            logger.warning(f"⚠️ User away after {os.environ.get('USER_AWAY_TIMEOUT', '60')}s inactivity")
-            inactivity_task = asyncio.create_task(user_presence_check())
-            return
-
-        if inactivity_task is not None and not inactivity_task.done():
-            logger.info("✅ User active again, cancelling presence check")
-            inactivity_task.cancel()
-            inactivity_task = None
-
-    # Transcription handlers
-    last_user_msg_committed = None
-    last_agent_msg_committed = None
-
-    @session.on("user_speech_committed")
-    def on_user_speech_committed(msg: llm.ChatMessage):
-        nonlocal last_user_msg_committed
-        try:
-            text = msg.content if isinstance(msg.content, str) else str(msg.content)
-            text = text.strip()
-            if text and text != last_user_msg_committed:
-                last_user_msg_committed = text
-                transcription.add_user_message(text, "user_speech_committed")
-        except Exception as e:
-            logger.error(f"❌ Error capturing user speech: {e}")
-
-    @session.on("agent_speech_committed")
-    def on_agent_speech_committed(msg: llm.ChatMessage):
-        nonlocal last_agent_msg_committed
-        try:
-            text = msg.content if isinstance(msg.content, str) else str(msg.content)
-            text = text.strip()
-            if text and text != last_agent_msg_committed:
-                if transcription.greeting_added and text == agent_config.get('greeting'):
-                    logger.debug("⏭️  Skipping greeting (already added manually)")
-                    return
-                last_agent_msg_committed = text
-                transcription.add_agent_message(text, "agent_speech_committed")
-        except Exception as e:
-            logger.error(f"❌ Error capturing agent speech: {e}")
-
-    last_user_msg = None
-
-    @session.on("user_transcript")
-    def on_user_transcript(transcript):
-        nonlocal last_user_msg
-        try:
-            if hasattr(transcript, 'text'):
-                text = transcript.text.strip()
-            elif hasattr(transcript, 'transcript'):
-                text = transcript.transcript.strip()
-            elif isinstance(transcript, str):
-                text = transcript.strip()
-            else:
-                text = str(transcript).strip()
-            if text and text != last_user_msg:
-                last_user_msg = text
-                transcription.add_user_message(text, "user_transcript")
-        except Exception as e:
-            logger.error(f"❌ Error capturing user transcript: {e}")
-
-    async def monitor_conversation():
-        last_msg_count = 0
-        try:
-            while True:
-                await asyncio.sleep(0.5)
-                try:
-                    if hasattr(session, 'chat_ctx') and session.chat_ctx:
-                        messages = session.chat_ctx.messages
-                        if len(messages) > last_msg_count:
-                            new_messages = messages[last_msg_count:]
-                            for msg in new_messages:
-                                role = msg.role
-                                content = msg.content
-                                if isinstance(content, str):
-                                    text = content.strip()
-                                elif isinstance(content, list):
-                                    text = ' '.join([
-                                        str(part.text) if hasattr(part, 'text') else str(part)
-                                        for part in content
-                                    ]).strip()
-                                else:
-                                    text = str(content).strip()
-                                if text:
-                                    if role == 'user':
-                                        transcription.add_user_message(text, "chat_context_monitor")
-                                    elif role == 'assistant':
-                                        if transcription.greeting_added and text == agent_config.get('greeting'):
-                                            logger.debug("⏭️  Monitor: Skipping greeting duplicate")
-                                            continue
-                                        transcription.add_agent_message(text, "chat_context_monitor")
-                            last_msg_count = len(messages)
-                except Exception as e:
-                    logger.debug(f"Monitor iteration error: {e}")
-        except asyncio.CancelledError:
-            logger.debug("Conversation monitor cancelled")
-        except Exception as e:
-            logger.error(f"Monitor fatal error: {e}")
-
-    conversation_monitor_task = asyncio.create_task(monitor_conversation())
-
-    async def cleanup_monitor():
-        if conversation_monitor_task and not conversation_monitor_task.done():
-            conversation_monitor_task.cancel()
+        # Load tools (cached, very fast)
+        if agent_id:
             try:
-                await conversation_monitor_task
-            except asyncio.CancelledError:
-                pass
-
-    ctx.add_shutdown_callback(cleanup_monitor)
-
-    @session.on("user_message")
-    def on_user_message(msg):
-        try:
-            if hasattr(msg, 'content'):
-                content = msg.content if isinstance(msg.content, str) else str(msg.content)
-                transcription.add_user_message(content, "user_message_event")
-        except:
-            pass
-
-    @session.on("agent_message")
-    def on_agent_message(msg):
-        try:
-            if hasattr(msg, 'content'):
-                content = msg.content if isinstance(msg.content, str) else str(msg.content)
-                if transcription.greeting_added and content == agent_config.get('greeting'):
-                    return
-                transcription.add_agent_message(content, "agent_message_event")
-        except:
-            pass
-
-    @session.on("agent_transcript")
-    def on_agent_transcript(transcript):
-        try:
-            text = str(transcript)
-            if transcription.greeting_added and text == agent_config.get('greeting'):
-                return
-            transcription.add_agent_message(text, "agent_transcript_event")
-        except:
-            pass
-
-    @session.on("conversation_item_added")
-    def on_conversation_item_added(event):
-        try:
-            if hasattr(event, 'item'):
-                item = event.item
-                if hasattr(item, 'role') and hasattr(item, 'content'):
-                    content = ' '.join(item.content) if isinstance(item.content, list) else str(item.content)
-                    if item.role == 'assistant' and transcription.greeting_added and content == agent_config.get('greeting'):
-                        return
-                    transcription.add_message(item.role, content, "conversation_item")
-        except Exception as e:
-            logger.debug(f"Error in conversation_item_added: {e}")
-
-    @session.on("chat_message")
-    def on_chat_message(msg):
-        try:
-            if hasattr(msg, 'role') and hasattr(msg, 'content'):
-                content = msg.content
-                if msg.role == 'assistant' and transcription.greeting_added and content == agent_config.get('greeting'):
-                    return
-                transcription.add_message(msg.role, content, "chat_message_event")
-        except:
-            pass
-
-    async def log_usage():
-        summary = usage_collector.get_summary()
-        logger.info(f"📊 Usage: {summary}")
-
-    async def send_call_data():
-        call_duration = int(time.time() - call_start_time)
-        logger.info(f"📝 Preparing transcription data...")
-        logger.info(f"   Messages captured: {len(transcription.messages)}")
-        logger.info(f"   Duration: {call_duration}s")
-
-        if len(transcription.messages) <= 1:
-            logger.warning("⚠️ Very few messages captured! Attempting final extraction...")
-            try:
-                if hasattr(session, 'chat_ctx') and session.chat_ctx:
-                    messages = session.chat_ctx.messages
-                    logger.info(f"   Found {len(messages)} messages in chat_ctx")
-                    for msg in messages:
-                        role = msg.role
-                        content = msg.content
-                        if isinstance(content, str):
-                            text = content.strip()
-                        elif isinstance(content, list):
-                            text = ' '.join([
-                                str(part.text) if hasattr(part, 'text') else str(part)
-                                for part in content
-                            ]).strip()
-                        else:
-                            text = str(content).strip()
-                        if text:
-                            if role == 'assistant' and transcription.greeting_added and text == agent_config.get('greeting'):
-                                continue
-                            transcription.add_message(role, text, "final_extraction")
-                            logger.info(f"   Extracted [{role}]: {text[:60]}")
+                dynamic_tools = tool_service.create_function_tools(agent_id)
+                logger.info(f"✅ Tools loaded: {len(dynamic_tools)} tools")
             except Exception as e:
-                logger.error(f"❌ Final extraction failed: {e}")
+                logger.warning(f"⚠️ Skipping tools: {e}")
 
-        logger.info(f"📋 Final transcription: {len(transcription.messages)} messages")
-        for i, msg in enumerate(transcription.messages, 1):
-            logger.info(f"   {i}. [{msg['role'].upper()}] ({msg['source']}): {msg['text'][:80]}")
+        # Wait for KB
+        if kb_task:
+            try:
+                kb_context = await kb_task
+                if kb_context:
+                    agent_config = {**agent_config, "prompt": agent_config["prompt"] + "\n\n" + kb_context}
+                    logger.info(f"✅ KB context injected ({len(kb_context)} chars)")
+            except Exception as e:
+                logger.error(f"❌ Error loading KB: {e}")
 
-        try:
-            payload = {
-                'room_name': ctx.room.name,
-                'duration': call_duration,
-                'transcription': transcription.get_plain_text(),
-                'metadata': transcription.get_json(),
-                'message_count': len(transcription.messages)
+    # ===== CAMPAIGN-ONLY: Initialize models and create session =====
+    # (Non-campaign calls already have session created before connect)
+    if session is None:
+        logger.info("🚀 Initializing models (campaign mode)...")
+
+        async def init_tts():
+            voice_speed = agent_config.get('voice_speed', 0.90)
+            logger.info(f"🎙️ Campaign TTS: Voice={agent_config.get('voice_name', '?')}, Speed={voice_speed}x")
+            return elevenlabs.TTS(
+                voice_id=agent_config['voice_id'],
+                model="eleven_turbo_v2_5",
+                language="ar",
+                auto_mode=True,
+                voice_settings=elevenlabs.VoiceSettings(
+                    stability=0.75,
+                    similarity_boost=0.5,
+                    style=0.0,
+                    speed=voice_speed,
+                    use_speaker_boost=True
+                ),
+                streaming_latency=0,
+                inactivity_timeout=60,
+                enable_ssml_parsing=False,
+                apply_text_normalization="auto"
+            )
+
+        async def init_llm():
+            llm_temperature = agent_config.get('temperature', 0.4)
+            vad_mode = agent_config.get('vad_mode', 'dynamic')
+            logger.info(f"🌡️ LLM Temperature: {llm_temperature}, VAD Mode: {vad_mode}")
+
+            model_kwargs = {
+                'model': "gpt-realtime-2025-08-28",
+                'modalities': ["text"],
+                'temperature': llm_temperature,
+                'input_audio_transcription': InputAudioTranscription(
+                    model="gpt-4o-transcribe",
+                    language="en",
+                ),
             }
-            logger.info(f"🚀 Sending webhook: {len(transcription.messages)} messages, {call_duration}s duration")
-            async with aiohttp.ClientSession() as http_session:
-                webhook_url = os.environ.get('FLASK_WEBHOOK_URL', 'http://localhost:5003/webhook/call-ended')
-                async with http_session.post(webhook_url, json=payload, timeout=aiohttp.ClientTimeout(total=20)) as resp:
-                    if resp.status == 200:
-                        response_text = await resp.text()
-                        logger.info(f"✅ Webhook delivered successfully!")
-                        logger.info(f"   Response: {response_text[:200]}")
-                    else:
-                        logger.error(f"❌ Webhook failed with status: {resp.status}")
-        except Exception as e:
-            logger.error(f"❌ Failed to send call data: {e}")
 
-    ctx.add_shutdown_callback(log_usage)
-    ctx.add_shutdown_callback(send_call_data)
+            if vad_mode == 'natural':
+                model_kwargs['turn_detection'] = TurnDetection(
+                    type="semantic_vad",
+                    eagerness="auto",
+                    create_response=True,
+                    interrupt_response=True,
+                )
+            elif vad_mode != 'precise':
+                model_kwargs['turn_detection'] = TurnDetection(
+                    type="server_vad",
+                    threshold=0.45,
+                    prefix_padding_ms=150,
+                    silence_duration_ms=250,
+                    create_response=True,
+                    interrupt_response=True,
+                )
 
-    monitor_task = None
+            return RealtimeModel(**model_kwargs)
 
-    async def monitor_session():
-        try:
-            while True:
-                await asyncio.sleep(10)
-                try:
-                    if hasattr(session, 'llm'):
-                        llm_obj = session.llm
-                        if hasattr(llm_obj, 'sessions'):
-                            for rt_session in llm_obj.sessions:
-                                if hasattr(rt_session, 'conversation') and hasattr(rt_session.conversation, 'messages'):
-                                    for msg in rt_session.conversation.messages:
-                                        if hasattr(msg, 'role') and hasattr(msg, 'content'):
-                                            if msg.role == 'assistant' and transcription.greeting_added and msg.content == agent_config.get('greeting'):
-                                                continue
-                                            transcription.add_message(msg.role, msg.content, "monitor_realtime")
-                    if hasattr(session, 'chat_ctx') and hasattr(session.chat_ctx, 'messages'):
-                        for msg in session.chat_ctx.messages:
-                            if hasattr(msg, 'role') and hasattr(msg, 'content'):
-                                if msg.role == 'assistant' and transcription.greeting_added and msg.content == agent_config.get('greeting'):
-                                    continue
-                                transcription.add_message(msg.role, msg.content, "monitor_chat_ctx")
-                except Exception as e:
-                    logger.debug(f"Monitor error: {e}")
-        except asyncio.CancelledError:
-            logger.debug("Monitor task cancelled (expected on call end)")
+        tts_engine, llm_model_realtime = await asyncio.gather(
+            init_tts(),
+            init_llm()
+        )
+        logger.info("✅ Models initialized!")
 
-    # ===== START SESSION =====
-    logger.info(f"🚀 Starting session with agent: {agent_config['name']}")
-    await session.start(
-        room=ctx.room,
-        agent=Assistant(config=agent_config, agent_id=agent_id, preloaded_tools=dynamic_tools),
-        room_input_options=RoomInputOptions(
-            noise_cancellation=noise_cancellation.BVCTelephony(),
-        ),
-    )
+        # Create session for campaign
+        session = voice.AgentSession(
+            llm=llm_model_realtime,
+            tts=tts_engine,
+            preemptive_generation=True,
+            user_away_timeout=float(os.environ.get('USER_AWAY_TIMEOUT', '60.0'))
+        )
 
-    # Start monitors
-    monitor_task = asyncio.create_task(monitor_session())
-    
-    # ===== OPTIMIZATION 3: Wait for participant AFTER session start =====
-    logger.info("⏳ Waiting for participant...")
-    if not ctx.room.name.startswith('campaign_'):
-        participant = await ctx.wait_for_participant()
-    
-    transcription.set_sip_info(participant)
-    logger.info(f"✅ Participant joined: {participant.identity} (Kind: {participant.kind})")
+    # Register handlers before session.start() (campaign only; non-campaign already did this before connect)
+    if ctx.room.name.startswith("campaign_"):
+        _register_session_handlers(session, transcription, agent_config, ctx, state)
 
-    # ===== OPTIMIZATION 4: Quick audio track check (reduced timeout) =====
-    if participant.kind == rtc.ParticipantKind.PARTICIPANT_KIND_SIP:
-        logger.info("⏳ Quick audio track check...")
-        try:
-            timeout = 5  # Reduced from 5s → 1.5s
-            start_wait = time.time()
-            while time.time() - start_wait < timeout:
-                audio_tracks = [
-                    track for track in participant.track_publications.values()
-                    if track.kind == rtc.TrackKind.KIND_AUDIO
-                ]
-                if audio_tracks:
-                    elapsed = time.time() - start_wait
-                    logger.info(f"✅ Audio track ready in {elapsed:.2f}s")
-                    break
-                await asyncio.sleep(0.1)  # Faster polling
-        except Exception as e:
-            logger.debug(f"Audio track check: {e}")
+    # ===== CAMPAIGN-ONLY: Start session and greeting (non-campaign already done above) =====
+    if ctx.room.name.startswith('campaign_'):
+        logger.info(f"🚀 Starting session with agent: {agent_config['name']}")
+        background_audio = BackgroundAudioPlayer()
+        await session.start(
+            room=ctx.room,
+            agent=Assistant(config=agent_config, agent_id=agent_id, preloaded_tools=dynamic_tools,
+                            background_audio=background_audio),
+            room_input_options=RoomInputOptions(
+                noise_cancellation=noise_cancellation.BVCTelephony(),
+            ),
+        )
+        await background_audio.start(room=ctx.room, agent_session=session)
+        logger.info("🎵 BackgroundAudioPlayer started (ready for transfer chimes)")
 
-    # ===== OPTIMIZATION 5: Start recording in background (NON-BLOCKING!) =====
-    async def start_recording_background():
-        """Start recording without blocking greeting"""
-        try:
-            logger.info("🎙️ Starting recording (background)...")
-            recording_id = await recording_service.start_recording(ctx.room.name)
-            if recording_id:
-                transcription.recording_id = recording_id
-                logger.info(f"✅ Recording started: {recording_id}")
-            else:
-                logger.warning("⚠️ Recording failed")
-        except Exception as e:
-            logger.error(f"❌ Recording error: {e}")
-    
-    # Start recording in background - DON'T WAIT FOR IT!
-    asyncio.create_task(start_recording_background())
+        # Store session reference
+        Assistant.last_session = session
+        logger.info("✅ Session started!")
 
-    # ===== Participant disconnect handler =====
-    #@ctx.room.on("participant_disconnected")
-    #def on_participant_disconnected(participant: rtc.RemoteParticipant):
-    #    nonlocal inactivity_task, monitor_task, call_ended
-    #    if participant.kind == rtc.ParticipantKind.PARTICIPANT_KIND_SIP:
-    #        logger.info(f"📴 SIP participant disconnected: {participant.identity}")
-    #        call_ended = True
-    #        if inactivity_task and not inactivity_task.done():
-    #            logger.info("✅ Cancelling inactivity timer (call ended)")
-    #            inactivity_task.cancel()
-    #        if monitor_task and not monitor_task.done():
-    #            logger.debug("✅ Cancelling monitor task (call ended)")
-    #            monitor_task.cancel()
-    #        asyncio.create_task(hangup_call())
-    
-    @ctx.room.on("participant_disconnected")
-    def on_participant_disconnected(participant: rtc.RemoteParticipant):
-        nonlocal inactivity_task, monitor_task, call_ended
-        if participant.kind == rtc.ParticipantKind.PARTICIPANT_KIND_SIP:
-            logger.info(f"📴 SIP participant disconnected: {participant.identity}")
-            call_ended = True
-            
-            # Cancel tasks
-            if inactivity_task and not inactivity_task.done():
-                logger.info("✅ Cancelling inactivity timer (call ended)")
-                inactivity_task.cancel()
-            if monitor_task and not monitor_task.done():
-                logger.debug("✅ Cancelling monitor task (call ended)")
-                monitor_task.cancel()
-            
-            # ✅ SEND WEBHOOK FIRST, THEN HANG UP
-            async def handle_disconnect():
-                await send_call_data()  # Send webhook
-                await asyncio.sleep(0.5)  # Give webhook time to send
-                await hangup_call()  # Then delete room
-            
-            asyncio.create_task(handle_disconnect())
+        # Send greeting
+        greeting_message = agent_config.get('greeting', 'السلام عليكم ورحمة الله وبركاته')
+        transcription.add_agent_message(greeting_message, "initial_greeting")
+        transcription.greeting_added = True
 
-    # ===== OPTIMIZATION 6: IMMEDIATE GREETING (no sleeps!) =====
-    logger.info("🎤 Sending greeting IMMEDIATELY...")
-    greeting_message = agent_config.get('greeting', 'السلام عليكم ورحمة الله وبركاته')
-    
-    # Add to transcription first
-    transcription.add_agent_message(greeting_message, "initial_greeting")
-    transcription.greeting_added = True
-    logger.info("✅ Greeting added to transcription")
-    
-    # Send greeting immediately - no sleeps!
-    await session.say(greeting_message, allow_interruptions=False)
-    logger.info("✅ Greeting sent!")
+        async def send_greeting_async():
+            try:
+                greeting_start = time.time()
+                logger.info("🎤 Sending greeting...")
+                await session.say(greeting_message)
+                greeting_elapsed = time.time() - greeting_start
+                logger.info(f"✅ Greeting sent! (took {greeting_elapsed:.2f}s)")
+            except Exception as e:
+                logger.error(f"❌ Greeting error: {e}")
+
+        asyncio.create_task(send_greeting_async())
+
+        # Start recording in background
+        async def start_recording_background():
+            try:
+                logger.info("🎙️ Starting recording (background)...")
+                recording_id = await recording_service.start_recording(ctx.room.name)
+                if recording_id:
+                    transcription.recording_id = recording_id
+                    logger.info(f"✅ Recording started: {recording_id}")
+            except Exception as e:
+                logger.error(f"❌ Recording error: {e}")
+
+        asyncio.create_task(start_recording_background())
+
+    # (Participant disconnect + monitor tasks are registered in _register_session_handlers.)
+    logger.info("✅ Call setup complete - greeting is playing")
 
 # --- Worker Load Management (Module Level for Multiprocessing) ---
 _last_logged_load = None
@@ -1455,10 +1514,10 @@ def compute_load(worker) -> float:
 
 if __name__ == "__main__":
     tool_service.preload_all_agents()
-    # Configure worker with essential production option
+    # Configure worker with essential production options
     opts = WorkerOptions(
         entrypoint_fnc=entrypoint,
-
+        
         # Load management - prevents system overload
         load_fnc=compute_load,
         load_threshold=0.9,  # Stop accepting new jobs at 90% capacity (13-14 concurrent calls)

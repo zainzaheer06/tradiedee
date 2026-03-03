@@ -19,3 +19,5 @@ google-generativeai
 redis
 prometheus-client
 openpyxl
+flask-cors
+phonenumbers

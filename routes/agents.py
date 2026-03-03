@@ -83,22 +83,22 @@ def new_agent_form():
     """Create new agent form"""
     # Generic Voice ID to ElevenLabs Voice ID mapping (hides ElevenLabs IDs from frontend)
     generic_to_elevenlabs_mapping = {
-        'voice_1': 'G1L6zhS0TTaBvSr18eUY',  # Fatima
-        'voice_2': '6XO1vwWJxHDXGcEu6pMV',  # Ayesha
-        'voice_3': 'zJBKdaTfvV4Cs3Q3Uqj8',  # Rabia
-        'voice_4': 'kgxi5e6hsB6HuAGpjbQ5',  # Hiba
-        'voice_5': 'KjDucWgG5NYuMBznv52L',  # Zainab
-        'voice_6': 'YdWLuz4rVsaG3kWAECFE'   # Ali
+        'voice_1': 'e1nbKcfTL4XYy71tZn9J',  # Isla
+        'voice_2': '56bWURjYFHyYyVf490Dp',  # Matilda
+        'voice_3': 'LXy8KWda5yk1Vw6sEV6w',  # Freya
+        'voice_4': 'jVaO0tjr2YWfUw1xLmB2',  # Grace
+        'voice_5': 'aEO01A4wXwd1O8GPgGlF',  # Sophie
+        'voice_6': 'WLKp2jV6nrS8aMkPPDRO'   # Mike
     }
 
     # Voice ID to Name mapping
     voice_mapping = {
-        'G1L6zhS0TTaBvSr18eUY': 'Fatima',
-        '6XO1vwWJxHDXGcEu6pMV': 'Ayesha',
-        'zJBKdaTfvV4Cs3Q3Uqj8': 'Rabia',
-        'kgxi5e6hsB6HuAGpjbQ5': 'Hiba',
-        'KjDucWgG5NYuMBznv52L': 'Zainab',
-        'YdWLuz4rVsaG3kWAECFE': 'Ali'
+        'e1nbKcfTL4XYy71tZn9J': 'Isla',
+        '56bWURjYFHyYyVf490Dp': 'Matilda',
+        'LXy8KWda5yk1Vw6sEV6w': 'Freya',
+        'jVaO0tjr2YWfUw1xLmB2': 'Grace',
+        'aEO01A4wXwd1O8GPgGlF': 'Sophie',
+        'WLKp2jV6nrS8aMkPPDRO': 'Mike'
     }
 
     if request.method == 'POST':
@@ -114,7 +114,7 @@ def new_agent_form():
 
         # Get generic voice ID from form and map to actual ElevenLabs voice ID
         generic_voice_id = request.form.get('voice_id', 'voice_1')
-        voice_id = generic_to_elevenlabs_mapping.get(generic_voice_id, 'G1L6zhS0TTaBvSr18eUY')
+        voice_id = generic_to_elevenlabs_mapping.get(generic_voice_id, 'e1nbKcfTL4XYy71tZn9J')
         voice_name = voice_mapping.get(voice_id, 'Fatima')
 
         # Calculate next user-specific agent number
@@ -192,22 +192,22 @@ def edit_agent_form(agent_id):
 
     # Generic Voice ID to ElevenLabs Voice ID mapping (hides ElevenLabs IDs from frontend)
     generic_to_elevenlabs_mapping = {
-        'voice_1': 'G1L6zhS0TTaBvSr18eUY',  # Fatima
-        'voice_2': '6XO1vwWJxHDXGcEu6pMV',  # Ayesha
-        'voice_3': 'zJBKdaTfvV4Cs3Q3Uqj8',  # Rabia
-        'voice_4': 'kgxi5e6hsB6HuAGpjbQ5',  # Hiba
-        'voice_5': 'KjDucWgG5NYuMBznv52L',  # Zainab
-        'voice_6': 'YdWLuz4rVsaG3kWAECFE'   # Ali
+        'voice_1': 'e1nbKcfTL4XYy71tZn9J',  # Isla
+        'voice_2': '56bWURjYFHyYyVf490Dp',  # Matilda
+        'voice_3': 'LXy8KWda5yk1Vw6sEV6w',  # Freya
+        'voice_4': 'jVaO0tjr2YWfUw1xLmB2',  # Grace
+        'voice_5': 'aEO01A4wXwd1O8GPgGlF',  # Sophie
+        'voice_6': 'WLKp2jV6nrS8aMkPPDRO'   # Mike
     }
 
     # Voice mapping
     voice_mapping = {
-        'G1L6zhS0TTaBvSr18eUY': 'Fatima',
-        '6XO1vwWJxHDXGcEu6pMV': 'Ayesha',
-        'zJBKdaTfvV4Cs3Q3Uqj8': 'Rabia',
-        'kgxi5e6hsB6HuAGpjbQ5': 'Hiba',
-        'KjDucWgG5NYuMBznv52L': 'Zainab',
-        'YdWLuz4rVsaG3kWAECFE': 'Ali'
+        'e1nbKcfTL4XYy71tZn9J': 'Isla',
+        '56bWURjYFHyYyVf490Dp': 'Matilda',
+        'LXy8KWda5yk1Vw6sEV6w': 'Freya',
+        'jVaO0tjr2YWfUw1xLmB2': 'Grace',
+        'aEO01A4wXwd1O8GPgGlF': 'Sophie',
+        'WLKp2jV6nrS8aMkPPDRO': 'Mike'
     }
 
     if request.method == 'POST':
@@ -228,7 +228,7 @@ def edit_agent_form(agent_id):
 
         # Get generic voice ID from form and map to actual ElevenLabs voice ID
         generic_voice_id = request.form.get('voice_id', 'voice_1')
-        agent.voice_id = generic_to_elevenlabs_mapping.get(generic_voice_id, 'G1L6zhS0TTaBvSr18eUY')
+        agent.voice_id = generic_to_elevenlabs_mapping.get(generic_voice_id, 'e1nbKcfTL4XYy71tZn9J')
         agent.voice_name = voice_mapping.get(agent.voice_id, 'Fatima')
 
 

@@ -44,7 +44,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # =============================================================================
 # SESSION_COOKIE_SECURE: Only send cookies over HTTPS connections
 # WHY: Prevents session hijacking via man-in-the-middle attacks on HTTP
-app.config['SESSION_COOKIE_SECURE'] = True
+# NOTE: Set to False for development (HTTP), True for production (HTTPS)
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('USE_HTTPS', 'false').lower() in ('true', '1', 'yes')
 
 # SESSION_COOKIE_HTTPONLY: JavaScript cannot access the session cookie
 # WHY: Prevents XSS attacks from stealing session cookies via document.cookie
