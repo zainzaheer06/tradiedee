@@ -149,6 +149,9 @@ async def make_livekit_call(phone_number: str, room_name: str, agent_name: str,
         agent_id: Agent ID for metadata
         webhook_context: Optional context data to pass to agent
     """
+    # Ensure E.164 format with + prefix (Twilio requires it)
+    if not phone_number.startswith("+"):
+        phone_number = f"+{phone_number}"
     lkapi = api.LiveKitAPI()
 
     # Create room metadata

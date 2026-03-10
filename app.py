@@ -260,5 +260,5 @@ def init_db():
 if __name__ == '__main__':
     init_db()
     debug_mode = os.environ.get('FLASK_DEBUG', 'false').lower() in ('true', '1', 'yes')
-    port = int(os.environ.get('FLASK_PORT', '5016'))
+    port = int(os.environ.get('FLASK_PORT', '5017'))
     app.run(debug=debug_mode, port=port, host='0.0.0.0')

@@ -45,22 +45,28 @@ def job_dashboard(business):
     try:
         # Get jobs for this business
         today = datetime.now()
-        date_filter = request.args.get('date', today.strftime('%Y-%m-%d'))
+        date_filter = request.args.get('date', 'all')
         status_filter = request.args.get('status', 'all')
 
         query = Job.query.filter_by(business_id=business.id)
 
-        # Apply filters
+        # Apply date filter only when explicitly selected
         if date_filter and date_filter != 'all':
             target_date = datetime.strptime(date_filter, '%Y-%m-%d')
-            # Show jobs for the date OR unscheduled jobs (from AI calls)
             query = query.filter(
                 db.or_(
+                    # Jobs scheduled for this date
                     db.and_(
                         Job.scheduled_datetime >= target_date,
                         Job.scheduled_datetime < target_date + timedelta(days=1)
                     ),
-                    Job.scheduled_datetime.is_(None)  # Include unscheduled AI-created jobs
+                    # Jobs created on this date (regardless of schedule)
+                    db.and_(
+                        Job.created_at >= target_date,
+                        Job.created_at < target_date + timedelta(days=1)
+                    ),
+                    # Unscheduled jobs always show
+                    Job.scheduled_datetime.is_(None)
                 )
             )
 

@@ -85,6 +85,9 @@ async def make_livekit_call(phone_number, room_name, agent_name, outbound_trunk_
         agent_name: Agent name for dispatch
         outbound_trunk_id: SIP trunk ID for outbound calls
     """
+    # Ensure E.164 format with + prefix (Twilio requires it)
+    if not phone_number.startswith("+"):
+        phone_number = f"+{phone_number}"
     lkapi = api.LiveKitAPI()
 
     # Create agent dispatch

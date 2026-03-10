@@ -89,7 +89,7 @@ def start_test_call():
 
             dispatch = await lkapi.agent_dispatch.create_dispatch(
                 api.CreateAgentDispatchRequest(
-                    agent_name="agent",
+                    agent_name="agent-tradiedee",
                     room=room_name,
                     metadata=str(agent_id)
                 )

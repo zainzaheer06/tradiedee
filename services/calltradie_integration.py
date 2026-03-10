@@ -13,7 +13,7 @@ from datetime import datetime
 
 logger = logging.getLogger("calltradie-integration")
 
-FLASK_API_BASE = os.environ.get('FLASK_API_BASE', 'http://localhost:5003')
+FLASK_API_BASE = os.environ.get('FLASK_API_BASE', 'http://localhost:5016')
 
 
 class CallTradeieIntegration:
@@ -222,6 +222,7 @@ class EntityExtractor:
             client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
 
             prompt = f"""Analyze this customer service call transcript and extract details. Return JSON only.
+Today's date and time: {datetime.now().strftime('%Y-%m-%d %H:%M')}
 
 Transcript:
 {transcript}
@@ -230,19 +231,26 @@ Extract and return ONLY valid JSON (no markdown, no explanation) with these fiel
 {{
   "customer_name": "extracted full name or null",
   "customer_phone": "extracted phone number (Australian format like 0412345678) or null",
+  "customer_email": "extracted email address or null",
   "customer_address": "extracted street address or null",
+  "customer_suburb": "extracted suburb/city name or null",
+  "customer_postcode": "extracted Australian postcode (4 digits) or null",
   "service_type": "plumbing|electrical|hvac|gas|general or null",
   "issue_description": "brief description of the issue or null",
   "urgency": "normal|emergency based on keywords",
-  "booking_needed": true|false - is customer trying to book a service?
+  "booking_needed": true or false,
+  "scheduled_datetime": "ISO 8601 datetime string or null",
+  "call_summary": "2-3 sentence summary of the call from the business owner's perspective"
 }}
 
 Rules:
-- Only extract if mentioned in the call
+- Only extract if clearly mentioned in the call
 - Phone: Australian numbers in format 04XX XXX XXX or 0412345678
 - Service type: identify from keywords (water/leak=plumbing, light/power=electrical, etc)
 - Urgency: emergency if mentions urgent/leak/flooding/burst
-- booking_needed: true if customer asked about times, availability, or scheduling"""
+- booking_needed: true if customer asked about times, availability, or scheduling
+- scheduled_datetime: if customer agreed on or requested a specific date/time (e.g. "tomorrow 10am", "Monday at 2pm", "today at 4", "this afternoon"), convert to full ISO 8601 datetime using today's date as reference. If no specific time mentioned, use null
+- call_summary: write a concise 2-3 sentence summary of what the customer needs, what was discussed, and the outcome. Write from the business perspective (e.g. "Customer called about a burst pipe in their bathroom. They need urgent repair. Appointment booked for tomorrow 10am.")"""
 
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
@@ -292,6 +300,7 @@ Rules:
             client = AsyncOpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
 
             prompt = f"""Analyze this customer service call transcript and extract details. Return JSON only.
+Today's date and time: {datetime.now().strftime('%Y-%m-%d %H:%M')}
 
 Transcript:
 {transcript}
@@ -300,19 +309,26 @@ Extract and return ONLY valid JSON (no markdown, no explanation) with these fiel
 {{
   "customer_name": "extracted full name or null",
   "customer_phone": "extracted phone number (Australian format like 0412345678) or null",
+  "customer_email": "extracted email address or null",
   "customer_address": "extracted street address or null",
+  "customer_suburb": "extracted suburb/city name or null",
+  "customer_postcode": "extracted Australian postcode (4 digits) or null",
   "service_type": "plumbing|electrical|hvac|gas|general or null",
   "issue_description": "brief description of the issue or null",
   "urgency": "normal|emergency based on keywords",
-  "booking_needed": true|false - is customer trying to book a service?
+  "booking_needed": true or false,
+  "scheduled_datetime": "ISO 8601 datetime string or null",
+  "call_summary": "2-3 sentence summary of the call from the business owner's perspective"
 }}
 
 Rules:
-- Only extract if mentioned in the call
+- Only extract if clearly mentioned in the call
 - Phone: Australian numbers in format 04XX XXX XXX or 0412345678
 - Service type: identify from keywords (water/leak=plumbing, light/power=electrical, etc)
 - Urgency: emergency if mentions urgent/leak/flooding/burst
-- booking_needed: true if customer asked about times, availability, or scheduling"""
+- booking_needed: true if customer asked about times, availability, or scheduling
+- scheduled_datetime: if customer agreed on or requested a specific date/time (e.g. "tomorrow 10am", "Monday at 2pm", "today at 4", "this afternoon"), convert to full ISO 8601 datetime using today's date as reference. If no specific time mentioned, use null
+- call_summary: write a concise 2-3 sentence summary of what the customer needs, what was discussed, and the outcome. Write from the business perspective (e.g. "Customer called about a burst pipe in their bathroom. They need urgent repair. Appointment booked for tomorrow 10am.")"""
 
             response = await client.chat.completions.create(
                 model="gpt-4o-mini",

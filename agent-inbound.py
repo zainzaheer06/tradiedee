@@ -662,7 +662,7 @@ async def entrypoint(ctx: JobContext):
             temperature=0.3,
             input_audio_transcription=InputAudioTranscription(
                 model="whisper-1",
-                language="ar"
+                language="en"
             ),
             turn_detection=TurnDetection(
                 type="server_vad",

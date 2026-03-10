@@ -110,8 +110,8 @@
                     <th>Customer</th>
                     <th>Service</th>
                     <th>Status</th>
+                    <th>Scheduled</th>
                     <th>Priority</th>
-                    <th>Created</th>
                     <th style="text-align:right;"></th>
                 </tr>
             </thead>
@@ -138,15 +138,20 @@
                             <span class="badge badge-gray">{{ job.status.replace('_', ' ').title() }}</span>
                         {% endif %}
                     </td>
+                    <td style="font-size:12px;">
+                        {% if job.scheduled_datetime %}
+                            <div style="font-weight:600; color:var(--t1);">{{ job.scheduled_datetime.strftime('%b %d') }}</div>
+                            <div style="color:var(--t3);">{{ job.scheduled_datetime.strftime('%I:%M %p') }}</div>
+                        {% else %}
+                            <span style="color:var(--t4);">Not set</span>
+                        {% endif %}
+                    </td>
                     <td>
                         {% if job.is_emergency %}
                             <span class="badge badge-red">Emergency</span>
                         {% else %}
                             <span style="color:var(--t3); font-size:12px;">Normal</span>
                         {% endif %}
-                    </td>
-                    <td style="font-size:12px; color:var(--t3);">
-                        {{ job.created_at.strftime('%b %d, %H:%M') }}
                     </td>
                     <td style="text-align:right;">
                         <a href="{{ url_for('jobs.view_job', job_id=job.id) }}" class="btn btn-ghost btn-sm" style="padding:6px 10px;">

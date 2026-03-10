@@ -486,6 +486,9 @@ def make_call_route(agent_id):
 async def make_livekit_call(phone_number, room_name, agent_name, outbound_trunk_id, agent_id=None, webhook_context=None):
     """Create a dispatch and add a SIP participant to call the phone number"""
     import json
+    # Ensure E.164 format with + prefix (Twilio requires it)
+    if not phone_number.startswith("+"):
+        phone_number = f"+{phone_number}"
     lkapi = api.LiveKitAPI()
 
     # Create room metadata with webhook context if available
@@ -499,7 +502,7 @@ async def make_livekit_call(phone_number, room_name, agent_name, outbound_trunk_
     # Create agent dispatch
     dispatch = await lkapi.agent_dispatch.create_dispatch(
         api.CreateAgentDispatchRequest(
-            agent_name="agent",
+            agent_name="agent-tradiedee",
             room=room_name,
             metadata=json.dumps(room_metadata)  
         )

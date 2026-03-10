@@ -693,10 +693,12 @@ def configure_user_trunk(user_id):
 
     if request.method == 'POST':
         outbound_trunk_id = request.form.get('outbound_trunk_id', '').strip()
+        outbound_phone_number = request.form.get('outbound_phone_number', '').strip()
         sip_notes = request.form.get('sip_notes', '').strip()
 
         # Update user trunk configuration
         user.outbound_trunk_id = outbound_trunk_id if outbound_trunk_id else None
+        user.outbound_phone_number = outbound_phone_number if outbound_phone_number else None
         user.sip_configured = bool(outbound_trunk_id)
         user.sip_configured_at = datetime.now(SAUDI_TZ).replace(tzinfo=None) if outbound_trunk_id else None
         user.sip_notes = sip_notes if sip_notes else None
@@ -1502,21 +1504,21 @@ def call_ended_webhook():
                     logger.info(f"📊 AI Analysis: name={extracted.get('customer_name')}, phone={extracted.get('customer_phone')}, service={extracted.get('service_type')}, booking_needed={extracted.get('booking_needed')}, urgency={extracted.get('urgency')}")
 
                     # Step 2: Decide if job creation is needed
+                    # Only create a job if the customer actually wants to book/schedule
+                    # or it's an emergency that needs immediate action
                     booking_needed = extracted.get('booking_needed', False)
-                    has_service = extracted.get('service_type') is not None
-                    has_issue = extracted.get('issue_description') is not None
                     is_emergency = extracted.get('urgency') == 'emergency'
+                    has_scheduled_time = extracted.get('scheduled_datetime') is not None
 
-                    should_create_job = booking_needed or has_service or has_issue or is_emergency
+                    should_create_job = booking_needed or is_emergency or has_scheduled_time
 
                     if not should_create_job:
-                        logger.info(f"ℹ️  No job needed for {call_type_label} - customer didn't request a service or booking")
+                        logger.info(f"ℹ️  No job needed for {call_type_label} - customer didn't request a booking or report an emergency")
                     else:
                         reason = []
                         if booking_needed: reason.append("booking requested")
-                        if has_service: reason.append(f"service: {extracted.get('service_type')}")
+                        if has_scheduled_time: reason.append(f"scheduled: {extracted.get('scheduled_datetime')}")
                         if is_emergency: reason.append("EMERGENCY")
-                        if has_issue: reason.append("issue described")
                         logger.info(f"✅ Job creation triggered: {', '.join(reason)}")
 
                         # Step 3: Find business (for real calls) or use None (for test calls)
@@ -1527,21 +1529,56 @@ def call_ended_webhook():
                                 business_id = business.id
                                 logger.info(f"✅ Linked to business: {business.business_name}")
 
-                        # Step 4: Create job with extracted data
+                        # Step 4: Parse scheduled datetime if extracted
+                        scheduled_dt = None
+                        raw_dt = extracted.get('scheduled_datetime')
+                        if raw_dt:
+                            try:
+                                scheduled_dt = datetime.fromisoformat(raw_dt)
+                                logger.info(f"📅 Scheduled datetime extracted: {scheduled_dt}")
+                            except (ValueError, TypeError) as e:
+                                logger.warning(f"⚠️ Could not parse scheduled_datetime '{raw_dt}': {e}")
+
+                        # Step 5: Find or create customer record
+                        customer_id = None
+                        cust_phone = (extracted.get('customer_phone') or '').strip()
+                        if cust_phone and business_id:
+                            from models import Customer
+                            customer = Customer.query.filter_by(business_id=business_id, phone=cust_phone).first()
+                            if not customer:
+                                customer = Customer(
+                                    business_id=business_id,
+                                    name=extracted.get('customer_name'),
+                                    phone=cust_phone,
+                                    email=extracted.get('customer_email'),
+                                    address=extracted.get('customer_address'),
+                                    suburb=extracted.get('customer_suburb'),
+                                    postcode=extracted.get('customer_postcode'),
+                                )
+                                db.session.add(customer)
+                                db.session.flush()
+                            customer_id = customer.id
+
+                        # Step 6: Create job with extracted data
                         job = Job(
                             business_id=business_id,
+                            customer_id=customer_id,
                             original_call_id=call_log.id,
                             customer_name=extracted.get('customer_name'),
-                            customer_phone=extracted.get('customer_phone'),
+                            customer_phone=cust_phone,
+                            customer_email=extracted.get('customer_email'),
                             customer_address=extracted.get('customer_address'),
+                            customer_suburb=extracted.get('customer_suburb'),
+                            customer_postcode=extracted.get('customer_postcode'),
                             job_type=extracted.get('service_type', 'general'),
                             description=extracted.get('issue_description', ''),
                             urgency=extracted.get('urgency', 'normal'),
                             is_emergency=is_emergency,
+                            scheduled_datetime=scheduled_dt,
                             call_transcript=transcription,
-                            call_summary=f"Call from {call_log.from_number} ({duration}s) [{call_type_label.upper()}]",
+                            call_summary=extracted.get('call_summary') or f"Call from {call_log.from_number} ({duration}s) [{call_type_label.upper()}]",
                             address_validated=False,
-                            status='new'
+                            status='scheduled' if scheduled_dt else 'new'
                         )
 
                         db.session.add(job)

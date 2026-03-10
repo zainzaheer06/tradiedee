@@ -539,6 +539,39 @@
                 <i class="bi bi-bar-chart-line ni"></i>
                 <span class="nav-label">Analytics</span>
             </a>
+            
+            <!-- PHASE 1: TRADIEDEE -->
+            <p class="nav-section">Tradiedee</p>
+            <a href="{{ url_for('jobs.job_dashboard') }}"
+               class="nav-item {% if request.endpoint in ['job_dashboard', 'view_job'] %}active{% endif %}"
+               data-tip="Jobs">
+                <i class="bi bi-briefcase ni"></i>
+                <span class="nav-label">Jobs</span>
+            </a>
+            <a href="{{ url_for('customers.customer_list') }}"
+               class="nav-item {% if request.endpoint in ['customer_list', 'customer_detail'] %}active{% endif %}"
+               data-tip="Customers">
+                <i class="bi bi-people ni"></i>
+                <span class="nav-label">Customers</span>
+            </a>
+            <a href="{{ url_for('jobs.job_schedule') }}"
+               class="nav-item {% if request.endpoint == 'job_schedule' %}active{% endif %}"
+               data-tip="Schedule">
+                <i class="bi bi-calendar-week ni"></i>
+                <span class="nav-label">Schedule</span>
+            </a>
+            <a style="display: none;" href="{{ url_for('phase1.test_dashboard') }}"
+               class="nav-item {% if request.endpoint == 'test_dashboard' %}active{% endif %}"
+               data-tip="Testing">
+                <i class="bi bi-bug ni"></i>
+                <span class="nav-label">Testing</span>
+            </a>
+            <a href="{{ url_for('business_setup.setup') }}"
+               class="nav-item {% if request.endpoint in ['setup', 'emergency_contacts', 'service_areas'] %}active{% endif %}"
+               data-tip="Setup">
+                <i class="bi bi-sliders ni"></i>
+                <span class="nav-label">Setup</span>
+            </a>
 
             <!-- CHANNELS -->
             <p class="nav-section">Channels</p>
@@ -620,38 +653,6 @@
                 <span class="nav-label">Test Agent</span>
             </a>
 
-            <!-- PHASE 1: TRADIEDEE -->
-            <p class="nav-section">Tradiedee</p>
-            <a href="{{ url_for('jobs.job_dashboard') }}"
-               class="nav-item {% if request.endpoint in ['job_dashboard', 'view_job'] %}active{% endif %}"
-               data-tip="Jobs">
-                <i class="bi bi-briefcase ni"></i>
-                <span class="nav-label">Jobs</span>
-            </a>
-            <a href="{{ url_for('customers.customer_list') }}"
-               class="nav-item {% if request.endpoint in ['customer_list', 'customer_detail'] %}active{% endif %}"
-               data-tip="Customers">
-                <i class="bi bi-people ni"></i>
-                <span class="nav-label">Customers</span>
-            </a>
-            <a href="{{ url_for('jobs.job_schedule') }}"
-               class="nav-item {% if request.endpoint == 'job_schedule' %}active{% endif %}"
-               data-tip="Schedule">
-                <i class="bi bi-calendar-week ni"></i>
-                <span class="nav-label">Schedule</span>
-            </a>
-            <a href="{{ url_for('phase1.test_dashboard') }}"
-               class="nav-item {% if request.endpoint == 'test_dashboard' %}active{% endif %}"
-               data-tip="Testing">
-                <i class="bi bi-bug ni"></i>
-                <span class="nav-label">Testing</span>
-            </a>
-            <a href="{{ url_for('business_setup.setup') }}"
-               class="nav-item {% if request.endpoint in ['setup', 'emergency_contacts', 'service_areas'] %}active{% endif %}"
-               data-tip="Setup">
-                <i class="bi bi-sliders ni"></i>
-                <span class="nav-label">Setup</span>
-            </a>
 
             <!-- ACCOUNT -->
             <p class="nav-section">Account</p>

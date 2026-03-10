@@ -60,7 +60,7 @@ from services.recording_service import recording_service
 # Import tool service for dynamic tools
 from services.tool_service import tool_service
 
-logger = logging.getLogger("agent-tradie")
+logger = logging.getLogger("agent-tradiedee")
 load_dotenv(".env")
 
 
@@ -660,7 +660,7 @@ class Assistant(Agent):
         """Called when the user wants to end the call"""
         # First generate a natural goodbye using the LLM
         await ctx.session.generate_reply(
-            instructions="قل وداعاً للمستخدم بطريقة طبيعية ولطيفة، واشكره على اتصاله"
+            instructions="Say good bye in Australian English with a friendly tone, and tell the user you hope they have a great day. Keep it short and natural."
         )
 
         # Wait for the goodbye message to finish playing
@@ -689,7 +689,7 @@ class Assistant(Agent):
 
         # Brief handoff announcement, then the new agent will greet
         await ctx.session.generate_reply(
-            instructions="أخبر المستخدم بجملة واحدة فقط أنك ستحوله الآن إلى وكيل آخر."
+            instructions="Tell the user in Australian English with a friendly tone that you are transferring them to another agent."
         )
         await ctx.wait_for_playout()
 
@@ -722,7 +722,7 @@ class Assistant(Agent):
     #async def detected_answering_machine(self):
     #    """Call this tool if you have detected a voicemail system, AFTER hearing the voicemail greeting"""
     #    await self.session.generate_reply(
-    #        instructions="اترك رسالة صوتية تخبر المستخدم بأنك ستعاود الاتصال لاحقاً."
+    #        instructions="Leave a voicemail message telling the user that you will call back later."
     #    )
     #    await asyncio.sleep(0.5) # Add a natural gap to the end of the voicemail message
     #    await hangup_call()
@@ -734,7 +734,7 @@ def build_tts_engine(config):
     return elevenlabs.TTS(
         voice_id=config['voice_id'],
         model="eleven_turbo_v2_5",
-        language="ar",
+        language="en",
         auto_mode=True,
         voice_settings=elevenlabs.VoiceSettings(
             stability=0.75,
@@ -810,14 +810,14 @@ async def entrypoint(ctx: JobContext):
             'temperature': llm_temperature,
             'input_audio_transcription': InputAudioTranscription(
                 model="gpt-4o-transcribe",
-                language="ar",
-                prompt=(
-                    "Transcribe speech only. "
-                    "If the speaker uses Arabic, output Arabic script. "
-                    "If the speaker uses English, output English text. "
-                    "Do NOT translate between languages. "
-                    "Do NOT add explanations or annotations."
-                ),
+                language="en",
+               # prompt=(
+               #     "Transcribe speech only. "
+               #     "If the speaker uses Arabic, output Arabic script. "
+               #     "If the speaker uses English, output English text. "
+               #     "Do NOT translate between languages. "
+               #     "Do NOT add explanations or annotations."
+               # ),
             ),
         }
 
@@ -1517,6 +1517,7 @@ if __name__ == "__main__":
     # Configure worker with essential production options
     opts = WorkerOptions(
         entrypoint_fnc=entrypoint,
+        agent_name="agent-tradiedee",
         
         # Load management - prevents system overload
         load_fnc=compute_load,

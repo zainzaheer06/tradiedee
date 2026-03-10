@@ -354,15 +354,15 @@ class CampaignWorker:
 
             # Create SIP participant (make the call)
             # Ensure phone number has + prefix for international format
-            #phone_number = contact['phone_number']
-            #if not phone_number.startswith('+'):
-            #    phone_number = '+' + phone_number
+            call_to_number = contact['phone_number']
+            if not call_to_number.startswith('+'):
+                call_to_number = '+' + call_to_number
 
             sip_participant = await self.lkapi.sip.create_sip_participant(
                 api.CreateSIPParticipantRequest(
                     room_name=room_name,
                     sip_trunk_id=outbound_trunk_id,
-                    sip_call_to=contact['phone_number'],
+                    sip_call_to=call_to_number,
                     participant_identity=f"contact_{contact['id']}",
                     participant_name=contact['name'] or contact['phone_number'],
                     participant_metadata=json.dumps(room_metadata)

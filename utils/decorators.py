@@ -34,6 +34,10 @@ def approved_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         user = db.session.get(User, session['user_id'])
+        if not user:
+            session.clear()
+            flash('Please login first', 'warning')
+            return redirect(url_for('core.login'))
         if not user.is_approved and not user.is_admin:
             flash('Your account is pending admin approval', 'warning')
             return redirect(url_for('core.pending_approval'))

@@ -830,6 +830,9 @@ def make_call_route(agent_id):
 
 async def make_livekit_call(phone_number, room_name, agent_name, outbound_trunk_id):
     """Create a dispatch and add a SIP participant to call the phone number"""
+    # Ensure E.164 format with + prefix (Twilio requires it)
+    if not phone_number.startswith("+"):
+        phone_number = f"+{phone_number}"
     lkapi = api.LiveKitAPI()
 
     # Create agent dispatch - agent_name should be "agent" as defined in agent.py
